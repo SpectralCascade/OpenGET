@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -57,11 +58,28 @@ namespace OpenGET
         /// </summary>
         private static Localise shared;
 
-        public void Start() {
+        public static Language currentLanguage { get { return languages[targetLanguage]; } }
+
+        public void Awake() {
             if (shared != null) {
-                // TODO: Log warning
+                Log.Warning("Localise instance already exists!");
+            }
+            Log.Info("Creating shared instance of Localise class...");
+            Log.Warning("TEST WARNING");
+            Log.Error("TEST ERROR");
+            Log.Verbose("TEST VERBOSE");
+            try {
+                shared.name = "test localise";
+            } catch (Exception e) {
+                Log.Exception(e);
             }
             shared = this;
+        }
+
+        public void OnDestroy() {
+            if (shared == this) {
+                shared = null;
+            }
         }
 
         public static Localise sharedInstance {
