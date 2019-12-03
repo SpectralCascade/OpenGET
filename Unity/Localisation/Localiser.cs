@@ -38,7 +38,7 @@ namespace OpenGET
     /// <summary>
     /// Singleton that can translate text to a desired language.
     /// </summary>
-    public class Localise : MonoBehaviour {
+    public class Localiser : MonoBehaviour {
 
         /// <summary>
         /// All available languages.
@@ -56,7 +56,7 @@ namespace OpenGET
         /// <summary>
         /// The singleton instance.
         /// </summary>
-        private static Localise shared;
+        private static Localiser shared;
 
         public static Language currentLanguage { get { return languages[targetLanguage]; } }
 
@@ -73,7 +73,7 @@ namespace OpenGET
             }
         }
 
-        public static Localise sharedInstance {
+        public static Localiser sharedInstance {
             get {
                 return shared;
             }

@@ -37,7 +37,7 @@ namespace OpenGET
         private void Translate(string targetText) {
             if (Application.isPlaying) {
                 rootText = targetText;
-                text = Localise.Text(targetText);
+                text = Localiser.Text(targetText);
             }
         }
 
