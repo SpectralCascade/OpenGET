@@ -100,6 +100,16 @@ namespace OpenGET
             /// TODO: map to desired language.
             return original;
         }
+        
+        /// <summary>
+        /// Returns a number with formatting applied in relation to the desired language.
+        /// </summary>
+        /// <param name="n"></param>
+        /// <param name="formatting"></param>
+        public static string Number(string formatting, float n) {
+            /// TODO: map to desired language.
+            return string.Format(formatting, n);
+        }
 
         /// <summary>
         /// Returns the currency formatting related to the desired language, e.g. "$5" -> "5$"
