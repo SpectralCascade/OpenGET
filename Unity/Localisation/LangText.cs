@@ -9,7 +9,7 @@ namespace OpenGET
     /// <summary>
     /// Improved Text component that automatically attempts to translate the text to a desired language.
     /// </summary>
-    public class TranslatedText : Text
+    public class LangText : Text
     {
         /// <summary>
         /// The text in the root language.

@@ -91,8 +91,8 @@ namespace OpenGET
                 targetLanguage = target;
 
                 /// Find all TranslatedText components and update their text.
-                TranslatedText[] allText = Resources.FindObjectsOfTypeAll<TranslatedText>();
-                foreach (TranslatedText text in allText) {
+                LangText[] allText = Resources.FindObjectsOfTypeAll<LangText>();
+                foreach (LangText text in allText) {
                     text.Retranslate();
                 }
             }
