@@ -64,15 +64,6 @@ namespace OpenGET
             if (shared != null) {
                 Log.Warning("Localise instance already exists!");
             }
-            Log.Info("Creating shared instance of Localise class...");
-            Log.Warning("TEST WARNING");
-            Log.Error("TEST ERROR");
-            Log.Verbose("TEST VERBOSE");
-            try {
-                shared.name = "test localise";
-            } catch (Exception e) {
-                Log.Exception(e);
-            }
             shared = this;
         }
 
