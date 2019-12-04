@@ -24,7 +24,6 @@ namespace OpenGET
 
     /// <summary>
     /// Abstract class for fading stuff in and out.
-    /// TODO: Implement OnFullyVisible and OnHidden events.
     /// </summary>
     public class Fader
     {
@@ -48,6 +47,10 @@ namespace OpenGET
         /// </summary>
         private bool isVisible { get { return implementation.GetFadeValue() > 0; } }
 
+        /// <summary>
+        /// Use CanvasGroup implementation.
+        /// </summary>
+        /// <param name="canvasGroup"></param>
         public Fader(CanvasGroup canvasGroup) {
             implementation = new CanvasGroupFader(canvasGroup);
         }
@@ -130,14 +133,14 @@ namespace OpenGET
                 if (lerpValue >= 1) {
                     /// Fade is finished
                     int fadeDir = end < start ? -1 : 1;
+                    if (fadeDirection == fadeDir) {
+                        fadeDirection = 0;
+                    }
+
                     if (fadeDir < 0) {
                         OnFadeComplete(this, -1);
                     } else {
                         OnFadeComplete(this, 1);
-                    }
-
-                    if (fadeDirection == fadeDir) {
-                        fadeDirection = 0;
                     }
                     break;
                 }
