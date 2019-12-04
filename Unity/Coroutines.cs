@@ -5,6 +5,7 @@ using UnityEngine;
 namespace OpenGET
 {
 
+    [DisallowMultipleComponent]
     public class Coroutines : MonoBehaviour
     {
 
@@ -12,10 +13,11 @@ namespace OpenGET
         /// Setup the singleton instance, and ensure it doesn't get destroyed when the scene is unloaded.
         /// </summary>
         void Awake() {
-            if (sharedInstance != null) {
+            if (_sharedInstance != null) {
                 Log.Warning("More than one Coroutines instance exists.");
+                Destroy(_sharedInstance.gameObject);
             }
-            sharedInstance = this;
+            _sharedInstance = this;
             DontDestroyOnLoad(this.gameObject);
         }
 
@@ -42,9 +44,13 @@ namespace OpenGET
         /// Singleton instance.
         /// </summary>
         private static Coroutines sharedInstance { 
-            get { 
-                if (_sharedInstance == null) {
-                    _sharedInstance = new GameObject("Coroutines").AddComponent<Coroutines>();
+            get {
+                if (_sharedInstance == null && Application.isPlaying) {
+                    try {
+                        _sharedInstance = new GameObject("Coroutines").AddComponent<Coroutines>();
+                    } catch {
+                        Log.Error("Failed to instantiate coroutines singleton! :(");
+                    }
                 }
                 return _sharedInstance;
             }
