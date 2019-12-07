@@ -6,23 +6,6 @@ namespace OpenGET
 {
 
     /// <summary>
-    /// Interface for fader implementations.
-    /// </summary>
-    public interface IFader {
-        /// <summary>
-        /// Returns the fade value of the target fade object.
-        /// </summary>
-        float GetFadeValue();
-
-        /// <summary>
-        /// Sets the fade value of the target fade object.
-        /// </summary>
-        /// <param name="v"></param>
-        void SetFadeValue(float v);
-
-    }
-
-    /// <summary>
     /// Abstract class for fading stuff in and out.
     /// </summary>
     public class Fader
@@ -35,7 +18,7 @@ namespace OpenGET
         /// <summary>
         /// Reference to the fader implementation.
         /// </summary>
-        private IFader implementation;
+        private IPercentValue implementation;
 
         /// <summary>
         /// Whether the fader is fading in (1), out (-1), or not fading (0).
@@ -45,7 +28,7 @@ namespace OpenGET
         /// <summary>
         /// Is the fader implementation visible?
         /// </summary>
-        private bool isVisible { get { return implementation.GetFadeValue() > 0; } }
+        private bool isVisible { get { return implementation.GetValue() > 0; } }
 
         /// <summary>
         /// Use CanvasGroup implementation.
@@ -62,7 +45,7 @@ namespace OpenGET
         public void FadeIn(float time = 1.0f) {
             if (fadeDirection <= 0) {
                 fadeDirection = 1;
-                DoFade(implementation.GetFadeValue(), 1, time);
+                DoFade(implementation.GetValue(), 1, time);
             }
         }
 
@@ -73,7 +56,7 @@ namespace OpenGET
         public void FadeOut(float time = 1.0f) {
             if (fadeDirection >= 0) {
                 fadeDirection = -1;
-                DoFade(implementation.GetFadeValue(), 0, time);
+                DoFade(implementation.GetValue(), 0, time);
             }
         }
 
@@ -128,7 +111,7 @@ namespace OpenGET
                 elapsedTime = Time.time - startTime;
                 lerpValue = elapsedTime / time;
 
-                implementation.SetFadeValue(Mathf.Lerp(start, end, lerpValue));
+                implementation.SetValue(Mathf.Lerp(start, end, lerpValue));
 
                 if (lerpValue >= 1) {
                     /// Fade is finished
@@ -154,7 +137,7 @@ namespace OpenGET
     /// <summary>
     /// Fader implementation for a canvas group.
     /// </summary>
-    public class CanvasGroupFader : IFader
+    public class CanvasGroupFader : IPercentValue
     {
 
         private readonly CanvasGroup canvasGroup;
@@ -163,11 +146,11 @@ namespace OpenGET
             this.canvasGroup = canvasGroup;
         }
 
-        public float GetFadeValue() {
+        public float GetValue() {
             return canvasGroup.alpha;
         }
 
-        public void SetFadeValue(float v) {
+        public void SetValue(float v) {
             canvasGroup.alpha = v;
         }
 
