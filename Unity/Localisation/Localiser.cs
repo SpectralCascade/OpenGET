@@ -102,12 +102,12 @@ namespace OpenGET
         /// Returns a localised version of the string for the current language.
         /// </summary>
         /// <param name="original"></param>
-        public static string Text(string original) {
+        public static string Text(string original, params object[] formatting) {
             if (targetLanguage == 0) {
-                return original;
+                return string.Format(original, formatting);
             }
             /// TODO: map to desired language.
-            return original;
+            return string.Format(original, formatting);
         }
         
         /// <summary>
