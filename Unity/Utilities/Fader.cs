@@ -13,7 +13,7 @@ namespace OpenGET
 
         public delegate void OnFaded(Fader f, int fadeDir);
 
-        public event OnFaded OnFadeComplete;
+        public event OnFaded OnFadeComplete = null;
 
         /// <summary>
         /// Reference to the fader implementation.
@@ -120,10 +120,12 @@ namespace OpenGET
                         fadeDirection = 0;
                     }
 
-                    if (fadeDir < 0) {
-                        OnFadeComplete(this, -1);
-                    } else {
-                        OnFadeComplete(this, 1);
+                    if (OnFadeComplete != null) {
+                        if (fadeDir < 0) {
+                            OnFadeComplete(this, -1);
+                        } else {
+                            OnFadeComplete(this, 1);
+                        }
                     }
                     break;
                 }
