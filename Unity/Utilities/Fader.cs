@@ -67,9 +67,14 @@ namespace OpenGET
         /// <param name="end"></param>
         /// <param name="lerpTime"></param>
         private void DoFade(float start, float end, float lerpTime = 0.5f) {
+            if (fadeRoutine != null) {
+                Coroutines.Stop(fadeRoutine);
+            }
             fadeDirection = end > start ? 1 : -1;
-            Coroutines.Start(Fade(start, end, lerpTime));
+            fadeRoutine = Coroutines.Start(Fade(start, end, lerpTime));
         }
+
+        private Coroutine fadeRoutine = null;
 
         /// <summary>
         /// Is the faded object fully visible (i.e. finished fading and visible)?
@@ -127,6 +132,8 @@ namespace OpenGET
                             OnFadeComplete(this, 1);
                         }
                     }
+
+                    fadeRoutine = null;
                     break;
                 }
                 yield return new WaitForEndOfFrame();
