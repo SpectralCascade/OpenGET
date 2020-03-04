@@ -13,7 +13,7 @@ namespace OpenGET
 
         public delegate void OnFaded(Fader f, int fadeDir);
 
-        public event OnFaded OnFadeComplete = null;
+        public event OnFaded OnFadeComplete;
 
         /// <summary>
         /// Reference to the fader implementation.
@@ -36,6 +36,14 @@ namespace OpenGET
         /// <param name="canvasGroup"></param>
         public Fader(CanvasGroup canvasGroup) {
             implementation = new CanvasGroupFader(canvasGroup);
+        }
+
+        /// <summary>
+        /// Use Renderer implementation (e.g. MeshRenderer, SpriteRenderer).
+        /// </summary>
+        /// <param name="renderer"></param>
+        public Fader(Renderer renderer) {
+            implementation = new RendererFader(renderer);
         }
 
         /// <summary>
@@ -67,14 +75,9 @@ namespace OpenGET
         /// <param name="end"></param>
         /// <param name="lerpTime"></param>
         private void DoFade(float start, float end, float lerpTime = 0.5f) {
-            if (fadeRoutine != null) {
-                Coroutines.Stop(fadeRoutine);
-            }
             fadeDirection = end > start ? 1 : -1;
-            fadeRoutine = Coroutines.Start(Fade(start, end, lerpTime));
+            Coroutines.Start(Fade(start, end, lerpTime));
         }
-
-        private Coroutine fadeRoutine = null;
 
         /// <summary>
         /// Is the faded object fully visible (i.e. finished fading and visible)?
@@ -125,15 +128,11 @@ namespace OpenGET
                         fadeDirection = 0;
                     }
 
-                    if (OnFadeComplete != null) {
-                        if (fadeDir < 0) {
-                            OnFadeComplete(this, -1);
-                        } else {
-                            OnFadeComplete(this, 1);
-                        }
+                    if (fadeDir < 0) {
+                        OnFadeComplete(this, -1);
+                    } else {
+                        OnFadeComplete(this, 1);
                     }
-
-                    fadeRoutine = null;
                     break;
                 }
                 yield return new WaitForEndOfFrame();
@@ -161,6 +160,33 @@ namespace OpenGET
 
         public void SetValue(float v) {
             canvasGroup.alpha = v;
+        }
+
+    }
+
+    /// <summary>
+    /// Fader implementation for renderers (e.g. MeshRenderer, SpriteRenderer).
+    /// </summary>
+    public class RendererFader : IPercentValue
+    {
+
+        private readonly Renderer renderer;
+
+        public RendererFader(Renderer renderer)
+        {
+            this.renderer = renderer;
+        }
+
+        public float GetValue()
+        {
+            return renderer.material != null ? renderer.material.color.a : 0;
+        }
+
+        public void SetValue(float v)
+        {
+            for (int i = 0, counti = renderer.materials.Length; i < counti; i++) {
+                renderer.materials[i].color = Colors.Alpha(renderer.materials[i].color, v);
+            }
         }
 
     }
