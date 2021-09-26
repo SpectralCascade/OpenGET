@@ -12,7 +12,7 @@ namespace OpenGET
         public static void Debug(string message, params object[] args) {
             UnityEngine.Debug.Log(
 #if UNITY_EDITOR
-                "<color=purple>Info: " + 
+                "<color=purple>Debug: " + 
 #endif
                 string.Format(message, args) 
 #if UNITY_EDITOR
@@ -27,7 +27,7 @@ namespace OpenGET
         public static void Info(string message, params object[] args) {
             UnityEngine.Debug.Log(
 #if UNITY_EDITOR
-                "<color=magenta>Info: " + 
+                "<color=white>Info: " + 
 #endif
                 string.Format(message, args) 
 #if UNITY_EDITOR            
@@ -69,7 +69,7 @@ namespace OpenGET
         public static void Verbose(string message, params object[] args) {
             UnityEngine.Debug.Log(
 #if UNITY_EDITOR
-                "<color=cyan>Info: " + 
+                "<color=green>Verbose: " + 
 #endif
                 string.Format(message, args)
 #if UNITY_EDITOR
