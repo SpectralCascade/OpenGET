@@ -1,4 +1,4 @@
-﻿Shader "TSDoors/FillImage"
+﻿Shader "OpenGET/FillImage"
 {
     Properties
 	{

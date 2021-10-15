@@ -50,7 +50,13 @@ namespace OpenGET.UI
         /// TODO: grayscale fill
         /// </summary>
         public bool grayscale;
+
+        [SerializeField]
+        [HideInInspector]
         private bool _invertFill;
+
+        [SerializeField]
+        [HideInInspector]
         private bool _verticalFill = true;
 
         public bool verticalFill {
@@ -84,7 +90,7 @@ namespace OpenGET.UI
         /// <summary>
         /// Get or set the fill value of the ProgressFill implementation.
         /// </summary>
-        public float fill { 
+        public float fill {
             get { return implementation.GetValue(); }
             set { implementation.SetValue(value); }
         }
@@ -102,10 +108,14 @@ namespace OpenGET.UI
         /// </summary>
         public FillGraphic parentFill;
 
+        [SerializeField]
+        [HideInInspector]
+        private float fill = 0;
+
         public Material material {
             get {
                 if (parentFill.image != null && parentFill.image.material == null) {
-                    parentFill.image.material = new Material(Shader.Find("TSDoors/FillImage"));
+                    parentFill.image.material = new Material(Shader.Find("OpenGET/FillImage"));
                 }
                 return parentFill.image?.material;
             }
@@ -136,8 +146,6 @@ namespace OpenGET.UI
                 }
             }
         }
-
-        private float fill = 0;
 
         public float GetValue() {
             return fill;
