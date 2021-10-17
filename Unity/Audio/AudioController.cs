@@ -127,14 +127,16 @@ namespace OpenGET {
             return source;
         }
 
-        public static void PlayMusic(AudioClip clip, int poolIndex = 0) {
+        public static AudioSource PlayMusic(AudioClip clip, float volume = 1, int poolIndex = 0) {
             AudioSource source = Instance.musicPool[poolIndex];
             if (source.isPlaying) {
                 source.Stop();
             }
+            source.volume = volume;
             source.clip = clip;
             source.loop = true;
             source.Play();
+            return source;
         }
 
     }
