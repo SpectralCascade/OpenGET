@@ -37,6 +37,7 @@ namespace OpenGET {
         public void Hide(float fadeTime = DefaultFadeTime) {
             OnWillHide();
             fader.FadeOut(fadeTime);
+            Log.Info("FADING OUT WINDOW");
         }
 
         protected virtual void OnWillShow() { }

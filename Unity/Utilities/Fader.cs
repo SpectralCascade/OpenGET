@@ -75,7 +75,7 @@ namespace OpenGET
         /// <param name="end"></param>
         /// <param name="lerpTime"></param>
         private void DoFade(float start, float end, float lerpTime = 0.5f) {
-            fadeDirection = end > start ? 1 : -1;
+            fadeDirection = end == 0 ? -1 : 1;
             Coroutines.Start(Fade(start, end, lerpTime));
         }
 
