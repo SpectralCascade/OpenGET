@@ -18,6 +18,7 @@ namespace OpenGET {
         /// The total number of audio sources per pool.
         /// </summary>
         public const int MaxPoolSources = 30;
+        public const float CrossfadeTime = 2;
 
         /// <summary>
         /// A limited pool of audio sources to play sounds from.
@@ -50,6 +51,11 @@ namespace OpenGET {
         /// Points to the last free audio source in the pools.
         /// </summary>
         private int[] poolHeads = new int[3];
+
+        /// <summary>
+        /// Whether the primary or secondary music channel should be playing
+        /// </summary>
+        private static int primaryMusicIndex = 0;
 
         /// <summary>
         /// Retrieve the singleton instance of this class.
@@ -96,6 +102,19 @@ namespace OpenGET {
 
                 musicPool[i] = gameObject.AddComponent<AudioSource>();
                 musicPool[i].outputAudioMixerGroup = musicBus;
+                musicPool[i].volume = 0;
+                musicPool[i].loop = true;
+            }
+        }
+
+        // Fading takes place here using Time.deltaTime
+        public void Update() {
+            // Fade in primary, fade out others
+            musicPool[primaryMusicIndex].volume = Mathf.Clamp01(musicPool[primaryMusicIndex].volume + (Time.deltaTime * CrossfadeTime));
+            for (int i = 0, counti = 2; i < counti; i++) {
+                if (i != primaryMusicIndex) {
+                    musicPool[i].volume = Mathf.Clamp01(musicPool[primaryMusicIndex].volume - (Time.deltaTime * CrossfadeTime));
+                }
             }
         }
 
@@ -127,15 +146,22 @@ namespace OpenGET {
             return source;
         }
 
-        public static AudioSource PlayMusic(AudioClip clip, float volume = 1, int poolIndex = 0) {
-            AudioSource source = Instance.musicPool[poolIndex];
-            if (source.isPlaying) {
-                source.Stop();
+        public static AudioSource PlayMusic(AudioClip clip) {
+            primaryMusicIndex++;
+            if (primaryMusicIndex > 1) {
+                primaryMusicIndex = 0;
             }
-            source.volume = volume;
-            source.clip = clip;
+            AudioSource source = Instance.musicPool[primaryMusicIndex];
+            if (source.clip == null || source.clip.name != clip.name) {
+                source.clip = clip;
+                source.Stop();
+                source.Play();
+            }
+            if (!source.isPlaying) {
+                source.Play();
+            }
             source.loop = true;
-            source.Play();
+            source.volume = 0;
             return source;
         }
 
