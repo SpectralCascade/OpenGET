@@ -17,7 +17,7 @@ namespace OpenGET {
         /// <summary>
         /// The total number of audio sources per pool.
         /// </summary>
-        public const int MaxPoolSources = 5;
+        public const int MaxPoolSources = 30;
 
         /// <summary>
         /// A limited pool of audio sources to play sounds from.
