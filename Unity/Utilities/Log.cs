@@ -80,7 +80,7 @@ namespace OpenGET {
             if (args.Length <= 0) {
                 formatted = message;
             } else {
-                // Test format; if misused we should throw an exception but not explode.
+                // Test format; if misused we should log an exception but not explode.
                 try {
                     formatted = string.Format(message, args);
                 } catch (System.Exception error) {
@@ -122,13 +122,29 @@ namespace OpenGET {
         }
 
         /// <summary>
-        /// Log something for debugging purposes only. Calls will be compiled out unless the OPENGET_DEBUG preprocessor is defined.
+        /// Log a formatted line. Stacktrace is removed for LogType.Log out of editor unless the preprocessor OPENGET_DEBUG is defined.
+        /// </summary>
+        private static void LogLine(string formatted, LogType logType = LogType.Log, Object context = null) {
+            UnityEngine.Debug.LogFormat(
+                logType,
+#if UNITY_EDITOR || OPENGET_DEBUG
+                LogOption.None,
+#else
+                logType != LogType.Log ? LogOption.None : LogOption.NoStacktrace,
+#endif
+                context,
+                formatted
+            );
+        }
+
+        /// <summary>
+        /// Log for debugging purposes only. Calls not compiled outside the editor unless the OPENGET_DEBUG preprocessor is defined.
         /// If need be, you can use Log.Verbose() for detailed information but you should still avoid spamming.
         /// </summary>
-        [System.Diagnostics.Conditional("OPENGET_DEBUG")]
+        [System.Diagnostics.Conditional("UNITY_EDITOR"), System.Diagnostics.Conditional("OPENGET_DEBUG")]
         public static void Debug(string message, params object[] args) {
             message = "Debug: " + message;
-            UnityEngine.Debug.Log(PrefixStackInfo(Format("cyan", message, args)));
+            LogLine(PrefixStackInfo(Format("cyan", message, args)));
             UpdateLoggers(Level.Debug, message, args);
         }
 
@@ -138,7 +154,7 @@ namespace OpenGET {
         /// </summary>
         public static void Info(string message, params object[] args) {
             message = "Info: " + message;
-            UnityEngine.Debug.Log(PrefixStackInfo(Format("white", message, args)));
+            LogLine(PrefixStackInfo(Format("white", message, args)));
             UpdateLoggers(Level.Info, message, args);
         }
 
@@ -149,7 +165,7 @@ namespace OpenGET {
         /// </summary>
         public static void Warning(string message, params object[] args) {
             message = "Warning: " + message;
-            UnityEngine.Debug.Log(PrefixStackInfo(Format("yellow", message, args)));
+            LogLine(PrefixStackInfo(Format("yellow", message, args)));
             UpdateLoggers(Level.Warning, message, args);
         }
 
@@ -159,10 +175,10 @@ namespace OpenGET {
         public static void Error(string message, params object[] args) {
             message = "Error: " + message;
 #if UNITY_EDITOR
-            UnityEngine.Debug.Log(PrefixStackInfo(Format("red", message, args)));
+            LogLine(PrefixStackInfo(Format("red", message, args)));
 #endif
             // Also log to the regular error console
-            UnityEngine.Debug.LogError(PrefixStackInfo(Format(null, message, args)));
+            LogLine(PrefixStackInfo(Format(null, message, args)), LogType.Error);
             UpdateLoggers(Level.Error, message, args);
         }
 
@@ -171,15 +187,21 @@ namespace OpenGET {
         /// </summary>
         public static void Verbose(string message, params object[] args) {
             message = "Verbose: " + message;
-            UnityEngine.Debug.Log(PrefixStackInfo(Format("green", message, args)));
+            LogLine(PrefixStackInfo(Format("green", message, args)));
             UpdateLoggers(Level.Verbose, message, args);
         }
 
         /// <summary>
-        /// Log exceptions as errors (convenience method).
+        /// Log exceptions as errors without any other information.
         /// </summary>
         public static void Exception(System.Exception e) {
-            Error(e.ToString());
+            string message = "Error: " + e.ToString();
+#if UNITY_EDITOR
+            LogLine(PrefixStackInfo(Format("red", message)));
+#endif
+            // Log with the exception log type
+            LogLine(PrefixStackInfo(Format(null, message)), LogType.Exception);
+            UpdateLoggers(Level.Error, message);
         }
 
     }
