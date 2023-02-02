@@ -1,88 +1,186 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace OpenGET
-{
+namespace OpenGET {
 
-    public static class Log
-    {
+    /// <summary>
+    /// Utility class for logging debug information. Use this instead of Unity's Debug.Log()!
+    /// You can also filter and add listeners to different log levels.
+    /// </summary>
+    public static class Log {
 
-        public static void Debug(string message, params object[] args) {
-            UnityEngine.Debug.Log(
-#if UNITY_EDITOR
-                "<color=purple>Debug: " + 
-#endif
-                string.Format(message, args) 
-#if UNITY_EDITOR
-                + "</color>"
-#endif
-            );
+        /// <summary>
+        /// Anything that wants to listen to logging events should implement this method and be added to the log.
+        /// </summary>
+        public interface ILogger {
+            void OnLog(Level level, string message, params object[] args);
         }
 
         /// <summary>
-        /// Logs information.
+        /// Log priority levels.
+        /// </summary>
+        [System.Flags]
+        public enum Level {
+            Error = 0,
+            Warning = 1,
+            Info = 2,
+            Debug = 4,
+            Verbose = 8,
+            All = 15
+        }
+
+        /// <summary>
+        /// All subscribed loggers.
+        /// </summary>
+        private static Dictionary<ILogger, Level> loggers = new Dictionary<ILogger, Level>();
+
+        /// <summary>
+        /// Add a logger to listen to logging events.
+        /// </summary>
+        public static void AddLogger(ILogger logger, Level level = Level.All) {
+            loggers.Add(logger, level);
+        }
+
+        /// <summary>
+        /// Remove a logger so it no longer listens to logging events.
+        /// </summary>
+        public static void RemoveLogger(ILogger logger) {
+            loggers.Remove(logger);
+        }
+
+        /// <summary>
+        /// Set the log level of a logger that has already been registered to listen to logging events.
+        /// Returns false if the logger has not been registered and so the log level cannot be set.
+        /// </summary>
+        public static bool SetLogLevel(ILogger logger, Level level) {
+            if (loggers.ContainsKey(logger)) {
+                loggers[logger] = level;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Calls the OnLog method of all ILogger instances registered as listeners.
+        /// </summary>
+        private static void UpdateLoggers(Level level, string message, params object[] args) {
+            foreach (KeyValuePair<ILogger, Level> logger in loggers) {
+                if ((logger.Value | level) != 0) {
+                    logger.Key.OnLog(level, message, args);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Format the log console output.
+        /// </summary>
+        public static string Format(string colour, string message, params object[] args) {
+            string formatted = "";
+            if (args.Length <= 0) {
+                formatted = message;
+            } else {
+                // Test format; if misused we should throw an exception but not explode.
+                try {
+                    formatted = string.Format(message, args);
+                } catch (System.Exception error) {
+#if OPENGET_DEBUG
+                    Log.Warning(
+                        "Bad string format. Please use string formatters, not concatenation: \"{0}\" with exception: {1}",
+                        message,
+                        error
+                    );
+#endif
+                    formatted = message;
+                }
+            }
+
+            // Return colour formatted in editor
+            bool hasColour = !string.IsNullOrEmpty(colour);
+            return
+#if UNITY_EDITOR
+            (hasColour ? "<color=" + colour + ">" : "") +
+#endif
+            formatted
+#if UNITY_EDITOR
+            + (hasColour ? "</color>" : "")
+#endif
+            ;
+        }
+
+        /// <summary>
+        /// Prefix stack information such as the file name and line number of the originating Log.X() call.
+        /// This is only done in editor.
+        /// </summary>
+        private static string PrefixStackInfo(string message) {
+#if UNITY_EDITOR
+            System.Diagnostics.StackFrame caller = new System.Diagnostics.StackTrace(true).GetFrame(2);
+            message = "<color=#AFA>[" + 
+                System.IO.Path.GetFileNameWithoutExtension(caller.GetFileName()) + ":" + caller.GetFileLineNumber() + "]</color> " + message;
+#endif
+            return message;
+        }
+
+        /// <summary>
+        /// Log something for debugging purposes only - these will NOT be included in release builds for sake of performance.
+        /// If need be, you can use Log.Verbose() for detailed information but you should still avoid spamming.
+        /// </summary>
+        [System.Diagnostics.Conditional("OPENGET_DEBUG")]
+        public static void Debug(string message, params object[] args) {
+            message = "Debug: " + message;
+            UnityEngine.Debug.Log(PrefixStackInfo(Format("cyan", message, args)));
+            UpdateLoggers(Level.Debug, message, args);
+        }
+
+        /// <summary>
+        /// Log some general info. This should be used as relatively significant markers of things that are expected to or has happened,
+        /// e.g. starting and completing a level load transition.
         /// </summary>
         public static void Info(string message, params object[] args) {
-            UnityEngine.Debug.Log(
-#if UNITY_EDITOR
-                "<color=white>Info: " + 
-#endif
-                string.Format(message, args) 
-#if UNITY_EDITOR            
-                + "</color>"
-#endif
-            );
+            message = "Info: " + message;
+            UnityEngine.Debug.Log(PrefixStackInfo(Format("white", message, args)));
+            UpdateLoggers(Level.Info, message, args);
         }
 
         /// <summary>
-        /// Logs warnings.
+        /// Log a warning i.e. something that probably shouldn't happen but is accounted for. This should be used only sparingly.
+        /// This logs to the standard info/debug log console. This is done because Unity outputs it's own warnings in the warnings console,
+        /// which we don't want to confuse.
         /// </summary>
         public static void Warning(string message, params object[] args) {
-            UnityEngine.Debug.Log(
-#if UNITY_EDITOR
-                "<color=yellow>Warning: " + 
-#endif
-                string.Format(message, args)
-#if UNITY_EDITOR
-                + "</color>"
-#endif
-            );
+            message = "Warning: " + message;
+            UnityEngine.Debug.Log(PrefixStackInfo(Format("yellow", message, args)));
+            UpdateLoggers(Level.Warning, message, args);
         }
 
         /// <summary>
-        /// Logs errors.
+        /// Log an error i.e. something which should not happen and cannot be accounted for.
         /// </summary>
         public static void Error(string message, params object[] args) {
-            UnityEngine.Debug.Log(
+            message = "Error: " + message;
 #if UNITY_EDITOR
-                "<color=red>Error: " + 
+            UnityEngine.Debug.Log(PrefixStackInfo(Format("red", message, args)));
 #endif
-                string.Format(message, args)
-#if UNITY_EDITOR
-                + "</color>"
-#endif
-            );
-        }
-
-        public static void Verbose(string message, params object[] args) {
-            UnityEngine.Debug.Log(
-#if UNITY_EDITOR
-                "<color=green>Verbose: " + 
-#endif
-                string.Format(message, args)
-#if UNITY_EDITOR
-                + "</color>"
-#endif
-            );
+            // Also log to the regular error console
+            UnityEngine.Debug.LogError(PrefixStackInfo(Format(null, message, args)));
+            UpdateLoggers(Level.Error, message, args);
         }
 
         /// <summary>
-        /// Logs exceptions.
+        /// Useful for logging lots of technical bits of information about processes for debugging - but unlike Log.Debug() this is included in builds,
+        /// So try not to spam something every frame for instance!
         /// </summary>
-        public static void Exception(Exception e) {
-            UnityEngine.Debug.LogError(e.ToString());
+        public static void Verbose(string message, params object[] args) {
+            message = "Verbose: " + message;
+            UnityEngine.Debug.Log(PrefixStackInfo(Format("green", message, args)));
+            UpdateLoggers(Level.Verbose, message, args);
+        }
+
+        /// <summary>
+        /// Log exceptions as errors (conveience method).
+        /// </summary>
+        public static void Exception(System.Exception e) {
+            Error(e.ToString());
         }
 
     }
