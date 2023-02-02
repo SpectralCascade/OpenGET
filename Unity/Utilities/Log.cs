@@ -122,7 +122,7 @@ namespace OpenGET {
         }
 
         /// <summary>
-        /// Log something for debugging purposes only - these will NOT be included in release builds for sake of performance.
+        /// Log something for debugging purposes only. Calls will be compiled out unless the OPENGET_DEBUG preprocessor is defined.
         /// If need be, you can use Log.Verbose() for detailed information but you should still avoid spamming.
         /// </summary>
         [System.Diagnostics.Conditional("OPENGET_DEBUG")]
@@ -134,7 +134,7 @@ namespace OpenGET {
 
         /// <summary>
         /// Log some general info. This should be used as relatively significant markers of things that are expected to or has happened,
-        /// e.g. starting and completing a level load transition.
+        /// e.g. starting and completing a scene load transition.
         /// </summary>
         public static void Info(string message, params object[] args) {
             message = "Info: " + message;
@@ -167,8 +167,7 @@ namespace OpenGET {
         }
 
         /// <summary>
-        /// Useful for logging lots of technical bits of information about processes for debugging - but unlike Log.Debug() this is included in builds,
-        /// So try not to spam something every frame for instance!
+        /// Use this sparingly. Useful for logging technical bits of information about processes in releases.
         /// </summary>
         public static void Verbose(string message, params object[] args) {
             message = "Verbose: " + message;
@@ -177,7 +176,7 @@ namespace OpenGET {
         }
 
         /// <summary>
-        /// Log exceptions as errors (conveience method).
+        /// Log exceptions as errors (convenience method).
         /// </summary>
         public static void Exception(System.Exception e) {
             Error(e.ToString());
