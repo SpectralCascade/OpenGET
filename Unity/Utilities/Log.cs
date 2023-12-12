@@ -125,16 +125,20 @@ namespace OpenGET {
         /// Log a formatted line. Stacktrace is removed for LogType.Log out of editor unless the preprocessor OPENGET_DEBUG is defined.
         /// </summary>
         private static void LogLine(string formatted, LogType logType = LogType.Log, Object context = null) {
-            UnityEngine.Debug.LogFormat(
-                logType,
+            try {
+                UnityEngine.Debug.LogFormat(
+                    logType,
 #if UNITY_EDITOR || OPENGET_DEBUG
-                LogOption.None,
+                    LogOption.None,
 #else
-                logType != LogType.Log ? LogOption.None : LogOption.NoStacktrace,
+                    logType != LogType.Log ? LogOption.None : LogOption.NoStacktrace,
 #endif
-                context,
-                formatted
-            );
+                    context,
+                    formatted
+                );
+            } catch (System.Exception e) {
+                Log.Warning("Bad string format for logging! Exception occurred: " + e.ToString());
+            }
         }
 
         /// <summary>
