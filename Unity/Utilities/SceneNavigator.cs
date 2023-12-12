@@ -20,6 +20,16 @@ namespace OpenGET
             return rootObj;
         }
 
+        public static string GetGameObjectPath(GameObject gameObject) {
+            string path = gameObject.name;
+            gameObject = gameObject.transform.parent?.gameObject;
+            while (gameObject != null) {
+                path = gameObject.name + "/" + path;
+                gameObject = gameObject.transform.parent?.gameObject;
+            }
+            return path;
+        }
+
     }
 
 }
