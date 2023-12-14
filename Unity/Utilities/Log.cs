@@ -1,8 +1,14 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 namespace OpenGET {
+
+    [System.AttributeUsage(System.AttributeTargets.Field)]
+    public class NullCheckAttribute : System.Attribute
+    {
+    }
 
     /// <summary>
     /// Utility class for logging debug information. Use this instead of Unity's Debug.Log()!
@@ -138,6 +144,51 @@ namespace OpenGET {
                 );
             } catch (System.Exception e) {
                 Log.Warning("Bad string format for logging! Exception occurred: " + e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Assert that there are no null references on an object for all fields with the NullCheck attribute.
+        /// By default only checks non-inherited members but you can optionally include those in the checks.
+        /// </summary>
+        [System.Diagnostics.Conditional("UNITY_EDITOR"), System.Diagnostics.Conditional("OPENGET_DEBUG")]
+        public static void CheckRefs<T>(T obj, bool includeInherited = false) where T : Object
+        {
+            if (obj == null)
+            {
+                throw new System.NullReferenceException("Cannot null check a null instance.");
+            }
+
+            System.Type objType = obj.GetType();
+            // Get all non-inherited fields
+            System.Reflection.FieldInfo[] fields = objType.GetFields(
+                (includeInherited ? 0 : System.Reflection.BindingFlags.DeclaredOnly) | 
+                System.Reflection.BindingFlags.Public | 
+                System.Reflection.BindingFlags.NonPublic
+            );
+
+            for (int i = 0, counti = fields.Length; i < counti; i++)
+            {
+                if (fields[i].FieldType.IsSubclassOf(typeof(Object)) &&
+                    !fields[i].IsNotSerialized &&
+                    fields[i].CustomAttributes.Where(x => x.AttributeType == typeof(NullCheckAttribute)).Count() > 0
+                ) {
+                    bool isGameObject = objType == typeof(GameObject);
+                    bool isComponent = !isGameObject && objType.IsSubclassOf(typeof(MonoBehaviour));
+                    string message = "Missing reference to " + fields[i].FieldType.ToString();
+                    GameObject target = isGameObject ? obj as GameObject : (isComponent ? (obj as MonoBehaviour).gameObject : null);
+                    if (target != null)
+                    {
+                        message += string.Format(" at hierarchy path '{0}'", SceneNavigator.GetGameObjectPath(target));
+                    }
+                    else
+                    {
+                        System.Diagnostics.StackFrame info = new System.Diagnostics.StackTrace(true).GetFrame(1);
+                        message += " in instance of " + info.GetMethod()?.DeclaringType.FullName;
+                    }
+
+                    UnityEngine.Debug.Assert(fields[i].GetValue(obj) != null, PrefixStackInfo(Format("red", message)), obj);
+                }
             }
         }
 
