@@ -3,9 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace OpenGET {
+namespace OpenGET.UI {
 
-    public abstract class Window : MonoBehaviour {
+    public abstract class Window : AccessUI {
         public const float DefaultFadeTime = 0.2f;
 
         private Fader fader {

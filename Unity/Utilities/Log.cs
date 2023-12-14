@@ -159,12 +159,13 @@ namespace OpenGET {
                 throw new System.NullReferenceException("Cannot null check a null instance.");
             }
 
-            System.Type objType = obj.GetType();
+            System.Type objType = typeof(T);
             // Get all non-inherited fields
             System.Reflection.FieldInfo[] fields = objType.GetFields(
                 (includeInherited ? 0 : System.Reflection.BindingFlags.DeclaredOnly) | 
                 System.Reflection.BindingFlags.Public | 
-                System.Reflection.BindingFlags.NonPublic
+                System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.Instance
             );
 
             for (int i = 0, counti = fields.Length; i < counti; i++)
@@ -187,7 +188,7 @@ namespace OpenGET {
                         message += " in instance of " + info.GetMethod()?.DeclaringType.FullName;
                     }
 
-                    UnityEngine.Debug.Assert(fields[i].GetValue(obj) != null, PrefixStackInfo(Format("red", message)), obj);
+                    UnityEngine.Debug.Assert(fields[i].GetValue(obj) != null, PrefixStackInfo(Format("red", message)), isComponent ? (Object)((obj as MonoBehaviour).gameObject) : obj);
                 }
             }
         }
