@@ -1,18 +1,10 @@
-﻿#define USE_REWIRED
-
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
 namespace OpenGET.Input
 {
-
-#if !USE_REWIRED
-    // Some Rewired input functions are identical in function to the legacy input system,
-    // allowing us to use an alias.
-    using Input = UnityEngine.Input;
-#endif
 
     /// <summary>
     /// Helper class for dealing with different types of input devices.
@@ -22,76 +14,6 @@ namespace OpenGET.Input
     /// </summary>
     public class InputHelper
     {
-
-
-        /// <summary>
-        /// Maps a game action to input bindings.
-        /// </summary>
-        public class Action : ScriptableObject
-        {
-
-            public enum Type
-            {
-                Bool = 0,
-                Float
-            }
-
-            public Action() { }
-            public Action(string id, Type type = Type.Bool, params Bind[] bindings)
-            {
-                this.id = id;
-                this.type = type;
-                if (bindings != null && bindings.Length > 0)
-                {
-                    this.bindings = new Bind[bindings.Length];
-                    for (int i = 0, counti = bindings.Length; i < counti; i++)
-                    {
-                        this.bindings[i] = bindings[i];
-                    }
-                }
-            }
-
-            /// <summary>
-            /// Custom identifier used to refer to the action in the game.
-            /// </summary>
-            public string id;
-
-            /// <summary>
-            /// Whether this input action corresponds to a boolean or floating point value.
-            /// </summary>
-            public Type type;
-
-            /// <summary>
-            /// Individual controller inputs that can be used to trigger this action.
-            /// </summary>
-            public Bind[] bindings = new Bind[0];
-
-            /// <summary>
-            /// Is this action enabled at present?
-            /// </summary>
-            public bool enabled = true;
-
-        }
-
-        /// <summary>
-        /// Built-in actions, used as defaults for certain UI such as buttons.
-        /// </summary>
-        public class BuiltIn
-        {
-            public static readonly Action Submit = new Action(
-                "Submit",
-                Action.Type.Bool,
-                new Bind(Bind.Controller.Keyboard, Bind.Type.Button, (int)KeyCode.Return),
-                new Bind(Bind.Controller.Gamepad, Bind.Type.Button, (int)Bind.GamepadButton.A),
-                new Bind(Bind.Controller.Mouse, Bind.Type.Button, (int)Bind.MouseButton.PRIMARY)
-            );
-            public static readonly Action Cancel = new Action(
-                "Cancel",
-                Action.Type.Bool,
-                new Bind(Bind.Controller.Keyboard, Bind.Type.Button, (int)KeyCode.Escape),
-                new Bind(Bind.Controller.Gamepad, Bind.Type.Button, (int)Bind.GamepadButton.B)
-            );
-        }
 
         /// <summary>
         /// Player lookup.
@@ -103,19 +25,7 @@ namespace OpenGET.Input
         /// </summary>
         private InputHelper()
         {
-#if USE_REWIRED
-            Rewired.ReInput.controllers.AddLastActiveControllerChangedDelegate(this.UpdateCursor);
-#endif
         }
-
-#if USE_REWIRED
-        private void UpdateCursor(Rewired.Controller changed)
-        {
-            bool usingGamepad = changed != null && changed.ImplementsTemplate<Rewired.IGamepadTemplate>();
-            Cursor.visible = !usingGamepad;
-            Cursor.lockState = usingGamepad ? CursorLockMode.Locked : CursorLockMode.None;
-        }
-#endif
 
         /// <summary>
         /// Represents the input from a particular player.
@@ -128,16 +38,14 @@ namespace OpenGET.Input
                 index = -1;
             }
 
-#if !USE_REWIRED
             private void UpdateCursor(bool usingGamepad)
             {
                 Cursor.visible = !usingGamepad;
                 Cursor.lockState = usingGamepad ? CursorLockMode.Locked : CursorLockMode.None;
             }
-#endif
 
             /// <summary>
-            /// Constructor takes an index as an identifier.
+            /// Index is stored and used as an identifier.
             /// </summary>
             public void Init(int index)
             {
@@ -152,16 +60,60 @@ namespace OpenGET.Input
                 }
 
                 this.index = index;
-#if USE_REWIRED
-                // Setup Rewired references and callbacks
-                Input = Rewired.ReInput.players.GetPlayer(index);
-                Rewired.Controller lastActive = Input.controllers.GetLastActiveController();
-                usingGamepad = lastActive != null ? lastActive.ImplementsTemplate<Rewired.IGamepadTemplate>() : false;
-                Input.controllers.AddLastActiveControllerChangedDelegate(this.RewiredControllerChange);
-#else
-                onSwitchGamepad += UpdateCursor;
-                Coroutines.Start(PollController());
-#endif
+                onUsingGamepad += UpdateCursor;
+                UnityEngine.InputSystem.InputSystem.onActionChange += OnInputAction;
+                UnityEngine.InputSystem.InputSystem.onDeviceChange += OnInputDeviceChange;
+            }
+
+            /// <summary>
+            /// Update the usingGamepad flag and notify listeners if changed.
+            /// </summary>
+            private void UpdateGamepadStatus(bool usingGamepad)
+            {
+                bool wasUsingGamepad = this.usingGamepad;
+                this.usingGamepad = usingGamepad;
+                if (usingGamepad != wasUsingGamepad)
+                {
+                    onUsingGamepad?.Invoke(usingGamepad);
+                }
+            }
+
+            /// <summary>
+            /// Handle switching between keyboard/mouse input and gamepad.
+            /// </summary>
+            private void OnInputAction(object obj, UnityEngine.InputSystem.InputActionChange change) {
+                if (change == UnityEngine.InputSystem.InputActionChange.ActionPerformed)
+                {
+                    UnityEngine.InputSystem.InputDevice controller = 
+                        ((UnityEngine.InputSystem.InputAction)obj).activeControl?.device;
+
+                    if (controller != null)
+                    {
+                        UpdateGamepadStatus(controller is UnityEngine.InputSystem.Gamepad);
+                    }
+                }
+            }
+
+            /// <summary>
+            /// Handle gamepad connection/disconnection.
+            /// </summary>
+            private void OnInputDeviceChange(UnityEngine.InputSystem.InputDevice device, UnityEngine.InputSystem.InputDeviceChange change)
+            {
+                if (device is UnityEngine.InputSystem.Gamepad)
+                {
+                    switch (change)
+                    {
+                        case UnityEngine.InputSystem.InputDeviceChange.Added:
+                        case UnityEngine.InputSystem.InputDeviceChange.Reconnected:
+                            UpdateGamepadStatus(true);
+                            break;
+                        case UnityEngine.InputSystem.InputDeviceChange.Removed:
+                        case UnityEngine.InputSystem.InputDeviceChange.Disconnected:
+                        default:
+                            UpdateGamepadStatus(false);
+                            break;
+                    }
+                }
             }
 
             /// <summary>
@@ -171,86 +123,17 @@ namespace OpenGET.Input
             {
                 if (index >= 0)
                 {
-#if !USE_REWIRED
-                    onSwitchGamepad -= UpdateCursor;
-#endif
+                    onUsingGamepad -= UpdateCursor;
+                    UnityEngine.InputSystem.InputSystem.onActionChange -= OnInputAction;
+                    UnityEngine.InputSystem.InputSystem.onDeviceChange -= OnInputDeviceChange;
                     this.index = -1;
                 }
             }
-
-#if USE_REWIRED
-            /// <summary>
-            /// Rewired event handler that invokes the onSwitchGamepad event.
-            /// </summary>
-            private void RewiredControllerChange(Rewired.Player rewired, Rewired.Controller changed)
-            {
-                if (changed != null && usingGamepad != changed.ImplementsTemplate<Rewired.IGamepadTemplate>())
-                {
-                    usingGamepad = !usingGamepad;
-                    Log.Debug("Controller changed, usingGamepad = " + usingGamepad.ToString());
-                    onSwitchGamepad?.Invoke(usingGamepad);
-                }
-            }
-#else
-            /// <summary>
-            /// Using the legacy input system, we have to poll to check for connected controllers.
-            /// Warning: This method does not distinguish between gamepads and other controllers (e.g. joysticks).
-            /// </summary>
-            private IEnumerator PollController()
-            {
-                while (index >= 0)
-                {
-                    string[] controllers = Input.GetJoystickNames();
-                    bool wasUsingGamepad = usingGamepad;
-                    usingGamepad = controllers.Length > 0 && !string.IsNullOrEmpty(controllers[0]);
-                    if (usingGamepad != wasUsingGamepad)
-                    {
-                        Log.Debug("Controller changed, usingGamepad = " + usingGamepad.ToString());
-                        onSwitchGamepad?.Invoke(usingGamepad);
-                    }
-                    yield return null;
-                }
-            }
-#endif
 
             /// <summary>
             /// Index of this player.
             /// </summary>
             public int index { get; private set; }
-
-#if USE_REWIRED
-            /// <summary>
-            /// Rewired player instance.
-            /// </summary>
-            protected Rewired.Player Input = null;
-#endif
-
-            /// <summary>
-            /// Returns a controller agnostic input identifier for a given binding.
-            /// A negative value indicates failure to find the id.
-            /// </summary>
-            public int GetBindingElement(Action binding)
-            {
-#if USE_REWIRED
-                var activeController = Input.controllers.GetLastActiveController();
-                if (activeController == null)
-                {
-                    activeController = Input.controllers.Keyboard;
-                }
-                var action = Rewired.ReInput.mapping.GetAction(binding.id);
-                IList<Rewired.ControllerTemplateElementTarget> targets = null;
-                Rewired.ActionElementMap map = Input.controllers.maps.GetFirstElementMapWithAction(activeController, action.id, true);
-                if (map == null || activeController.templateCount == 0 || 
-                    activeController.Templates[0].GetElementTargets(map, targets) < 1)
-                {
-                    return -1;
-                }
-
-                return targets[0].element.id;
-#else
-                return -1;
-#endif
-            }
 
             /// <summary>
             /// Is this player using a gamepad or some other input device (such as keyboard, mouse, touch etc.)?
@@ -270,6 +153,7 @@ namespace OpenGET.Input
                         lastSelected = current;
                     }
                     _selected = value;
+                    EventSystem.current.SetSelectedGameObject(null);
                     EventSystem.current.SetSelectedGameObject(_selected);
                 }
             }
@@ -295,12 +179,12 @@ namespace OpenGET.Input
             /// <summary>
             /// Callback delegate which indicates whether the player has switched to or from the gamepad.
             /// </summary>
-            public delegate void OnSwitchGamepad(bool usingGamepad);
+            public delegate void OnUsingGamepad(bool usingGamepad);
 
             /// <summary>
             /// Callback for handling switching between a gamepad and some other control scheme.
             /// </summary>
-            public event OnSwitchGamepad onSwitchGamepad;
+            public event OnUsingGamepad onUsingGamepad;
 
             /// <summary>
             /// Push a particular group of input handlers onto the priority stack.
@@ -387,7 +271,7 @@ namespace OpenGET.Input
             /// Returns true if control is available. By default this includes cases where there are no groups in the control stack.
             /// Optionally specify exclusive = false if you wish to check that the group has exclusive control currently.
             /// </summary>
-            public bool HasInputControl(GameObject requestGroup, bool exclusive = false)
+            public bool HasControl(GameObject requestGroup, bool exclusive = false)
             {
                 return (controlStack.Count > 0 && controlStack.Peek() == requestGroup) || (!exclusive && controlStack.Count == 0);
             }
@@ -407,104 +291,6 @@ namespace OpenGET.Input
             {
                 return controlStack.Count > 0;
             }
-
-            /// <summary>
-            /// Make sure the input system is valid/working correctly.
-            /// </summary>
-            private bool IsInputNominal()
-            {
-#if USE_REWIRED
-                return Input != null;
-#else
-                return true;
-#endif
-            }
-
-            public bool GetButtonDown(Action action, GameObject requester)
-            {
-                return GetButtonDown(action.id, requester);
-            }
-
-            public bool GetButtonUp(Action action, GameObject requester)
-            {
-                return GetButtonUp(action.id, requester);
-            }
-
-            public bool GetButton(Action action, GameObject requester)
-            {
-                return GetButton(action.id, requester);
-            }
-
-            public bool GetButtonDown(string action, GameObject requester)
-            {
-                return HasInputControl(requester) && Input.GetButtonDown(action);
-            }
-
-            public bool GetButtonUp(string action, GameObject requester)
-            {
-                return HasInputControl(requester) && Input.GetButtonUp(action);
-            }
-
-            public bool GetButton(string action, GameObject requester)
-            {
-                return HasInputControl(requester) && Input.GetButton(action);
-            }
-
-            /// <summary>
-            /// Get the value of a specific axis. Optionally specify pos/neg actions that map to the desired axis.
-            /// The pos/neg actions are added to the axis value but the result is clamped between -1 and 1.
-            /// </summary
-            public float GetAxis(string axis, GameObject requester, string actionPositive = "", string actionNegative = "")
-            {
-                if (!HasInputControl(requester) || !IsInputNominal())
-                {
-                    return 0f;
-                }
-                return Mathf.Clamp(
-                    Input.GetAxis(axis) + 
-                        (string.IsNullOrEmpty(actionPositive) ? 0 : (Input.GetButton(actionPositive) ? 1 : 0)) + 
-                        (string.IsNullOrEmpty(actionNegative) ? 0 : (Input.GetButton(actionNegative) ? -1 : 0)),
-                    -1,
-                    1
-                );
-            }
-
-            /// <summary>
-            /// Get pure x and y axis values. Does not clamp or consider alternative actions used for the axes.
-            /// Note: Y is mapped to Z in the returned Vector3.
-            /// </summary>
-            public Vector3 GetRawAxes(string axisX, string axisY, GameObject requester)
-            {
-                if (!HasInputControl(requester) || !IsInputNominal())
-                {
-                    return Vector3.zero;
-                }
-
-                return new Vector3(
-                    Input.GetAxis(axisX),
-                    0f,
-                    Input.GetAxis(axisY)
-                );
-            }
-
-            /// <summary>
-            /// For each axis, returns the more extreme input value rather than summing together inputs.
-            /// Note: Y axis is mapped to Z in the returned Vector3.
-            /// </summary>
-            public Vector3 GetExtremeAxes(string axisX, string axisY, string actionPositiveX, string actionNegativeX, string actionPositiveY, string actionNegativeY, GameObject requester)
-            {
-                if (!HasInputControl(requester) || !IsInputNominal())
-                {
-                    return Vector2.zero;
-                }
-
-                return new Vector3(
-                    MathUtils.Extreme(Input.GetAxis(axisX), Input.GetButton(actionPositiveX) ? 1.0f : (Input.GetButton(actionNegativeX) ? -1.0f : 0.0f)),
-                    0,
-                    MathUtils.Extreme(Input.GetAxis(axisY), Input.GetButton(actionPositiveY) ? 1.0f : (Input.GetButton(actionNegativeY) ? -1.0f : 0.0f))
-                );
-            }
-
         }
 
         /// <summary>
