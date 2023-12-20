@@ -7,10 +7,8 @@ namespace OpenGET.Input
 {
 
     /// <summary>
-    /// Helper class for dealing with different types of input devices.
+    /// Helper class for dealing with various input devices.
     /// Includes callback event for gamepad connect/disconnect.
-    /// If you are using Rewired (Unity plugin) you should enable the USE_REWIRED preprocessor.
-    /// Note: Vanilla Unity support for gamepad connect/disconnect is rudimentary, Rewired is recommended instead.
     /// </summary>
     public class InputHelper
     {
@@ -117,7 +115,7 @@ namespace OpenGET.Input
             }
 
             /// <summary>
-            /// When done the instance, mark as invalid to stop input polling.
+            /// When done the instance, mark as invalid to unhook event listeners.
             /// </summary>
             public void Invalidate()
             {
