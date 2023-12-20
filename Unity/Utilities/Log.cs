@@ -152,7 +152,7 @@ namespace OpenGET {
         /// By default only checks non-inherited members but you can optionally include those in the checks.
         /// </summary>
         [System.Diagnostics.Conditional("UNITY_EDITOR"), System.Diagnostics.Conditional("OPENGET_DEBUG")]
-        public static void CheckRefs<T>(T obj, bool includeInherited = false) where T : Object
+        public static void NullCheck<T>(T obj, bool includeInherited = false) where T : Object
         {
             if (obj == null)
             {

@@ -16,7 +16,7 @@ namespace OpenGET.UI
 
         protected virtual void Awake()
         {
-            Log.CheckRefs(this);
+            Log.NullCheck(this);
         }
 
         /// <summary>

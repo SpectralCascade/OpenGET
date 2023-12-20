@@ -17,32 +17,13 @@ namespace OpenGET.UI
         }
 
         /// <summary>
-        /// Global UI settings.
-        /// </summary>
-        [CreateAssetMenu(fileName = "UISettings.asset", menuName = "OpenGET/UI Settings")]
-        public class Settings : ScriptableObject
-        {
-
-            /// <summary>
-            /// How long a button input should be pressed before it actually causes an action to complete.
-            /// </summary>
-            public float ButtonHoldTime = 2f;
-
-            /// <summary>
-            /// How long to wait until the player can move focus again after holding down a button.
-            /// </summary>
-            public float MoveFocusCooldown = 0.2f;
-
-        }
-
-        /// <summary>
         /// Global settings for this UI. Default values are used when unassigned.
         /// </summary>
-        public Settings settings {
+        public UIConfig settings {
             get {
                 if (_settings == null)
                 {
-                    _settings = new Settings();
+                    _settings = new UIConfig();
                 }
                 return _settings;
             }
@@ -50,7 +31,7 @@ namespace OpenGET.UI
 
         [SerializeField]
         [Tooltip("Optional - define custom settings to use for all UI.")]
-        private Settings _settings;
+        private UIConfig _settings;
 
         [Tooltip("Recommended - This is the parent transform used for modal popups.")]
         public Transform modalsRoot;
