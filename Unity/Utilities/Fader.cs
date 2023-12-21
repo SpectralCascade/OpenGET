@@ -114,6 +114,7 @@ namespace OpenGET
             float startTime = Time.time;
             float elapsedTime = 0;
             float lerpValue = 0;
+            time = Mathf.Max(float.Epsilon, time);
 
             while (true) {
                 elapsedTime = Time.time - startTime;
