@@ -62,7 +62,11 @@ namespace OpenGET.Bootstrap
             /// </summary>
             public Setting<TextureResolution> textureResolution = new Setting<TextureResolution>(
                 TextureResolution.Half,
+#if UNITY_2022_2_OR_NEWER
+                v => QualitySettings.globalTextureMipmapLimit = (int)v,
+#else
                 v => QualitySettings.masterTextureLimit = (int)v,
+#endif
                 name: () => "Texture Quality",
                 desc: () => "Determines the maximum fidelity (specifically, resolution) of all textures."
             );
