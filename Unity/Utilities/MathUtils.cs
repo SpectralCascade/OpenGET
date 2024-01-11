@@ -14,7 +14,7 @@ namespace OpenGET
 		/// Takes in a value alongside a min+max and returns a normalized 0-1 value.
 		/// EXAMPLE: (val:15, min:10, max:20) returns 0.5f
 		/// </summary>
-		public static float NormalizeValue(float value, float min, float max)
+		public static float Normalize(float value, float min, float max)
 		{
 			float normalized = (value - min) / (max - min);
 			return normalized;
@@ -24,10 +24,19 @@ namespace OpenGET
 		/// Takes in a normalized value alongside a min-max and returns the unnormalized.
 		/// EXAMPLE: (val:0.5f, min:10, max:20) returns 15
 		/// </summary>
-		public static float UnnormalizeValue(float normalized, float min, float max)
+		public static float Denormalize(float normalized, float min, float max)
 		{
 			float unnormalized = normalized * (max - min) + min;
 			return unnormalized;
+		}
+
+		/// <summary>
+		/// Map a value in a range to a different range.
+		/// </summary>
+		public static float MapRange(float value, float min, float max, float target_min, float target_max)
+        {
+			float fraction = Mathf.Clamp(value, min, max) / (max - min);
+			return target_min + (fraction * (target_max - target_min));
 		}
 
 		/// <summary>

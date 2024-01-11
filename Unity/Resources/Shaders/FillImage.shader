@@ -2,8 +2,10 @@
 {
     Properties
 	{
-		_BaseTex("Base Texture", 2D) = "white" {}
+		_MainTex("Base Texture", 2D) = "white" {}
+		_BaseColor("Base Color", Color) = (1, 1, 1, 1)
 		_FillTex("Fill Texture", 2D) = "white" {}
+		_FillColor("FillColor", Color) = (1, 1, 1, 1)
 		_FillAmount("Fill Amount", Range(0.0, 1.0)) = 0.75
     }
     SubShader
@@ -43,8 +45,19 @@
                 return o;
             }
 
-            sampler2D _BaseTex;
+			// Base (unfilled) texture
+            sampler2D _MainTex;
+
+			// Color tint for the base texture
+			fixed4 _BaseColor;
+
+			// Fill (filled) texture
 			sampler2D _FillTex;
+
+			// Color tint for the fill texture
+			fixed4 _FillColor;
+
+			// Percentage filled
 			float _FillAmount;
 
 			fixed4 frag(v2f i) : SV_Target
@@ -56,23 +69,18 @@
 	#else
 				if (_FillAmount >= i.uv.y) {
 	#endif
-					col = tex2D(_FillTex, i.uv);
-				}
-				else {
-					col = tex2D(_BaseTex, i.uv);
-				}
 #else
 	#ifdef INVERT_FILL_ON
 				if (_FillAmount >= 1 - i.uv.x) {
 	#else
 				if (_FillAmount >= i.uv.x) {
 	#endif
-					col = tex2D(_FillTex, i.uv);
+#endif
+					col = tex2D(_FillTex, i.uv) * _FillColor;
 				}
 				else {
-					col = tex2D(_BaseTex, i.uv);
+					col = tex2D(_MainTex, i.uv) * _BaseColor;
 				}
-#endif // VERTICAL_FILL_ON
                 return col;
             }
             ENDCG

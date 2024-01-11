@@ -15,21 +15,21 @@ namespace OpenGET.Editor.UI
         public override void OnInspectorGUI() {            
             FillGraphic fill = (FillGraphic)target;
 
-            FillGraphic.FillType oldFillType = fill.fillType;
-            fill.fillType = (FillGraphic.FillType)EditorGUILayout.EnumPopup("Fill Type:", fill.fillType);
-            bool changedType = fill.fillType != oldFillType;
+            FillGraphic.Type oldFillType = fill.type;
+            fill.type = (FillGraphic.Type)EditorGUILayout.EnumPopup("Fill Type:", fill.type);
+            bool changedType = fill.type != oldFillType;
             if (changedType) {
                 fill.implementation = null;
             }
 
-            fill.verticalFill = EditorGUILayout.Toggle("Vertical Fill:", fill.verticalFill);
-            fill.invertFill = EditorGUILayout.Toggle("Invert Fill:", fill.invertFill);
+            fill.isVertical = EditorGUILayout.Toggle("Vertical Fill:", fill.isVertical);
+            fill.isInverted = EditorGUILayout.Toggle("Invert Fill:", fill.isInverted);
 
-            if (fill.fillType == FillGraphic.FillType.UI_Image) {
+            if (fill.type == FillGraphic.Type.Image) {
                 /// ImageFill editor
-                ImageFill fillImage = (ImageFill)fill.implementation;
+                ImageFill fillImage = fill.implementation as ImageFill;
                 if (fillImage == null) {
-                    fillImage = new ImageFill((FillGraphic)target);
+                    fillImage = new ImageFill(fill);
                     fill.implementation = fillImage;
                 }
 
@@ -42,15 +42,15 @@ namespace OpenGET.Editor.UI
                     }
                     // TODO: grayscale fill support
 
-                    if (fill.baseSprite == null && fill.image.sprite != null && fillImage.material != null) {
+                    if (fill.baseSprite != null && fill.image.sprite != null && fillImage.material != null) {
                         // Default to whatever the image is using.
-                        fillImage.material.SetTexture("_BaseTex", fill.baseSprite.texture); 
+                        fillImage.material.SetTexture("_MainTex", fill.baseSprite.texture); 
                     }
 
                     oldSprite = fill.baseSprite;
                     fill.baseSprite = (Sprite)EditorGUILayout.ObjectField("Base Sprite:", fill.baseSprite, typeof(Sprite), allowSceneObjects: false);
                     if (fill.baseSprite != oldSprite && fillImage.material != null) {
-                        fillImage.material.SetTexture("_BaseTex", fill.baseSprite?.texture);
+                        fillImage.material.SetTexture("_MainTex", fill.baseSprite?.texture);
                     }
 
                     if (fill.baseSprite != null && fill.fillSprite != null) {
@@ -70,6 +70,83 @@ namespace OpenGET.Editor.UI
 
                 fillImage.UpdateMaterial();
 
+            }
+            else if (fill.type == FillGraphic.Type.Sprite)
+            {
+                /// ImageFill editor
+                SpriteFill fillSprite = fill.implementation as SpriteFill;
+                if (fillSprite == null)
+                {
+                    fillSprite = new SpriteFill(fill);
+                    fill.implementation = fillSprite;
+                }
+
+                fill.target = (SpriteRenderer)EditorGUILayout.ObjectField("Target Sprite:", fill.target, typeof(SpriteRenderer), allowSceneObjects: true);
+                if (fill.target != null)
+                {
+                    Sprite oldSprite = fill.fillSprite;
+                    fill.fillSprite = (Sprite)EditorGUILayout.ObjectField("Fill Sprite:", fill.fillSprite, typeof(Sprite), allowSceneObjects: false);
+                    if (fill.fillSprite != oldSprite && fill.fillSprite != null && fillSprite.material != null)
+                    {
+                        fillSprite.material.SetTexture("_FillTex", fill.fillSprite.texture);
+                    }
+
+                    bool isDirty = false;
+                    Color oldColor = fill.fillColor;
+                    fill.fillColor = EditorGUILayout.ColorField("Fill Color:", fill.fillColor);
+                    if (oldColor != fill.fillColor)
+                    {
+                        fillSprite.material.SetColor("_FillColor", fill.fillColor);
+                        isDirty = true;
+                    }
+
+                    if (fill.baseSprite != null && fill.target.sprite != null && fillSprite.material != null)
+                    {
+                        // Default to whatever the image is using.
+                        fillSprite.material.SetTexture("_MainTex", fill.baseSprite.texture);
+                    }
+
+                    oldSprite = fill.baseSprite;
+                    fill.baseSprite = (Sprite)EditorGUILayout.ObjectField("Base Sprite:", fill.baseSprite, typeof(Sprite), allowSceneObjects: false);
+                    if (fill.baseSprite != oldSprite && fillSprite.material != null)
+                    {
+                        fillSprite.material.SetTexture("_MainTex", fill.baseSprite?.texture);
+                    }
+
+                    oldColor = fill.fillColor;
+                    fill.baseColor = EditorGUILayout.ColorField("Base Color:", fill.baseColor);
+                    if (oldColor != fill.fillColor)
+                    {
+                        fillSprite.material.SetColor("_BaseColor", fill.baseColor);
+                        isDirty = true;
+                    }
+
+                    if (fill.baseSprite != null && fill.fillSprite != null)
+                    {
+                        // Show fill slider
+                        float oldValue = fill.implementation.GetValue();
+                        fill.implementation.SetValue(EditorGUILayout.Slider("Fill Value:", fill.implementation.GetValue(), 0.0f, 1.0f));
+                        if (fill.implementation.GetValue() != oldValue || isDirty)
+                        {
+                            EditorUtility.SetDirty(fill);
+                        }
+                    }
+                    else
+                    {
+                        if (isDirty)
+                        {
+                            EditorUtility.SetDirty(fill);
+                        }
+                        EditorGUILayout.HelpBox("You must specify a base sprite and filled sprite for the fill sprite to work.", MessageType.Warning);
+                    }
+
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox("You must specify a target sprite renderer for this fill type.", MessageType.Warning);
+                }
+
+                fillSprite.UpdateMaterial();
             }
 
         }
