@@ -193,12 +193,15 @@ namespace OpenGET.UI {
 #if UNITY_EDITOR
         // TODO: Move this to an editor save event handler
         protected void OnValidate() {
-            Debug.Assert(
-                startShown == gameObject.activeSelf,
-                "Warning: ViewPanel instance is " + (gameObject.activeSelf ? "active" : "inactive") + " in scene but startShown is set to " +
-                startShown.ToString() + ", did you remember to set the gameobject " + (startShown ? "active" : "inactive") + " in the scene?",
-                gameObject
-            );
+            if (UnityEditor.EditorUtility.IsDirty(this))
+            {
+                Debug.Assert(
+                    startShown == gameObject.activeSelf,
+                    "Warning: ViewPanel instance is " + (gameObject.activeSelf ? "active" : "inactive") + " in scene but startShown is set to " +
+                    startShown.ToString() + ", did you remember to set the gameobject " + (startShown ? "active" : "inactive") + " in the scene?",
+                    gameObject
+                );
+            }
         }
 #endif
 

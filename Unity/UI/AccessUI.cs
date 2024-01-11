@@ -33,6 +33,10 @@ namespace OpenGET.UI
                 Debug.Log("Auto assigning UI to " + gameObject.name + "...");
                 _UI = FindObjectOfType<UIController>();
                 Debug.Assert(_UI != null, "Failed to find and auto-assign UI to " + gameObject.name, gameObject);
+                if (_UI != null)
+                {
+                    UnityEditor.EditorUtility.SetDirty(this);
+                }
             }
         }
 #endif
