@@ -17,13 +17,18 @@ namespace OpenGET.Editor.UI
 
             FillGraphic.Type oldFillType = fill.type;
             fill.type = (FillGraphic.Type)EditorGUILayout.EnumPopup("Fill Type:", fill.type);
-            bool changedType = fill.type != oldFillType;
-            if (changedType) {
+            bool didChange = fill.type != oldFillType;
+            if (didChange) {
                 fill.implementation = null;
             }
 
+            didChange |= fill.isVertical;
             fill.isVertical = EditorGUILayout.Toggle("Vertical Fill:", fill.isVertical);
+            didChange = didChange != fill.isVertical;
+
+            didChange |= fill.isInverted;
             fill.isInverted = EditorGUILayout.Toggle("Invert Fill:", fill.isInverted);
+            didChange |= didChange != fill.isInverted;
 
             if (fill.type == FillGraphic.Type.Image) {
                 /// ImageFill editor
@@ -39,6 +44,7 @@ namespace OpenGET.Editor.UI
                     fill.fillSprite = (Sprite)EditorGUILayout.ObjectField("Fill Sprite:", fill.fillSprite, typeof(Sprite), allowSceneObjects: false);
                     if (fill.fillSprite != oldSprite && fill.fillSprite != null && fillImage.material != null) {
                         fillImage.material.SetTexture("_FillTex", fill.fillSprite.texture);
+                        EditorUtility.SetDirty(fill);
                     }
 
                     bool isDirty = false;
@@ -109,6 +115,7 @@ namespace OpenGET.Editor.UI
                     if (fill.fillSprite != oldSprite && fill.fillSprite != null && fillSprite.material != null)
                     {
                         fillSprite.material.SetTexture("_FillTex", fill.fillSprite.texture);
+                        EditorUtility.SetDirty(fill);
                     }
 
                     bool isDirty = false;
@@ -167,6 +174,11 @@ namespace OpenGET.Editor.UI
                 }
 
                 fillSprite.UpdateMaterial();
+            }
+
+            if (didChange)
+            {
+                EditorUtility.SetDirty(fill);
             }
 
         }
