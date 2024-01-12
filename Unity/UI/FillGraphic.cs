@@ -162,17 +162,21 @@ namespace OpenGET.UI
 
         public Material material {
             get {
-                if (parentFill.image != null && parentFill.image.material == null) {
-                    parentFill.image.material = new Material(Shader.Find("OpenGET/FillImage"));
+                if (parentFill.image != null && _material == null) {
+                    Shader shader = Shader.Find("OpenGET/FillImage");
+                    _material = new Material(shader);
+                    parentFill.image.material = _material;
                 }
-                return parentFill.image?.material;
+                return _material;
             }
             private set {
                 if (parentFill.image != null) {
-                    parentFill.image.material = value;
+                    _material = value;
+                    parentFill.image.material = _material;
                 }
             } 
         }
+        private Material _material = null;
 
         public readonly static int fillProperty = Shader.PropertyToID("_FillAmount");
 

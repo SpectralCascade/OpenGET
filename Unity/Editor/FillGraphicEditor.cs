@@ -40,7 +40,15 @@ namespace OpenGET.Editor.UI
                     if (fill.fillSprite != oldSprite && fill.fillSprite != null && fillImage.material != null) {
                         fillImage.material.SetTexture("_FillTex", fill.fillSprite.texture);
                     }
-                    // TODO: grayscale fill support
+
+                    bool isDirty = false;
+                    Color oldColor = fill.fillColor;
+                    fill.fillColor = EditorGUILayout.ColorField("Fill Color:", fill.fillColor);
+                    if (oldColor != fill.fillColor)
+                    {
+                        fillImage.material.SetColor("_FillColor", fill.fillColor);
+                        isDirty = true;
+                    }
 
                     if (fill.baseSprite != null && fill.image.sprite != null && fillImage.material != null) {
                         // Default to whatever the image is using.
@@ -53,14 +61,26 @@ namespace OpenGET.Editor.UI
                         fillImage.material.SetTexture("_MainTex", fill.baseSprite?.texture);
                     }
 
+                    oldColor = fill.fillColor;
+                    fill.baseColor = EditorGUILayout.ColorField("Base Color:", fill.baseColor);
+                    if (oldColor != fill.fillColor)
+                    {
+                        fillImage.material.SetColor("_BaseColor", fill.baseColor);
+                        isDirty = true;
+                    }
+
                     if (fill.baseSprite != null && fill.fillSprite != null) {
                         // Show fill slider
                         float oldValue = fill.implementation.GetValue();
                         fill.implementation.SetValue(EditorGUILayout.Slider("Fill Value:", fill.implementation.GetValue(), 0.0f, 1.0f));
-                        if (fill.implementation.GetValue() != oldValue) {
+                        if (fill.implementation.GetValue() != oldValue || isDirty) {
                             EditorUtility.SetDirty(fill);
                         }
                     } else {
+                        if (isDirty)
+                        {
+                            EditorUtility.SetDirty(fill);
+                        }
                         EditorGUILayout.HelpBox("You must specify a base sprite and filled sprite for the fill image to work.", MessageType.Warning);
                     }
 
