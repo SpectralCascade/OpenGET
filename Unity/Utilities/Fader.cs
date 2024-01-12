@@ -21,6 +21,11 @@ namespace OpenGET
         private IPercentValue implementation;
 
         /// <summary>
+        /// Current fade coroutine.
+        /// </summary>
+        private Coroutine fadeCoroutine = null;
+
+        /// <summary>
         /// Whether the fader is fading in (1), out (-1), or not fading (0).
         /// </summary>
         private int fadeDirection;
@@ -83,7 +88,11 @@ namespace OpenGET
         /// <param name="lerpTime"></param>
         private void DoFade(float start, float end, float lerpTime = 0.5f) {
             fadeDirection = end == 0 ? -1 : 1;
-            Coroutines.Start(Fade(start, end, lerpTime));
+            if (fadeCoroutine != null)
+            {
+                Coroutines.Stop(fadeCoroutine);
+            }
+            fadeCoroutine = Coroutines.Start(Fade(start, end, lerpTime));
         }
 
         /// <summary>
@@ -141,6 +150,7 @@ namespace OpenGET
                     } else {
                         OnFadeComplete(this, 1);
                     }
+                    fadeCoroutine = null;
                     break;
                 }
                 yield return new WaitForEndOfFrame();
