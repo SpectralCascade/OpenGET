@@ -8,42 +8,50 @@ using UnityEngine.UI;
 namespace OpenGET.Editor.UI
 {
 
-    [CustomEditor(typeof(FillGraphic))]
-    public class FillGraphicEditor : UnityEditor.Editor
+    [CustomEditor(typeof(DiscreteFillGraphic))]
+    public class DiscreteFillGraphicEditor : UnityEditor.Editor
     {
 
         public override void OnInspectorGUI() {            
-            FillGraphic fill = (FillGraphic)target;
+            DiscreteFillGraphic fill = (DiscreteFillGraphic)target;
 
-            FillGraphic.Type oldFillType = fill.type;
-            fill.type = (FillGraphic.Type)EditorGUILayout.EnumPopup("Fill Type:", fill.type);
+            DiscreteFillGraphic.Type oldFillType = fill.type;
+            fill.type = (DiscreteFillGraphic.Type)EditorGUILayout.EnumPopup("Fill Type:", fill.type);
             bool didChange = fill.type != oldFillType;
             if (didChange) {
                 fill.implementation = null;
             }
 
-            didChange |= fill.isVertical;
-            fill.isVertical = EditorGUILayout.Toggle("Vertical Fill:", fill.isVertical);
-            didChange = didChange != fill.isVertical;
-
             didChange |= fill.isFlipped;
-            fill.isFlipped = EditorGUILayout.Toggle("Invert Fill:", fill.isFlipped);
+            fill.isFlipped = EditorGUILayout.Toggle("Flipped:", fill.isFlipped);
             didChange |= didChange != fill.isFlipped;
 
-            if (fill.type == FillGraphic.Type.Image) {
-                /// ImageFill editor
-                ImageFill fillImage = fill.implementation as ImageFill;
-                if (fillImage == null) {
-                    fillImage = new ImageFill(fill);
-                    fill.implementation = fillImage;
+            if (fill.type == DiscreteFillGraphic.Type.Image) {
+                /// DiscreteImagesFill editor
+                DiscreteFillGraphic.DiscreteImagesFill discreteFillImages = fill.implementation as DiscreteFillGraphic.DiscreteImagesFill;
+                if (discreteFillImages == null) {
+                    discreteFillImages = new DiscreteFillGraphic.DiscreteImagesFill(fill);
+                    fill.implementation = discreteFillImages;
                 }
 
-                fill.image = (Image)EditorGUILayout.ObjectField("Target Image:", fill.image, typeof(Image), allowSceneObjects: true);
-                if (fill.image != null) {
+                // Unity doesn't provide the full inspector GUI API so work around with a serialised property instead
+                // for arrays.
+                SerializedObject obj = new SerializedObject(fill);
+                SerializedProperty propArray = obj.FindProperty("discreteImages");
+                if (propArray != null)
+                {
+                    EditorGUILayout.PropertyField(propArray, includeChildren: true);
+                    obj.ApplyModifiedProperties();
+                }
+                else
+                {
+                    Log.Error("Failed to find and draw property \"discreteImages\".");
+                }
+
+                if (fill.discreteImages != null) {
                     Sprite oldSprite = fill.fillSprite;
                     fill.fillSprite = (Sprite)EditorGUILayout.ObjectField("Fill Sprite:", fill.fillSprite, typeof(Sprite), allowSceneObjects: false);
-                    if (fill.fillSprite != oldSprite && fill.fillSprite != null && fillImage.material != null) {
-                        fillImage.material.SetTexture("_FillTex", fill.fillSprite.texture);
+                    if (fill.fillSprite != oldSprite && fill.fillSprite != null) {
                         EditorUtility.SetDirty(fill);
                     }
 
@@ -52,30 +60,27 @@ namespace OpenGET.Editor.UI
                     fill.fillColor = EditorGUILayout.ColorField("Fill Color:", fill.fillColor);
                     if (oldColor != fill.fillColor)
                     {
-                        fillImage.material.SetColor("_FillColor", fill.fillColor);
                         isDirty = true;
-                    }
-
-                    if (fill.baseSprite != null && fill.image.sprite != null && fillImage.material != null) {
-                        // Default to whatever the image is using.
-                        fillImage.material.SetTexture("_MainTex", fill.baseSprite.texture); 
                     }
 
                     oldSprite = fill.baseSprite;
                     fill.baseSprite = (Sprite)EditorGUILayout.ObjectField("Base Sprite:", fill.baseSprite, typeof(Sprite), allowSceneObjects: false);
-                    if (fill.baseSprite != oldSprite && fillImage.material != null) {
-                        fillImage.material.SetTexture("_MainTex", fill.baseSprite?.texture);
+                    if (fill.baseSprite != oldSprite) {
+                        EditorUtility.SetDirty(fill);
                     }
 
                     oldColor = fill.fillColor;
                     fill.baseColor = EditorGUILayout.ColorField("Base Color:", fill.baseColor);
                     if (oldColor != fill.fillColor)
                     {
-                        fillImage.material.SetColor("_BaseColor", fill.baseColor);
                         isDirty = true;
                     }
 
                     if (fill.baseSprite != null && fill.fillSprite != null) {
+                        int discreteValue = fill.discreteFill;
+                        fill.discreteFill = EditorGUILayout.IntField("Discrete Fill Value", fill.discreteFill);
+                        isDirty |= fill.discreteFill != discreteValue;
+                        
                         // Show fill slider
                         float oldValue = fill.implementation.GetValue();
                         fill.implementation.SetValue(EditorGUILayout.Slider("Fill Value:", fill.implementation.GetValue(), 0.0f, 1.0f));
@@ -94,27 +99,40 @@ namespace OpenGET.Editor.UI
                     EditorGUILayout.HelpBox("You must specify a target image for this fill type.", MessageType.Warning);
                 }
 
-                fillImage.UpdateMaterial();
+                // Force update
+                discreteFillImages.SetValue(discreteFillImages.GetValue());
 
             }
-            else if (fill.type == FillGraphic.Type.Sprite)
+            else if (fill.type == DiscreteFillGraphic.Type.Sprite)
             {
-                /// ImageFill editor
-                SpriteFill fillSprite = fill.implementation as SpriteFill;
-                if (fillSprite == null)
+                /// DiscreteImagesFill editor
+                DiscreteFillGraphic.DiscreteSpritesFill discreteFillSprites = fill.implementation as DiscreteFillGraphic.DiscreteSpritesFill;
+                if (discreteFillSprites == null)
                 {
-                    fillSprite = new SpriteFill(fill);
-                    fill.implementation = fillSprite;
+                    discreteFillSprites = new DiscreteFillGraphic.DiscreteSpritesFill(fill);
+                    fill.implementation = discreteFillSprites;
                 }
 
-                fill.target = (SpriteRenderer)EditorGUILayout.ObjectField("Target Sprite:", fill.target, typeof(SpriteRenderer), allowSceneObjects: true);
-                if (fill.target != null)
+                // Unity doesn't provide the full inspector GUI API so work around with a serialised property instead
+                // for arrays.
+                SerializedObject obj = new SerializedObject(fill);
+                SerializedProperty propArray = obj.FindProperty("discreteSpriteRenderers");
+                if (propArray != null)
+                {
+                    EditorGUILayout.PropertyField(propArray, includeChildren: true);
+                    obj.ApplyModifiedProperties();
+                }
+                else
+                {
+                    Log.Error("Failed to find and draw property \"discreteSpriteRenderers\".");
+                }
+
+                if (fill.discreteImages != null)
                 {
                     Sprite oldSprite = fill.fillSprite;
                     fill.fillSprite = (Sprite)EditorGUILayout.ObjectField("Fill Sprite:", fill.fillSprite, typeof(Sprite), allowSceneObjects: false);
-                    if (fill.fillSprite != oldSprite && fill.fillSprite != null && fillSprite.material != null)
+                    if (fill.fillSprite != oldSprite && fill.fillSprite != null)
                     {
-                        fillSprite.material.SetTexture("_FillTex", fill.fillSprite.texture);
                         EditorUtility.SetDirty(fill);
                     }
 
@@ -123,33 +141,29 @@ namespace OpenGET.Editor.UI
                     fill.fillColor = EditorGUILayout.ColorField("Fill Color:", fill.fillColor);
                     if (oldColor != fill.fillColor)
                     {
-                        fillSprite.material.SetColor("_FillColor", fill.fillColor);
                         isDirty = true;
-                    }
-
-                    if (fill.baseSprite != null && fill.target.sprite != null && fillSprite.material != null)
-                    {
-                        // Default to whatever the image is using.
-                        fillSprite.material.SetTexture("_MainTex", fill.baseSprite.texture);
                     }
 
                     oldSprite = fill.baseSprite;
                     fill.baseSprite = (Sprite)EditorGUILayout.ObjectField("Base Sprite:", fill.baseSprite, typeof(Sprite), allowSceneObjects: false);
-                    if (fill.baseSprite != oldSprite && fillSprite.material != null)
+                    if (fill.baseSprite != oldSprite)
                     {
-                        fillSprite.material.SetTexture("_MainTex", fill.baseSprite?.texture);
+                        EditorUtility.SetDirty(fill);
                     }
 
                     oldColor = fill.fillColor;
                     fill.baseColor = EditorGUILayout.ColorField("Base Color:", fill.baseColor);
                     if (oldColor != fill.fillColor)
                     {
-                        fillSprite.material.SetColor("_BaseColor", fill.baseColor);
                         isDirty = true;
                     }
 
                     if (fill.baseSprite != null && fill.fillSprite != null)
                     {
+                        int discreteValue = fill.discreteFill;
+                        fill.discreteFill = EditorGUILayout.IntField("Discrete Fill Value", fill.discreteFill);
+                        isDirty |= fill.discreteFill != discreteValue;
+
                         // Show fill slider
                         float oldValue = fill.implementation.GetValue();
                         fill.implementation.SetValue(EditorGUILayout.Slider("Fill Value:", fill.implementation.GetValue(), 0.0f, 1.0f));
@@ -164,16 +178,18 @@ namespace OpenGET.Editor.UI
                         {
                             EditorUtility.SetDirty(fill);
                         }
-                        EditorGUILayout.HelpBox("You must specify a base sprite and filled sprite for the fill sprite to work.", MessageType.Warning);
+                        EditorGUILayout.HelpBox("You must specify a base sprite and filled sprite for the fill image to work.", MessageType.Warning);
                     }
 
                 }
                 else
                 {
-                    EditorGUILayout.HelpBox("You must specify a target sprite renderer for this fill type.", MessageType.Warning);
+                    EditorGUILayout.HelpBox("You must specify a target image for this fill type.", MessageType.Warning);
                 }
 
-                fillSprite.UpdateMaterial();
+                // Force update
+                discreteFillSprites.SetValue(discreteFillSprites.GetValue());
+
             }
 
             if (didChange)

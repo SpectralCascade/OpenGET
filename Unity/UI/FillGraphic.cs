@@ -7,9 +7,16 @@ using UnityEngine.UI;
 namespace OpenGET.UI
 {
 
+    /// <summary>
+    /// A continuous fill bar used to display a ranged value such as progress.
+    /// Can be used with UI images or sprite renderers.
+    /// </summary>
     public class FillGraphic : MonoBehaviour
     {
 
+        /// <summary>
+        /// Type of graphic component to be used, e.g. a UI image.
+        /// </summary>
         public enum Type
         {
             Image = 0,
@@ -20,7 +27,7 @@ namespace OpenGET.UI
             Debug.Assert(fillSprite != null);
             Debug.Assert(baseSprite != null);
             isVertical = _verticalFill;
-            isInverted = _invertFill;
+            isFlipped = _flipFill;
         }
 
         public Type type;
@@ -31,7 +38,7 @@ namespace OpenGET.UI
         /// TODO: Upgrade to 2019.3, add [SerializeReference] attribute,
         /// then instead of storing specific image/sprite stuff in this class
         /// we can store it in the ImageFill itself.
-        public IPercentValue implementation {
+        public virtual IPercentValue implementation {
             get {
                 if (impl == null)
                 {
@@ -54,7 +61,7 @@ namespace OpenGET.UI
                 impl = value;
             }
         }
-        private IPercentValue impl = null;
+        protected IPercentValue impl = null;
 
         /// <summary>
         /// TODO: see IPercentValue implementation TODO.
@@ -94,12 +101,15 @@ namespace OpenGET.UI
 
         [SerializeField]
         [HideInInspector]
-        private bool _invertFill;
+        private bool _flipFill;
 
         [SerializeField]
         [HideInInspector]
         private bool _verticalFill = true;
 
+        /// <summary>
+        /// Should the graphic fill vertically?
+        /// </summary>
         public bool isVertical {
             get { return _verticalFill; }
             set { 
@@ -120,21 +130,24 @@ namespace OpenGET.UI
             }
         }
 
-        public bool isInverted {
-            get { return _invertFill; }
+        /// <summary>
+        /// Should the graphic fill from the opposite direction?
+        /// </summary>
+        public bool isFlipped {
+            get { return _flipFill; }
             set {
-                _invertFill = value;
+                _flipFill = value;
                 if (image != null && image.material != null) {
                     if (value) {
-                        image.material.EnableKeyword("INVERT_FILL_ON");
+                        image.material.EnableKeyword("FLIP_FILL_ON");
                     } else {
-                        image.material.DisableKeyword("INVERT_FILL_ON");
+                        image.material.DisableKeyword("FLIP_FILL_ON");
                     }
                 } else if (target != null && target.sharedMaterial != null) {
                     if (value) {
-                        target.sharedMaterial.EnableKeyword("INVERT_FILL_ON");
+                        target.sharedMaterial.EnableKeyword("FLIP_FILL_ON");
                     } else {
-                        target.sharedMaterial.DisableKeyword("INVERT_FILL_ON");
+                        target.sharedMaterial.DisableKeyword("FLIP_FILL_ON");
                     }
                 }
             }

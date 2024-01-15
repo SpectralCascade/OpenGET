@@ -20,7 +20,7 @@
             #pragma vertex vert
             #pragma fragment frag
 			#pragma multi_compile VERTICAL_FILL_ON VERTICAL_FILL_OFF
-			#pragma multi_compile INVERT_FILL_OFF INVERT_FILL_ON
+			#pragma multi_compile FLIP_FILL_OFF FLIP_FILL_ON
 			#pragma multi_compile GRAYSCALE_OFF GRAYSCALE_ON
 
             #include "UnityCG.cginc"
@@ -64,13 +64,13 @@
 			{
 				fixed4 col;
 #ifdef VERTICAL_FILL_ON
-	#ifdef INVERT_FILL_ON
+	#ifdef FLIP_FILL_ON
 				if (_FillAmount >= 1 - i.uv.y) {
 	#else
 				if (_FillAmount >= i.uv.y) {
 	#endif
 #else
-	#ifdef INVERT_FILL_ON
+	#ifdef FLIP_FILL_ON
 				if (_FillAmount >= 1 - i.uv.x) {
 	#else
 				if (_FillAmount >= i.uv.x) {
