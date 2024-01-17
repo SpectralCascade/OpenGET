@@ -12,7 +12,7 @@ namespace OpenGET.Editor.UI
     public class FillGraphicEditor : UnityEditor.Editor
     {
 
-        public override void OnInspectorGUI() {            
+        public override void OnInspectorGUI() {
             FillGraphic fill = (FillGraphic)target;
 
             FillGraphic.Type oldFillType = fill.type;
@@ -27,7 +27,7 @@ namespace OpenGET.Editor.UI
             didChange = didChange != fill.isVertical;
 
             didChange |= fill.isFlipped;
-            fill.isFlipped = EditorGUILayout.Toggle("Invert Fill:", fill.isFlipped);
+            fill.isFlipped = EditorGUILayout.Toggle("Flip Fill:", fill.isFlipped);
             didChange |= didChange != fill.isFlipped;
 
             if (fill.type == FillGraphic.Type.Image) {
