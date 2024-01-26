@@ -5,19 +5,14 @@ using UnityEngine;
 namespace OpenGET.UI
 {
 
-    public class AccessUI : MonoBehaviour
+    public class AccessUI : AutoBehaviour
     {
 
         [SerializeField]
-        [NullCheck]
+        [Auto.NullCheck]
         protected UIController _UI = null;
 
         public UIController UI => _UI;
-
-        protected virtual void Awake()
-        {
-            Log.NullCheck(this);
-        }
 
         /// <summary>
         /// Convenience getter that can do the cast implicitly for you.

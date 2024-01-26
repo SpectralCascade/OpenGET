@@ -60,11 +60,11 @@ namespace OpenGET.UI
         public InputHelper.Player input => _input = (_input == null ? InputHelper.Get(currentPlayer) : _input);
         private InputHelper.Player _input;
 
-        [NullCheck]
+        [Auto.NullCheck]
         public UnityEngine.InputSystem.InputActionReference actionSubmit;
-        [NullCheck]
+        [Auto.NullCheck]
         public UnityEngine.InputSystem.InputActionReference actionCancel;
-        [NullCheck]
+        [Auto.NullCheck]
         public UnityEngine.InputSystem.InputActionReference actionMoveSelection;
 
     }
