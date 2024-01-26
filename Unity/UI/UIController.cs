@@ -6,7 +6,7 @@ using OpenGET.Input;
 namespace OpenGET.UI
 {
 
-    public abstract class UIController : MonoBehaviour
+    public abstract class UIController : AutoBehaviour
     {
 
         /// <summary>
