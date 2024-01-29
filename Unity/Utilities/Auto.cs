@@ -56,7 +56,7 @@ namespace OpenGET
         /// Automatically assign all component references to fields with AutoHook attributes.
         /// By default only checks non-inherited members but you can optionally include those.
         /// </summary>
-        public static void Hookup<T>(T obj, bool includeInherited = false, bool useDerivedType = false) where T : MonoBehaviour
+        public static void Hookup<T>(T obj, bool includeInherited = false, bool useDerivedType = false) where T : Behaviour
         {
             if (obj == null)
             {
@@ -75,7 +75,7 @@ namespace OpenGET
             for (int i = 0, counti = fields.Length; i < counti; i++)
             {
                 if (fields[i].GetValue(obj) == null &&
-                    fields[i].FieldType.IsSubclassOf(typeof(MonoBehaviour)) &&
+                    fields[i].FieldType.IsSubclassOf(typeof(Behaviour)) &&
                     !fields[i].IsNotSerialized
                 )
                 {

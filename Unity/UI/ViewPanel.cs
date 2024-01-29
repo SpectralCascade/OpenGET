@@ -30,6 +30,14 @@ namespace OpenGET.UI {
         protected ViewPanel below = null;
 
         /// <summary>
+        /// Canvas group used for fading.
+        /// </summary>
+        [SerializeField]
+        [Auto.Hookup]
+        [Auto.NullCheck]
+        protected CanvasGroup canvasGroup;
+
+        /// <summary>
         /// The button used to go back to the previous screen, if relevant. May be null.
         /// </summary>
         public UnityEngine.UI.Button backButton = null;
@@ -47,13 +55,12 @@ namespace OpenGET.UI {
             get {
                 if (_fader == null)
                 {
-                    CanvasGroup cg = gameObject.AddComponentOnce<CanvasGroup>();
                     if (Application.isPlaying)
                     {
                         // Make sure panel is invisible so it can fade in
-                        cg.alpha = 0;
+                        canvasGroup.alpha = 0;
                     }
-                    _fader = new Fader(cg);
+                    _fader = new Fader(canvasGroup);
                     _fader.OnFadeComplete += OnFaded;
                 }
                 return _fader;
@@ -192,7 +199,8 @@ namespace OpenGET.UI {
 
 #if UNITY_EDITOR
         // TODO: Move this to an editor save event handler
-        protected void OnValidate() {
+        protected override void OnValidate() {
+            base.OnValidate();
             if (UnityEditor.EditorUtility.IsDirty(this))
             {
                 Debug.Assert(

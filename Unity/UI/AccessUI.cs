@@ -10,6 +10,7 @@ namespace OpenGET.UI
 
         [SerializeField]
         [Auto.NullCheck]
+        [Auto.Hookup(Auto.Mode.Parent)]
         protected UIController _UI = null;
 
         public UIController UI => _UI;
