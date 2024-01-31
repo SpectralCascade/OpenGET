@@ -304,11 +304,28 @@ namespace OpenGET.UI {
                 }
                 // Hide the top of the stack
                 above.SetShown(false);
+
                 above.below = null;
-                above = null;
+                if (above.above != null)
+                {
+                    // Special case - popped but there are still higher panels on the stack.
+                    // As this is a non-recursive pop, seamlessly remove the above panel as if it was never pushed
+                    ViewPanel old = above;
+                    above.above.below = this;
+                    above = above.above;
+                    if (above.backButton != null)
+                    {
+                        above.backButton.onClick.RemoveListener(old.Pop);
+                        above.backButton.onClick.AddListener(Pop);
+                    }
+                }
+                else
+                {
+                    above = null;
+                }
             }
             // Show this panel now this is the top of the stack.
-            if (!IsFullyShown()) {
+            if (above == null && !IsFullyShown()) {
                 SetShown(true);
             }
         }
