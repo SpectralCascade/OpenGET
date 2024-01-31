@@ -391,6 +391,13 @@ namespace OpenGET
         }
 
         /// <summary>
+        /// Called when settings are about to be applied after being loaded for the first time.
+        /// </summary>
+        protected virtual void OnLoad()
+        {
+        }
+
+        /// <summary>
         /// Ensure the singleton instance is initialised and pre-existing settings are applied.
         /// </summary>
         private static void CheckInit()
@@ -415,6 +422,7 @@ namespace OpenGET
                 }
                 else
                 {
+                    instance.OnLoad();
                     Apply();
                     Log.Debug("Successfully initialised settings instance.");
                 }
