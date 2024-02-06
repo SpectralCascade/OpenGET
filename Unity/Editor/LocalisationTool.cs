@@ -13,7 +13,7 @@ namespace OpenGET
     /// <summary>
     /// Editor tool for generating a CSV of localisation strings from a Unity project.
     /// </summary>
-    public class LocalisationScraper : EditorWindow
+    public class LocalisationTool : EditorWindow
     {
 
         /// <summary>
@@ -87,10 +87,8 @@ namespace OpenGET
         private Dictionary<string, ExportData> exportTable = new Dictionary<string, ExportData>();
 
         /// <summary>
-        /// Freshly found strings that don't already exist in the database.
+        /// Custom field for user-specified function names to pattern match for.
         /// </summary>
-        private List<string> fresh = new List<string>();
-
         private TextField functionNames;
 
         /// <summary>
@@ -99,7 +97,7 @@ namespace OpenGET
         [MenuItem("OpenGET/Localisation")]
         public static void Open()
         {
-            LocalisationScraper window = GetWindow<LocalisationScraper>();
+            LocalisationTool window = GetWindow<LocalisationTool>();
             window.titleContent = new GUIContent("Localisation [OpenGET]");
         }
 
