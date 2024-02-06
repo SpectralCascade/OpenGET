@@ -60,13 +60,13 @@ namespace OpenGET
             public string[] ExportRow()
             {
                 return new string[] {
-                    raw,
-                    sourceFileNames,
-                    string.Join(
+                    "\"" + raw + "\"",
+                    "\"" + sourceFileNames + "\"",
+                    "\"" + string.Join(
                         ", ",
                         (System.Enum.GetValues(typeof(SourceType)) as IEnumerable<SourceType>).Where(x => (sources & x) > 0)
-                    ),
-                    formattingContext
+                    ) + "\"",
+                    "\"" + formattingContext + "\""
                 };
             }
         }
@@ -122,7 +122,7 @@ namespace OpenGET
                     Localise.Text(""key1 {0}"", Localise.Text(""Nested function call, with a comma... and some \funky\ chars"", x));
                     Localise.Text(AnotherFunction(param3), param4);
                     Localise.Text(""key2"", param5);
-                    var Text = Localise.Text(@""some \ escaped \ string"", param6, Localise.Text(""Another nested call"", Localise.Text(""Double nested"", y)));
+                    var Text = Localise.Text(""some \ escaped \ string"", param6, Localise.Text(""Another nested call"", Localise.Text(""Double nested"", y)));
                     Localise.Text(""key3"", ""default"");
                     FunctionWithArray(new int[] { 1, 2, 3 }, param7);
                 ";
@@ -138,13 +138,17 @@ namespace OpenGET
 
             root.Add(button);
 
-            // Create toggle
             functionNames = new TextField();
             // TODO: Serialise settings and load them in
             functionNames.value = "Localise\\.Text";
             functionNames.name = "FunctionNames";
             functionNames.label = "Function names to match";
             root.Add(functionNames);
+
+            button = new Button(ScrapeCode);
+            button.name = "ScrapeCode";
+            button.text = "Extract strings from scripts";
+            root.Add(button);
         }
 
         /// <summary>
@@ -165,7 +169,7 @@ namespace OpenGET
         /// <summary>
         /// Searches for relevant function calls and extracts the argument strings into a stack.
         /// Treats nested calls as separate stack items and replaces them with a dummy parameter in parent stack items.
-        /// e.g. arguments string "\"Test {0}\", failed ? Localise.Text("Failed") : Localise.Text("Succeeded")"
+        /// e.g. arguments string "\"Test {0}\", failed ? LocaliseFunc("Failed") : LocaliseFunc("Succeeded")"
         /// becomes string "\"Test {0}\", failed ? [localised text] : [localised text]"
         /// </summary>
         private Stack<string> ExtractArguments(string functionNames, Stack<string> code, int depth = 0) {
@@ -253,13 +257,33 @@ namespace OpenGET
             exportTable.Clear();
             string[] ids = AssetDatabase.FindAssets("t:script");
             string[] paths = ids.Select(x => AssetDatabase.GUIDToAssetPath(x)).Where(x => !string.IsNullOrEmpty(x)).ToArray();
+            List<ExportData> newStrings = new List<ExportData>();
             for (int i = 0, counti = paths.Length; i < counti; i++)
             {
-                TextAsset script = AssetDatabase.LoadAssetAtPath<TextAsset>(paths[i]);
-                Stack<string> code = new Stack<string>();
-                code.Push(script.text);
-                ProcessArgs(ExtractArguments(matchFunctionNames, code), System.IO.Path.GetFileNameWithoutExtension(paths[i]));
+                Log.Debug("Parsing file {0}/{1} at \"{2}\"", i + 1, counti, paths[i]);
+
+                try
+                {
+                    TextAsset script = AssetDatabase.LoadAssetAtPath<TextAsset>(paths[i]);
+                    Stack<string> code = new Stack<string>();
+                    code.Push(script.text);
+                    newStrings.AddRange(
+                        ProcessArgs(
+                            ExtractArguments(matchFunctionNames, code),
+                            System.IO.Path.GetFileNameWithoutExtension(paths[i])
+                        )
+                    );
+                }
+                catch (System.Exception e)
+                {
+                    Log.Exception(e);
+                }
             }
+
+            string savePath = Application.dataPath + "/TestExport.csv";
+            Log.Debug("Found {0} new localisation strings, saving to {1}", newStrings.Count, savePath);
+            string data = string.Join("\n", newStrings.Select(x => string.Join(",", x.ExportRow())));
+            System.IO.File.WriteAllText(savePath, data, System.Text.Encoding.UTF8);
         }
 
         /// <summary>
