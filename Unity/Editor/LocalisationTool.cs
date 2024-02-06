@@ -17,6 +17,52 @@ namespace OpenGET
     {
 
         /// <summary>
+        /// Pattern matching data for extracting strings from function call arguments.
+        /// </summary>
+        [System.Serializable]
+        public class Marker
+        {
+            public Marker(string functionName, int extractMax = 1)
+            {
+                this.functionName = functionName;
+                this.extractMax = extractMax;
+            }
+
+            /// <summary>
+            /// Name of the function to extract from.
+            /// </summary>
+            public string functionName;
+
+            /// <summary>
+            /// Maximum number of arguments to consider for string extraction.
+            /// </summary>
+            public int extractMax;
+
+        }
+
+        /// <summary>
+        /// Contains extracted string data as well as additional information such as it's marker.
+        /// </summary>
+        private class ExtractionData
+        {
+            public ExtractionData(string data, Marker marker)
+            {
+                this.data = data;
+                this.marker = marker;
+            }
+
+            /// <summary>
+            /// Extracted raw string data.
+            /// </summary>
+            public string data;
+
+            /// <summary>
+            /// Associated marker.
+            /// </summary>
+            public Marker marker;
+        }
+
+        /// <summary>
         /// Contains localisation string export data, not just the raw string but also contextual information.
         /// </summary>
         [System.Serializable]
@@ -57,29 +103,19 @@ namespace OpenGET
             /// <summary>
             /// Export the data as a CSV row.
             /// </summary>
-            public string[] ExportRow()
+            public string ExportRow()
             {
-                return new string[] {
-                    "\"" + raw + "\"",
-                    "\"" + sourceFileNames + "\"",
+                return 
+                    "\"" + raw + "\"," +
+                    "\"" + sourceFileNames + "\"," +
                     "\"" + string.Join(
                         ", ",
                         (System.Enum.GetValues(typeof(SourceType)) as IEnumerable<SourceType>).Where(x => (sources & x) > 0)
-                    ) + "\"",
+                    ) + "\"," +
                     "\"" + formattingContext + "\""
-                };
+                ;
             }
         }
-
-        /// <summary>
-        /// All function names to match for when extracting strings for localisation.
-        /// </summary>
-        public string matchFunctionNames => functionNames.value;
-
-        /// <summary>
-        /// Path to the CSV file used as the persistent database table.
-        /// </summary>
-        private TextAsset csv = null;
 
         /// <summary>
         /// Database table of ids mapped to export data.
@@ -87,9 +123,19 @@ namespace OpenGET
         private Dictionary<string, ExportData> exportTable = new Dictionary<string, ExportData>();
 
         /// <summary>
-        /// Custom field for user-specified function names to pattern match for.
+        /// OpenGET editor settings object reference.
         /// </summary>
-        private TextField functionNames;
+        public EditorConfig config;
+
+        /// <summary>
+        /// Localisation config settings property field.
+        /// </summary>
+        private UnityEditor.UIElements.PropertyField localisationConfig;
+
+        /// <summary>
+        /// This object's serialisation binding.
+        /// </summary>
+        private SerializedObject serialiser;
 
         /// <summary>
         /// Setup the editor window.
@@ -109,6 +155,30 @@ namespace OpenGET
             // Each editor window contains a root VisualElement object
             VisualElement root = rootVisualElement;
 
+            // Make sure we always have a valid configuration
+            if (config == null)
+            {
+                string[] found = AssetDatabase.FindAssets("t:" + typeof(EditorConfig).ToString());
+
+                config = found.Length > 0 ? 
+                    AssetDatabase.LoadAssetAtPath<EditorConfig>(AssetDatabase.GUIDToAssetPath(found[0])) : 
+                    CreateInstance<EditorConfig>();
+            }
+
+            // OpenGET configuration settings reference
+            serialiser = new SerializedObject(this);
+            SerializedProperty prop = serialiser.FindProperty("config");
+            localisationConfig = new UnityEditor.UIElements.PropertyField(prop);
+            UnityEditor.UIElements.BindingExtensions.Bind(localisationConfig, serialiser);
+            root.Add(localisationConfig);
+
+            // Display localisation settings
+            SerializedObject obj = new SerializedObject(config);
+            prop = obj.FindProperty("localisation");
+            UnityEditor.UIElements.PropertyField addProp = new UnityEditor.UIElements.PropertyField(prop);
+            UnityEditor.UIElements.BindingExtensions.Bind(addProp, obj);
+            root.Add(addProp);
+
             // Create button
             Button button = new Button();
             button.name = "";
@@ -119,13 +189,21 @@ namespace OpenGET
                     SomeFunction(param1, param2);
                     Localise.Text(""key1 {0}"", Localise.Text(""Nested function call, with a comma... and some \funky\ chars"", x));
                     Localise.Text(AnotherFunction(param3), param4);
+                    [SettingsGroup(""Test"", ""Desc test"")]
                     Localise.Text(""key2"", param5);
                     var Text = Localise.Text(""some \ escaped \ string"", param6, Localise.Text(""Another nested call"", Localise.Text(""Double nested"", y)));
                     Localise.Text(""key3"", ""default"");
                     FunctionWithArray(new int[] { 1, 2, 3 }, param7);
                 ";
                 exportTable.Clear();
-                List<ExportData> newData = ProcessArgs(ExtractArguments(matchFunctionNames, new Stack<string>(new string[] { code })), "__test__");
+                List<ExportData> newData = ProcessArgs(
+                    ExtractArguments(
+                        config.localisation.extractionMatches,
+                        GetPatternString(config.localisation.extractionMatches),
+                        new Stack<ExtractionData>(new ExtractionData[] { new ExtractionData(code, null) })
+                    ),
+                    "__test__"
+                );
 
                 Log.Debug(
                     "Found {0} new localisation strings: [{1}]",
@@ -136,17 +214,26 @@ namespace OpenGET
 
             root.Add(button);
 
-            functionNames = new TextField();
-            // TODO: Serialise settings and load them in
-            functionNames.value = "Localise\\.Text";
-            functionNames.name = "FunctionNames";
-            functionNames.label = "Function names to match";
-            root.Add(functionNames);
-
             button = new Button(ScrapeCode);
             button.name = "ScrapeCode";
             button.text = "Extract strings from scripts";
             root.Add(button);
+        }
+
+        private void OnInspectorUpdate()
+        {
+            if (config == null)
+            {
+                config = CreateInstance<EditorConfig>();
+            }
+        }
+
+        /// <summary>
+        /// Gets localisation extraction marker function names in RegEx string format.
+        /// </summary>
+        public string GetPatternString(Marker[] markers)
+        {
+            return "(?:" + string.Join("|", markers.Select(x => Regex.Escape(x.functionName))) + ")";
         }
 
         /// <summary>
@@ -170,25 +257,32 @@ namespace OpenGET
         /// e.g. arguments string "\"Test {0}\", failed ? LocaliseFunc("Failed") : LocaliseFunc("Succeeded")"
         /// becomes string "\"Test {0}\", failed ? [localised text] : [localised text]"
         /// </summary>
-        private Stack<string> ExtractArguments(string functionNames, Stack<string> code, int depth = 0) {
+        private Stack<ExtractionData> ExtractArguments(Marker[] markers, string functionNames, Stack<ExtractionData> code, int depth = 0) {
             string pattern = functionNames + @"\s*\(([^()""']|""(?:\\.|[^""\\])*""|'(?:\\.|[^'\\])*'|\((?<DEPTH>)|\)(?<-DEPTH>))*(?(DEPTH)(?!))\)"; ;
 
-            string source = code.Pop();
-            MatchCollection matches = Regex.Matches(source, pattern);
+            if (depth == 0)
+            {
+                Log.Debug("Matching with pattern: {0}", pattern);
+            }
+
+            ExtractionData source = code.Pop();
+            MatchCollection matches = Regex.Matches(source.data, pattern);
             foreach (Match match in matches)
             {
                 // Strip function call wrapping to get the actual arguments string
-                string parameters = GetParameters(match.Groups[0].Value.Trim());
+                string found = match.Groups[0].Value.Trim();
+                Marker marker = markers.FirstOrDefault(x => found.StartsWith(x.functionName));
+                string parameters = GetParameters(found);
 
                 if (!string.IsNullOrEmpty(parameters))
                 {
                     // Now push args on the stack and consider those
                     if (depth > 0)
                     {
-                        source = source.Replace(match.Groups[0].Value, "[localised text]");
+                        source.data = source.data.Replace(match.Groups[0].Value, "[localised text]");
                     }
-                    code.Push(parameters);
-                    ExtractArguments(functionNames, code, depth + 1);
+                    code.Push(new ExtractionData(parameters, marker));
+                    ExtractArguments(markers, functionNames, code, depth + 1);
                 }
             }
 
@@ -203,44 +297,64 @@ namespace OpenGET
         }
 
         /// <summary>
+        /// Strip string literal wrapper characters.
+        /// </summary>
+        private string StripLiteral(string literal)
+        {
+            return literal.Remove(literal.Length - 1).Remove(0, literal[0] == '"' ? 1 : 2);
+        }
+
+        /// <summary>
         /// Extracts string literal arguments from the given function calls and gets strings setup for export.
         /// </summary>
-        private List<ExportData> ProcessArgs(Stack<string> code, string fileName)
+        private List<ExportData> ProcessArgs(Stack<ExtractionData> code, string fileName)
         {
             // Step through the stack and extract strings
             List<ExportData> freshExport = new List<ExportData>();
             while (code.Count > 0)
             {
-                string args = code.Pop();
+                ExtractionData extracted = code.Pop();
+                string args = extracted.data;
 
                 //Log.Debug("Processing args: {0}", args.Replace("{", "{{").Replace("}", "}}"));
                 MatchCollection matches = Regex.Matches(args, @"(""[^""]*"")|[^,]+");
-                if (matches.Count > 0)
+                int counti = Mathf.Min(matches.Count, extracted.marker != null ? extracted.marker.extractMax : 1);
+                List<string> extractedArgs = new List<string>();
+                for (int i = 0; i < counti; i++)
                 {
-                    string arg = matches[0].Value.Trim();
-                    args = args.Remove(0, matches[0].Value.Length).Trim();
-
+                    string arg = matches[i].Value.Trim();
                     if (arg.Length > 2 && (arg[0] == '"' || arg[1] == '"'))
                     {
-                        arg = arg.Remove(arg.Length - 1).Remove(0, arg[0] == '"' ? 1 : 2);
-                        if (!exportTable.ContainsKey(arg))
-                        {
-                            ExportData data = new ExportData();
-                            data.raw = arg;
-                            data.sourceFileNames = fileName;
-                            data.sources = ExportData.SourceType.Script;
-                            data.formattingContext = args.Length > 0 ? "(" + args + ")" : "";
-                            exportTable.Add(arg, data);
-                            freshExport.Add(data);
-                        }
-                        else
-                        {
-                            exportTable[arg].sourceFileNames += ", " + fileName;
-                            exportTable[arg].sources |= ExportData.SourceType.Script;
-                            exportTable[arg].formattingContext += ", (" + args + ")";
-                        }
+                        extractedArgs.Add(arg);
+                        args = args.Replace(arg, "_");
                     }
-                    //Log.Debug("Obtained arg: {0}", arg.Replace("{", "{{").Replace("}", "}}"));
+                    //Log.Debug("Obtained arg: {0}", arg.Replace("{", "{{").Replace("}", "}}"));                    
+                }
+
+                counti = extractedArgs.Count;
+                for (int i = 0; i < counti; i++)
+                {
+                    string arg = extractedArgs[i];
+                    arg = StripLiteral(arg);
+
+                    string func = (extracted.marker != null ? extracted.marker.functionName : "");
+                    if (!exportTable.ContainsKey(arg))
+                    {
+                        ExportData data = new ExportData();
+                        data.raw = arg;
+                        data.sourceFileNames = fileName;
+                        data.sources = ExportData.SourceType.Script;
+                        data.formattingContext = args.Length > 0 ? 
+                            (counti > 1 ? "Param " + (i + 1) + " of " : "") + (func + "(" + args + ")") : "";
+                        exportTable.Add(arg, data);
+                        freshExport.Add(data);
+                    }
+                    else
+                    {
+                        exportTable[arg].sourceFileNames += ", " + fileName;
+                        exportTable[arg].sources |= ExportData.SourceType.Script;
+                        exportTable[arg].formattingContext += ", " + func + "(" + args + ")";
+                    }
                 }
             }
             return freshExport;
@@ -253,21 +367,33 @@ namespace OpenGET
         public void ScrapeCode()
         {
             exportTable.Clear();
-            string[] ids = AssetDatabase.FindAssets("t:script");
-            string[] paths = ids.Select(x => AssetDatabase.GUIDToAssetPath(x)).Where(x => !string.IsNullOrEmpty(x)).ToArray();
-            List<ExportData> newStrings = new List<ExportData>();
-            for (int i = 0, counti = paths.Length; i < counti; i++)
+
+            // Get paths to all scripts in valid directories
+            List<string> paths = new List<string>();
+            for (int i = 0, counti = config.localisation.includePaths.Length; i < counti; i++)
+            {
+                paths.AddRange(System.IO.Directory.EnumerateFiles(
+                    System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, config.localisation.includePaths[i])),
+                    "*.cs",
+                    System.IO.SearchOption.AllDirectories
+                ));
+            }
+
+            // Read all scripts and extract raw strings to be localised
+            List<ExportData> export = new List<ExportData>();
+            string match = GetPatternString(config.localisation.extractionMatches);
+            Log.Debug("Matching functions: {0}", match);
+            for (int i = 0, counti = paths.Count; i < counti; i++)
             {
                 Log.Debug("Parsing file {0}/{1} at \"{2}\"", i + 1, counti, paths[i]);
 
                 try
                 {
-                    TextAsset script = AssetDatabase.LoadAssetAtPath<TextAsset>(paths[i]);
-                    Stack<string> code = new Stack<string>();
-                    code.Push(script.text);
-                    newStrings.AddRange(
+                    Stack<ExtractionData> code = new Stack<ExtractionData>();
+                    code.Push(new ExtractionData(System.IO.File.ReadAllText(paths[i]), null));
+                    export.AddRange(
                         ProcessArgs(
-                            ExtractArguments(matchFunctionNames, code),
+                            ExtractArguments(config.localisation.extractionMatches, match, code),
                             System.IO.Path.GetFileNameWithoutExtension(paths[i])
                         )
                     );
@@ -279,8 +405,8 @@ namespace OpenGET
             }
 
             string savePath = Application.dataPath + "/TestExport.csv";
-            Log.Debug("Found {0} new localisation strings, saving to {1}", newStrings.Count, savePath);
-            string data = string.Join("\n", newStrings.Select(x => string.Join(",", x.ExportRow())));
+            Log.Debug("Found {0} new localisation strings, saving to {1}", export.Count, savePath);
+            string data = string.Join("\n", export.Select(x => x.ExportRow()));
             System.IO.File.WriteAllText(savePath, data, System.Text.Encoding.UTF8);
         }
 

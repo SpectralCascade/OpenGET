@@ -120,6 +120,11 @@ namespace OpenGET
             }
         }
 
+        public static string Runtime(string raw)
+        {
+            return raw;
+        }
+
         /// <summary>
         /// Attempts to return a localised version of a string for the current language.
         /// On failure to find an associated localised string, returns the [MISSING STRING "{raw}"]
