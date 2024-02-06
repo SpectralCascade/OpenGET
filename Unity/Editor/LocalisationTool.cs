@@ -156,9 +156,9 @@ namespace OpenGET
             VisualElement root = rootVisualElement;
 
             // Make sure we always have a valid configuration
-            if (config == null)
+            if (config == null || config.name.Length <= 0)
             {
-                string[] found = AssetDatabase.FindAssets("t:" + typeof(EditorConfig).ToString());
+                string[] found = AssetDatabase.FindAssets("t:" + typeof(EditorConfig).Name);
 
                 config = found.Length > 0 ? 
                     AssetDatabase.LoadAssetAtPath<EditorConfig>(AssetDatabase.GUIDToAssetPath(found[0])) : 
@@ -191,7 +191,7 @@ namespace OpenGET
                     Localise.Text(AnotherFunction(param3), param4);
                     [SettingsGroup(""Test"", ""Desc test"")]
                     Localise.Text(""key2"", param5);
-                    var Text = Localise.Text(""some \ escaped \ string"", param6, Localise.Text(""Another nested call"", Localise.Text(""Double nested"", y)));
+                    var Text = Localise.Text(""some \""escaped\"" string"", param6, Localise.Text(""Another nested call"", Localise.Text(""Double nested"", y)));
                     Localise.Text(""key3"", ""default"");
                     FunctionWithArray(new int[] { 1, 2, 3 }, param7);
                 ";
@@ -258,12 +258,7 @@ namespace OpenGET
         /// becomes string "\"Test {0}\", failed ? [localised text] : [localised text]"
         /// </summary>
         private Stack<ExtractionData> ExtractArguments(Marker[] markers, string functionNames, Stack<ExtractionData> code, int depth = 0) {
-            string pattern = functionNames + @"\s*\(([^()""']|""(?:\\.|[^""\\])*""|'(?:\\.|[^'\\])*'|\((?<DEPTH>)|\)(?<-DEPTH>))*(?(DEPTH)(?!))\)"; ;
-
-            if (depth == 0)
-            {
-                Log.Debug("Matching with pattern: {0}", pattern);
-            }
+            string pattern = functionNames + @"\s*\(([^()""']|""(?:\\.|[^""\\])*""|'(?:\\.|[^'\\])*'|\((?<DEPTH>)|\)(?<-DEPTH>))*(?(DEPTH)(?!))\)";
 
             ExtractionData source = code.Pop();
             MatchCollection matches = Regex.Matches(source.data, pattern);
@@ -317,18 +312,21 @@ namespace OpenGET
                 string args = extracted.data;
 
                 //Log.Debug("Processing args: {0}", args.Replace("{", "{{").Replace("}", "}}"));
-                MatchCollection matches = Regex.Matches(args, @"(""[^""]*"")|[^,]+");
+                MatchCollection matches = Regex.Matches(args, @"""(?:\\.|[^""\\])*""|[^,]+");
                 int counti = Mathf.Min(matches.Count, extracted.marker != null ? extracted.marker.extractMax : 1);
                 List<string> extractedArgs = new List<string>();
                 for (int i = 0; i < counti; i++)
                 {
-                    string arg = matches[i].Value.Trim();
-                    if (arg.Length > 2 && (arg[0] == '"' || arg[1] == '"'))
+                    for (int j = 0, countj = matches[i].Captures.Count; j < countj; j++)
                     {
-                        extractedArgs.Add(arg);
-                        args = args.Replace(arg, "_");
+                        string arg = matches[i].Captures[j].Value.Trim();
+                        if (arg.Length > 2 && (arg[0] == '"' || arg[1] == '"'))
+                        {
+                            extractedArgs.Add(arg);
+                            args = args.Replace(arg, "_");
+                        }
+                        //Log.Debug("Obtained arg: {0}", arg.Replace("{", "{{").Replace("}", "}}"));
                     }
-                    //Log.Debug("Obtained arg: {0}", arg.Replace("{", "{{").Replace("}", "}}"));                    
                 }
 
                 counti = extractedArgs.Count;

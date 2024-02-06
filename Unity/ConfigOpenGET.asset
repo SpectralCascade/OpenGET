@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   localisation:
     extractionMatches:
-    - functionName: Localise\.Text
+    - functionName: Localise.Text
       extractMax: 1
     - functionName: SettingsGroup
       extractMax: 2
