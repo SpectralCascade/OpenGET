@@ -23,8 +23,7 @@ namespace OpenGET
 #endif
 
         /// <summary>
-        /// The text string. This acts as the localisation id when autoLocalise is true,
-        /// otherwise it is treated as an already localised text string.
+        /// The text string. In addition to being the original/source text to be translated, this is also the localisation id.
         /// </summary>
         public string text {
             get {
