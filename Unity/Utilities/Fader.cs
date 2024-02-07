@@ -146,9 +146,9 @@ namespace OpenGET
                     }
 
                     if (fadeDir < 0) {
-                        OnFadeComplete(this, -1);
+                        OnFadeComplete?.Invoke(this, -1);
                     } else {
-                        OnFadeComplete(this, 1);
+                        OnFadeComplete?.Invoke(this, 1);
                     }
                     fadeCoroutine = null;
                     break;
