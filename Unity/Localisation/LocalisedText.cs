@@ -23,22 +23,22 @@ namespace OpenGET
 #endif
 
         /// <summary>
-        /// The text string. In addition to being the original/source text to be translated, this is also the localisation id.
+        /// The raw string. In addition to being the original/source text to be translated, this is also the localisation id.
         /// </summary>
-        public string text {
+        public string id {
             get {
-                if (id == null)
+                if (_id == null || !Application.isPlaying)
                 {
-                    id = textGraphic.text;
+                    _id = textGraphic.text;
                 }
-                return id;
+                return _id;
             }
             set {
-                id = value;
+                _id = value;
                 AutoLocalise();
             }
         }
-        private string id = null;
+        private string _id = null;
 
         /// <summary>
         /// Whenever enabled, re-localise in case the language has changed.
@@ -57,7 +57,7 @@ namespace OpenGET
             if (Application.isPlaying)
             {
 #endif
-                string localised = !string.IsNullOrEmpty(text) ? Localise.Text(text) : "[NULL TEXT]";
+                string localised = !string.IsNullOrEmpty(id) ? Localise.Text(id) : "[NULL TEXT]";
                 textGraphic.text = localised;
 #if UNITY_EDITOR
             }

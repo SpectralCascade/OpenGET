@@ -218,6 +218,11 @@ namespace OpenGET
             button.name = "ScrapeCode";
             button.text = "Extract strings from scripts";
             root.Add(button);
+
+            button = new Button(ScrapeScenes);
+            button.name = "ScrapeScenes";
+            button.text = "Scrape strings from scenes";
+            root.Add(button);
         }
 
         private void OnInspectorUpdate()
@@ -368,10 +373,10 @@ namespace OpenGET
 
             // Get paths to all scripts in valid directories
             List<string> paths = new List<string>();
-            for (int i = 0, counti = config.localisation.includePaths.Length; i < counti; i++)
+            for (int i = 0, counti = config.localisation.scriptIncludePaths.Length; i < counti; i++)
             {
                 paths.AddRange(System.IO.Directory.EnumerateFiles(
-                    System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, config.localisation.includePaths[i])),
+                    System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, config.localisation.scriptIncludePaths[i])),
                     "*.cs",
                     System.IO.SearchOption.AllDirectories
                 ));
@@ -411,21 +416,75 @@ namespace OpenGET
         /// <summary>
         /// Scrape GameObjects from the root of some hierarchy such as a scene root GameObject, or a prefab.
         /// </summary>
-        public void ScrapeHierarchy(GameObject root)
+        public List<ExportData> ScrapeHierarchy(GameObject root, ExportData.SourceType type)
         {
-            LocalisedText[] allText = root.GetComponentsInChildren<LocalisedText>();
+            LocalisedText[] allText = root.GetComponentsInChildren<LocalisedText>(true);
+            List<ExportData> exported = new List<ExportData>();
             for (int i = 0, counti = allText.Length; i < counti; i++)
             {
-                AddString(allText[i].text);
+                exported.Add(AddString(
+                    allText[i].id,
+                    type == ExportData.SourceType.Scene ? root.scene.name : root.name,
+                    allText[i].gameObject.name,
+                    type
+                ));
             }
+            return exported;
+        }
+
+        /// <summary>
+        /// Extract strings from LocalisedText objects in scenes.
+        /// </summary>
+        public void ScrapeScenes()
+        {
+            // TODO: Load scene data from file YAML rather than loading in entirety
+            List<ExportData> export = new List<ExportData>();
+            string[] paths = new string[EditorBuildSettings.scenes.Length];
+            for (int i = 0, counti = paths.Length; i < counti; i++) {
+                paths[i] = EditorBuildSettings.scenes[i].path;
+            }
+            SceneNavigator.RunSceneProcess(
+                paths,
+                (Scene scene) => {
+                    Log.Debug("Extracting localisation strings from scene {0}", scene.name);
+                    GameObject[] roots = scene.GetRootGameObjects();
+                    for (int i = 0, counti = roots.Length; i < counti; i++)
+                    {
+                        export.AddRange(ScrapeHierarchy(roots[i], ExportData.SourceType.Scene));
+                    }
+                }
+            );
+            Log.Debug(
+                "Exported {0} strings from {1} scene(s): {2}",
+                export.Count,
+                paths.Length,
+                string.Join(", ", export.Select(x => "\"" + x.raw.Replace("{", "{{").Replace("}", "}}") + "\""))
+            );
         }
 
         /// <summary>
         /// Add a string to the localisation 
         /// </summary>
-        private void AddString(string text)
+        private ExportData AddString(string raw, string sourceFileName, string context, ExportData.SourceType source)
         {
-            //if ()
+            ExportData data;
+            if (!exportTable.ContainsKey(raw))
+            {
+                data = new ExportData();
+                data.raw = raw;
+                data.sourceFileNames = sourceFileName;
+                data.sources = source;
+                data.formattingContext = context;
+                exportTable.Add(raw, data);
+            }
+            else
+            {
+                data = exportTable[raw];
+                data.sourceFileNames += ", " + sourceFileName;
+                data.sources |= source;
+                data.formattingContext += ", " + context;
+            }
+            return data;
         }
 
     }

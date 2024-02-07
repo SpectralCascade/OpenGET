@@ -19,13 +19,19 @@ namespace OpenGET
             /// </summary>
             [Header("Functions to pattern match when extracting strings from code.")]
             public LocalisationTool.Marker[] extractionMatches = new LocalisationTool.Marker[] {
-                new LocalisationTool.Marker("Localise\\.Text")
+                new LocalisationTool.Marker("Localise.Text"),
+                new LocalisationTool.Marker("SettingsGroup", 2)
             };
 
             /// <summary>
-            /// Script paths that should be considered during strings extraction, relative to project assets directory.
+            /// Paths that should be considered during strings extraction, relative to project assets directory.
             /// </summary>
-            public string[] includePaths = new string[0];
+            public string[] scriptIncludePaths = new string[0];
+            
+            /// <summary>
+            /// Paths that should be considered during scenes extraction, relative to project assets directory.
+            /// </summary>
+            public string[] prefabIncludePaths = new string[0];
 
             /// <summary>
             /// Output path for the extracted strings CSV file.
