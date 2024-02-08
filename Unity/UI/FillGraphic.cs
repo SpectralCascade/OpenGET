@@ -120,11 +120,11 @@ namespace OpenGET.UI
                     } else {
                         image.material.EnableKeyword("VERTICAL_FILL_OFF");
                     }
-                } else if (target != null && target.sharedMaterial != null) {
+                } else if (target != null && target.material != null) {
                     if (value) {
-                        target.sharedMaterial.DisableKeyword("VERTICAL_FILL_OFF");
+                        target.material.DisableKeyword("VERTICAL_FILL_OFF");
                     } else {
-                        target.sharedMaterial.EnableKeyword("VERTICAL_FILL_OFF");
+                        target.material.EnableKeyword("VERTICAL_FILL_OFF");
                     }
                 }
             }
@@ -143,11 +143,11 @@ namespace OpenGET.UI
                     } else {
                         image.material.DisableKeyword("FLIP_FILL_ON");
                     }
-                } else if (target != null && target.sharedMaterial != null) {
+                } else if (target != null && target.material != null) {
                     if (value) {
-                        target.sharedMaterial.EnableKeyword("FLIP_FILL_ON");
+                        target.material.EnableKeyword("FLIP_FILL_ON");
                     } else {
-                        target.sharedMaterial.DisableKeyword("FLIP_FILL_ON");
+                        target.material.DisableKeyword("FLIP_FILL_ON");
                     }
                 }
             }
@@ -235,16 +235,16 @@ namespace OpenGET.UI
 
         public Material material {
             get {
-                if (parentFill.target != null && parentFill.target.sharedMaterial == null)
+                if (parentFill.target != null && parentFill.target.material == null)
                 {
-                    parentFill.target.sharedMaterial = new Material(Shader.Find("OpenGET/FillImage"));
+                    parentFill.target.material = new Material(Shader.Find("OpenGET/FillImage"));
                 }
-                return parentFill.target?.sharedMaterial;
+                return parentFill.target?.material;
             }
             private set {
                 if (parentFill.target != null)
                 {
-                    parentFill.target.sharedMaterial = value;
+                    parentFill.target.material = value;
                 }
             }
         }
