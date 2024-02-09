@@ -75,6 +75,30 @@ namespace OpenGET.UI
         public SpriteRenderer target;
 
         /// <summary>
+        /// Material associated with the target SpriteRenderer.
+        /// In the Unity editor out of play mode, using the local material causes leak errors
+        /// so the shared material is used instead.
+        /// </summary>
+        public Material targetMaterial {
+            get {
+                return
+#if UNITY_EDITOR
+                    !Application.isPlaying ? target.sharedMaterial :
+#endif
+                    target.material;
+            }
+            set {
+#if UNITY_EDITOR
+                if (!Application.isPlaying) {
+                    target.sharedMaterial = value;
+                    return;
+                }
+#endif
+                target.material = value;
+            }
+        }
+
+        /// <summary>
         /// The "full", filled sprite.
         /// </summary>
         public Sprite fillSprite;
@@ -120,11 +144,11 @@ namespace OpenGET.UI
                     } else {
                         image.material.EnableKeyword("VERTICAL_FILL_OFF");
                     }
-                } else if (target != null && target.material != null) {
+                } else if (target != null && targetMaterial != null) {
                     if (value) {
-                        target.material.DisableKeyword("VERTICAL_FILL_OFF");
+                        targetMaterial.DisableKeyword("VERTICAL_FILL_OFF");
                     } else {
-                        target.material.EnableKeyword("VERTICAL_FILL_OFF");
+                        targetMaterial.EnableKeyword("VERTICAL_FILL_OFF");
                     }
                 }
             }
@@ -143,11 +167,11 @@ namespace OpenGET.UI
                     } else {
                         image.material.DisableKeyword("FLIP_FILL_ON");
                     }
-                } else if (target != null && target.material != null) {
+                } else if (target != null && targetMaterial != null) {
                     if (value) {
-                        target.material.EnableKeyword("FLIP_FILL_ON");
+                        targetMaterial.EnableKeyword("FLIP_FILL_ON");
                     } else {
-                        target.material.DisableKeyword("FLIP_FILL_ON");
+                        targetMaterial.DisableKeyword("FLIP_FILL_ON");
                     }
                 }
             }
@@ -235,16 +259,16 @@ namespace OpenGET.UI
 
         public Material material {
             get {
-                if (parentFill.target != null && parentFill.target.material == null)
+                if (parentFill.target != null && parentFill.targetMaterial == null)
                 {
-                    parentFill.target.material = new Material(Shader.Find("OpenGET/FillImage"));
+                    parentFill.targetMaterial = new Material(Shader.Find("OpenGET/FillImage"));
                 }
                 return parentFill.target?.material;
             }
             private set {
                 if (parentFill.target != null)
                 {
-                    parentFill.target.material = value;
+                    parentFill.targetMaterial = value;
                 }
             }
         }
