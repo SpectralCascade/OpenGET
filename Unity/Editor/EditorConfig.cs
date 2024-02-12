@@ -36,12 +36,12 @@ namespace OpenGET
             /// <summary>
             /// Output path for the extracted strings CSV file.
             /// </summary>
-            public string extractionOutputPath = "OpenGET_Localisation_Export.csv";
+            public string extractionOutputPath = "strings_export.csv";
 
             /// <summary>
             /// CSV file containing imported string localisations.
             /// </summary>
-            public TextAsset importData;
+            public string importPath = "strings.csv";
 
         }
 

@@ -42,6 +42,7 @@ namespace OpenGET
 
         /// <summary>
         /// Contains extracted string data as well as additional information such as it's marker.
+        /// Used exclusively for extracting from code.
         /// </summary>
         private class ExtractionData
         {
@@ -123,6 +124,16 @@ namespace OpenGET
         private Dictionary<string, ExportData> exportTable = new Dictionary<string, ExportData>();
 
         /// <summary>
+        /// Database table of ids mapped to imported localised strings.
+        /// </summary>
+        private Dictionary<string, string[]> importTable = new Dictionary<string, string[]>();
+
+        /// <summary>
+        /// How many columns are in the import table?
+        /// </summary>
+        private int numImportColumns = 0;
+
+        /// <summary>
         /// OpenGET editor settings object reference.
         /// </summary>
         public EditorConfig config;
@@ -136,6 +147,11 @@ namespace OpenGET
         /// This object's serialisation binding.
         /// </summary>
         private SerializedObject serialiser;
+
+        /// <summary>
+        /// Info displayed about import/export data.
+        /// </summary>
+        private Label infoLabel;
 
         /// <summary>
         /// Setup the editor window.
@@ -160,8 +176,8 @@ namespace OpenGET
             {
                 string[] found = AssetDatabase.FindAssets("t:" + typeof(EditorConfig).Name);
 
-                config = found.Length > 0 ? 
-                    AssetDatabase.LoadAssetAtPath<EditorConfig>(AssetDatabase.GUIDToAssetPath(found[0])) : 
+                config = found.Length > 0 ?
+                    AssetDatabase.LoadAssetAtPath<EditorConfig>(AssetDatabase.GUIDToAssetPath(found[0])) :
                     CreateInstance<EditorConfig>();
             }
 
@@ -179,8 +195,65 @@ namespace OpenGET
             UnityEditor.UIElements.BindingExtensions.Bind(addProp, obj);
             root.Add(addProp);
 
-            // Create button
-            Button button = new Button();
+            root.Add(new Label("\nImport pre-existing localisations"));
+
+            Button button = new Button(() => {
+                string path = "";
+                if (string.IsNullOrEmpty(config.localisation.importPath))
+                {
+                    path = EditorUtility.OpenFilePanel("Import localisations", Application.dataPath, "csv");
+                }
+                else
+                {
+                    path = config.localisation.importPath;
+                }
+
+                if (!string.IsNullOrEmpty(path))
+                {
+                    Log.Debug("Importing localisations CSV at \"{0}\"", path);
+                    CSVFile.CSVReader csv = new CSVFile.CSVReader(new System.IO.StreamReader(path, System.Text.Encoding.UTF8));
+                    csv.Settings.HeaderRowIncluded = true;
+                    csv.Settings.TextQualifier = '"';
+                    csv.Settings.LineSeparator = "\n";
+
+                    int line = 0;
+                    foreach (string[] row in csv)
+                    {
+                        Log.Debug("Importing CSV row {0}", line);
+                        line++;
+                        //if (line > 1)
+                        //{
+                            List<string> data = new List<string>(row);
+                            data.RemoveAt(0);
+                            if (!importTable.ContainsKey(row[0]))
+                            {
+                                importTable.Add(row[0], data.ToArray());
+                                Log.Debug("Imported CSV row with key \"{0}\": {1}", row[0], string.Join(", ", row));
+                            }
+                        //}
+                    }
+                }
+                else
+                {
+                    Log.Warning("Could not obtain path to import CSV.");
+                }
+
+                UpdateInfoLabel();
+            });
+            button.name = "ImportCSV";
+            button.text = "Import localisations CSV";
+            root.Add(button);
+
+            button = new Button(() => MigrateFromTypicalCSV(
+                EditorUtility.OpenFilePanel("Migrate old localisations", Application.dataPath, "csv"))
+            );
+            button.name = "MigrateCSV";
+            button.text = "Migrate pre-existing localisation file";
+            root.Add(button);
+
+            root.Add(new Label("\nExtract strings"));
+
+            button = new Button();
             button.name = "";
             button.text = "Test Regex";
             button.clicked += () => {
@@ -195,7 +268,6 @@ namespace OpenGET
                     Localise.Text(""key3"", ""default"");
                     FunctionWithArray(new int[] { 1, 2, 3 }, param7);
                 ";
-                exportTable.Clear();
                 List<ExportData> newData = ProcessArgs(
                     ExtractArguments(
                         config.localisation.extractionMatches,
@@ -207,22 +279,82 @@ namespace OpenGET
 
                 Log.Debug(
                     "Found {0} new localisation strings: [{1}]",
-                    newData.Count, 
+                    newData.Count,
                     string.Join(", ", newData.Select(x => "\"" + x.raw.Replace("{", "{{").Replace("}", "}}") + "\""))
                 );
             };
 
             root.Add(button);
 
-            button = new Button(ScrapeCode);
-            button.name = "ScrapeCode";
-            button.text = "Extract strings from scripts";
+            if (false)
+            {
+                button = new Button(() => ScrapeCode());
+                button.name = "ScrapeCode";
+                button.text = "Extract strings from scripts";
+                root.Add(button);
+
+                button = new Button(() => ScrapeScenes());
+                button.name = "ScrapeScenes";
+                button.text = "Extract strings from scenes";
+                root.Add(button);
+
+                button = new Button(() => ScrapePrefabs());
+                button.name = "ScrapePrefabs";
+                button.text = "Extract strings from prefabs";
+                root.Add(button);
+            }
+
+            button = new Button(() => {
+                ScrapeCode();
+                ScrapePrefabs();
+                ScrapeScenes();
+            });
+            button.name = "ScrapeAll";
+            button.text = "Extract strings from ALL sources";
             root.Add(button);
 
-            button = new Button(ScrapeScenes);
-            button.name = "ScrapeScenes";
-            button.text = "Scrape strings from scenes";
+            button = new Button(() => System.IO.File.WriteAllText(
+                EditorUtility.SaveFilePanel("Export data", Application.dataPath, "export_strings", "csv"), ExportToCSV())
+            );
+            button.name = "ExportCSV";
+            button.text = "Export strings to CSV";
             root.Add(button);
+
+            root.Add(new Label("\nAmend imported localisations"));
+
+            button = new Button(() => MergeExportIntoImport());
+            button.name = "MergeExportIntoImport";
+            button.text = "Merge export strings into import data";
+            root.Add(button);
+
+            button = new Button(() => System.IO.File.WriteAllText(
+                EditorUtility.SaveFilePanel("Save localisations table", Application.dataPath, "strings", "csv"), ImportToCSV())
+            );
+            button.name = "ExportTable";
+            button.text = "Save localisations to CSV";
+            root.Add(button);
+
+            root.Add(new Label("\nClear data"));
+
+            button = new Button(() => {
+                importTable.Clear();
+                UpdateInfoLabel();
+            });
+            button.name = "ClearImportData";
+            button.text = "Clear import data";
+            root.Add(button);
+
+            button = new Button(() => {
+                exportTable.Clear();
+                UpdateInfoLabel();
+            });
+            button.name = "ClearExportData";
+            button.text = "Clear export data";
+            root.Add(button);
+
+            infoLabel = new Label("");
+            UpdateInfoLabel();
+            root.Add(infoLabel);
         }
 
         private void OnInspectorUpdate()
@@ -231,6 +363,26 @@ namespace OpenGET
             {
                 config = CreateInstance<EditorConfig>();
             }
+        }
+
+        /// <summary>
+        /// Convert export table into a CSV string.
+        /// </summary>
+        private string ExportToCSV()
+        {
+            return string.Join("\n", exportTable.Select(x => x.Value.ExportRow()));
+        }
+
+        /// <summary>
+        /// Convert import able into a CSV string.
+        /// </summary>
+        private string ImportToCSV()
+        {
+            /*foreach (var row in importTable)
+            {
+                Log.Debug("Writing {0} : {1}", "\"" + row.Key + "\"", string.Join(", ", row.Value.Select(x => "\"" + x + "\"")));
+            }*/
+            return string.Join("\n", importTable.Select(kv => string.Join(",", kv.Value.Select(str => "\"" + str + "\""))));
         }
 
         /// <summary>
@@ -364,14 +516,25 @@ namespace OpenGET
         }
 
         /// <summary>
-        /// Scrape code for localisation strings.
-        /// TODO: Parallelise to speed up processing time.
+        /// Export extracted localisation strings to CSV.
         /// </summary>
-        public void ScrapeCode()
+        public void ExportCSV(string path, List<ExportData> export)
         {
-            exportTable.Clear();
+            Log.Debug("Found {0} localisation strings, saving to {1}", export.Count, path);
+            string data = string.Join("\n", export.Select(x => x.ExportRow()));
+            System.IO.File.WriteAllText(path, data, System.Text.Encoding.UTF8);
+        }
 
-            // Get paths to all scripts in valid directories
+        /// <summary>
+        /// Info label text update.
+        /// </summary>
+        private void UpdateInfoLabel()
+        {
+            infoLabel.text = string.Format("Import data rows: {0}\nExport data rows: {1}", importTable.Count, exportTable.Count);
+        }
+
+        private List<string> GetScriptPaths()
+        {
             List<string> paths = new List<string>();
             for (int i = 0, counti = config.localisation.scriptIncludePaths.Length; i < counti; i++)
             {
@@ -381,6 +544,17 @@ namespace OpenGET
                     System.IO.SearchOption.AllDirectories
                 ));
             }
+            return paths;
+        }
+
+        /// <summary>
+        /// Scrape code for localisation strings.
+        /// TODO: Parallelise to speed up processing time.
+        /// </summary>
+        public List<ExportData> ScrapeCode()
+        {
+            // Get paths to all scripts in valid directories
+            List<string> paths = GetScriptPaths();
 
             // Read all scripts and extract raw strings to be localised
             List<ExportData> export = new List<ExportData>();
@@ -406,11 +580,9 @@ namespace OpenGET
                     Log.Exception(e);
                 }
             }
+            UpdateInfoLabel();
 
-            string savePath = Application.dataPath + "/TestExport.csv";
-            Log.Debug("Found {0} new localisation strings, saving to {1}", export.Count, savePath);
-            string data = string.Join("\n", export.Select(x => x.ExportRow()));
-            System.IO.File.WriteAllText(savePath, data, System.Text.Encoding.UTF8);
+            return export;
         }
 
         /// <summary>
@@ -429,13 +601,41 @@ namespace OpenGET
                     type
                 ));
             }
+            UpdateInfoLabel();
+
             return exported;
+        }
+        
+        /// <summary>
+        /// Scrape all prefabs in the specified include paths.
+        /// </summary>
+        public List<ExportData> ScrapePrefabs()
+        {
+            string[] guids = AssetDatabase.FindAssets("t:prefab", config.localisation.prefabIncludePaths);
+            List<ExportData> extracted = new List<ExportData>();
+            for (int i = 0, counti = guids.Length; i < counti; i++)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+                Log.Debug("Extracting from prefab at \"{0}\"", path);
+                GameObject root = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (root != null)
+                {
+                    extracted.AddRange(ScrapeHierarchy(root, ExportData.SourceType.Prefab));
+                }
+                else
+                {
+                    Log.Debug("Root GameObject is null :(");
+                }
+            }
+            Log.Debug("Searched {0} prefab(s) and extracted {1} localisation strings.", guids.Length, extracted.Count);
+            UpdateInfoLabel();
+            return extracted;
         }
 
         /// <summary>
         /// Extract strings from LocalisedText objects in scenes.
         /// </summary>
-        public void ScrapeScenes()
+        public List<ExportData> ScrapeScenes()
         {
             // TODO: Load scene data from file YAML rather than loading in entirety
             List<ExportData> export = new List<ExportData>();
@@ -455,15 +655,16 @@ namespace OpenGET
                 }
             );
             Log.Debug(
-                "Exported {0} strings from {1} scene(s): {2}",
-                export.Count,
+                "Searched {0} scene(s) and extracted {1} localisation strings.",                
                 paths.Length,
-                string.Join(", ", export.Select(x => "\"" + x.raw.Replace("{", "{{").Replace("}", "}}") + "\""))
+                export.Count
             );
+            UpdateInfoLabel();
+            return export;
         }
 
         /// <summary>
-        /// Add a string to the localisation 
+        /// Add a string to the localisation export table.
         /// </summary>
         private ExportData AddString(string raw, string sourceFileName, string context, ExportData.SourceType source)
         {
@@ -485,6 +686,96 @@ namespace OpenGET
                 data.formattingContext += ", " + context;
             }
             return data;
+        }
+
+        /// <summary>
+        /// Merge export data into import data, with empty strings inserted in lieu of localised data.
+        /// Optionally provide the index of the main language and add the raw IDs to that column as well.
+        /// </summary>
+        private void MergeExportIntoImport(int mainLanguageColumn = 1)
+        {
+            foreach (KeyValuePair<string, ExportData> entry in exportTable)
+            {
+                if (!importTable.ContainsKey(entry.Key))
+                {
+                    string[] data = new string[numImportColumns];
+                    data[0] = entry.Key;
+                    if (mainLanguageColumn > 0 && mainLanguageColumn < numImportColumns)
+                    {
+                        data[mainLanguageColumn] = entry.Key;
+                    }
+                    importTable.Add(entry.Key, data);
+                }
+            }
+            UpdateInfoLabel();
+        }
+
+        /// <summary>
+        /// Migrate a typical localisation table that has custom IDs to this localisation table, which uses raw strings as IDs.
+        /// This does assume that the layout of the headers row is the same (i.e. IDs column, then language names).
+        /// </summary>
+        private void MigrateFromTypicalCSV(string path, int nativeStringColumn = 1, int skipRows = 1, bool migrateScripts = true)
+        {
+            CSVFile.CSVReader csv = new CSVFile.CSVReader(new System.IO.StreamReader(path, System.Text.Encoding.UTF8));
+            csv.Settings.HeaderRowIncluded = true;
+            csv.Settings.TextQualifier = '"';
+            if (nativeStringColumn < 0 || nativeStringColumn >= csv.Headers.Length)
+            {
+                Log.Error("Failed to migrate from typical CSV as specified native string column index {0} is out of range.", nativeStringColumn);
+                return;
+            }
+
+            int rowsRead = 0;
+            numImportColumns = csv.Headers.Length;
+            // Track IDs to match up in code and overwrite
+            Dictionary<string, string> idMap = new Dictionary<string, string>();
+            foreach (string[] row in csv)
+            {
+                rowsRead++;
+                if (rowsRead > skipRows)
+                {
+                    if (!importTable.ContainsKey(row[nativeStringColumn]))
+                    {
+                        importTable.Add(row[nativeStringColumn], new string[numImportColumns]);
+                        Log.Debug("Adding new localisation entry \"{0}\"", row[nativeStringColumn]);
+                    }
+                    else
+                    {
+                        Log.Debug("Importing existing localisation entry \"{0}\"", row[nativeStringColumn]);
+                    }
+                    importTable[row[nativeStringColumn]][0] = row[nativeStringColumn];
+                    idMap[row[0]] = row[nativeStringColumn];
+                    for (int i = 1, counti = Mathf.Min(row.Length, numImportColumns); i < counti; i++)
+                    {
+                        importTable[row[nativeStringColumn]][i] = row[i];
+                    }
+                }
+            }
+
+            if (migrateScripts)
+            {
+                // Do a simple find and replace operation to migrate old IDs
+                List<string> scripts = GetScriptPaths();
+                for (int i = 0, counti = scripts.Count; i < counti; i++)
+                {
+                    try
+                    {
+                        string code = System.IO.File.ReadAllText(scripts[i]);
+                        foreach (var kv in idMap)
+                        {
+                            code = code.Replace("\"" + kv.Key + "\"", "\"" + kv.Value + "\"");
+                        }
+                        System.IO.File.WriteAllText(scripts[i], code);
+                    }
+                    catch (System.Exception e)
+                    {
+                        Log.Exception(e);
+                    }
+                }
+            }
+
+            Log.Debug("Imported {0} localisation entries.", rowsRead - skipRows);
+            UpdateInfoLabel();
         }
 
     }
