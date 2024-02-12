@@ -774,6 +774,7 @@ namespace OpenGET
 
                         if (didReplace)
                         {
+                            Log.Debug("Overwriting script \"{0}\" following localisation ID migration.", scripts[i]);
                             System.IO.File.WriteAllText(scripts[i], code, System.Text.Encoding.UTF8);
                         }
                     }
