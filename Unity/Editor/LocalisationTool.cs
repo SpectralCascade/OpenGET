@@ -761,11 +761,21 @@ namespace OpenGET
                     try
                     {
                         string code = System.IO.File.ReadAllText(scripts[i]);
+                        bool didReplace = false;
                         foreach (var kv in idMap)
                         {
-                            code = code.Replace("\"" + kv.Key + "\"", "\"" + kv.Value + "\"");
+                            string idOld = "\"" + kv.Key + "\"";
+                            if (code.Contains(idOld))
+                            {
+                                didReplace = true;
+                                code = code.Replace(idOld, "\"" + kv.Value + "\"");
+                            }
                         }
-                        System.IO.File.WriteAllText(scripts[i], code);
+
+                        if (didReplace)
+                        {
+                            System.IO.File.WriteAllText(scripts[i], code, System.Text.Encoding.UTF8);
+                        }
                     }
                     catch (System.Exception e)
                     {
