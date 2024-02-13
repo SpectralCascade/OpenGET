@@ -129,9 +129,14 @@ namespace OpenGET
         private Dictionary<string, string[]> importTable = new Dictionary<string, string[]>();
 
         /// <summary>
+        /// Imported localisation headers.
+        /// </summary>
+        private string[] importHeaders = new string[0];
+
+        /// <summary>
         /// How many columns are in the import table?
         /// </summary>
-        private int numImportColumns = 0;
+        private int numImportColumns => importHeaders.Length;
 
         /// <summary>
         /// OpenGET editor settings object reference.
@@ -215,14 +220,15 @@ namespace OpenGET
                     csv.Settings.HeaderRowIncluded = true;
                     csv.Settings.TextQualifier = '"';
                     csv.Settings.LineSeparator = "\n";
+                    importHeaders = csv.Headers;
 
                     int line = 0;
                     foreach (string[] row in csv)
                     {
                         Log.Debug("Importing CSV row {0}", line);
                         line++;
-                        //if (line > 1)
-                        //{
+                        if (line > 1)
+                        {
                             List<string> data = new List<string>(row);
                             data.RemoveAt(0);
                             if (!importTable.ContainsKey(row[0]))
@@ -230,7 +236,7 @@ namespace OpenGET
                                 importTable.Add(row[0], data.ToArray());
                                 Log.Debug("Imported CSV row with key \"{0}\": {1}", row[0], string.Join(", ", row));
                             }
-                        //}
+                        }
                     }
                 }
                 else
@@ -378,11 +384,8 @@ namespace OpenGET
         /// </summary>
         private string ImportToCSV()
         {
-            /*foreach (var row in importTable)
-            {
-                Log.Debug("Writing {0} : {1}", "\"" + row.Key + "\"", string.Join(", ", row.Value.Select(x => "\"" + x + "\"")));
-            }*/
-            return string.Join("\n", importTable.Select(kv => string.Join(",", kv.Value.Select(str => "\"" + str + "\""))));
+            return string.Join(",", importHeaders.Select(x => "\"" + x + "\"")) + "\n" +
+                string.Join("\n", importTable.Select(kv => string.Join(",", kv.Value.Select(str => "\"" + str + "\""))));
         }
 
         /// <summary>
@@ -719,6 +722,7 @@ namespace OpenGET
             CSVFile.CSVReader csv = new CSVFile.CSVReader(new System.IO.StreamReader(path, System.Text.Encoding.UTF8));
             csv.Settings.HeaderRowIncluded = true;
             csv.Settings.TextQualifier = '"';
+            importHeaders = csv.Headers;
             if (nativeStringColumn < 0 || nativeStringColumn >= csv.Headers.Length)
             {
                 Log.Error("Failed to migrate from typical CSV as specified native string column index {0} is out of range.", nativeStringColumn);
@@ -726,13 +730,12 @@ namespace OpenGET
             }
 
             int rowsRead = 0;
-            numImportColumns = csv.Headers.Length;
             // Track IDs to match up in code and overwrite
             Dictionary<string, string> idMap = new Dictionary<string, string>();
             foreach (string[] row in csv)
             {
                 rowsRead++;
-                if (rowsRead > skipRows)
+                if (rowsRead >= skipRows)
                 {
                     if (!importTable.ContainsKey(row[nativeStringColumn]))
                     {
