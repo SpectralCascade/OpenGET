@@ -33,7 +33,7 @@ namespace OpenGET.UI {
         /// Canvas group used for fading.
         /// </summary>
         [SerializeField]
-        [Auto.Hookup]
+        [Auto.Hookup(Auto.Mode.Self)]
         [Auto.NullCheck]
         protected CanvasGroup canvasGroup;
 
