@@ -24,6 +24,22 @@ namespace OpenGET
             return array[index];
         }
 
+        /// <summary>
+        /// Randomly shuffle an array.
+        /// </summary>
+        public static void Shuffle<T>(this IList<T> array)
+        {
+            int n = array.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = Mathf.FloorToInt(Random.Range(0f, n + 1));
+                T value = array[k];
+                array[k] = array[n];
+                array[n] = value;
+            }
+        }
+
     }
 
 }
