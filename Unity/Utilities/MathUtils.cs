@@ -35,7 +35,7 @@ namespace OpenGET
 		/// </summary>
 		public static float MapRange(float value, float min, float max, float target_min, float target_max)
         {
-			float fraction = Mathf.Clamp(value, min, max) / (max - min);
+			float fraction = (Mathf.Clamp(value, min, max) - min) / (max - min);
 			return target_min + (fraction * (target_max - target_min));
 		}
 
