@@ -18,9 +18,6 @@ namespace OpenGET.Editor.UI
             FillGraphic.Type oldFillType = fill.type;
             fill.type = (FillGraphic.Type)EditorGUILayout.EnumPopup("Fill Type:", fill.type);
             bool didChange = fill.type != oldFillType;
-            if (didChange) {
-                fill.implementation = null;
-            }
 
             didChange |= fill.isVertical;
             fill.isVertical = EditorGUILayout.Toggle("Vertical Fill:", fill.isVertical);
@@ -30,20 +27,32 @@ namespace OpenGET.Editor.UI
             fill.isFlipped = EditorGUILayout.Toggle("Flip Fill:", fill.isFlipped);
             didChange |= didChange != fill.isFlipped;
 
-            if (fill.type == FillGraphic.Type.Image) {
-                /// ImageFill editor
-                ImageFill fillImage = fill.implementation as ImageFill;
-                if (fillImage == null) {
-                    fillImage = new ImageFill(fill);
-                    fill.implementation = fillImage;
-                }
+            Material oldMaterial = fill.material;
+            Material loadedMaterial = (Material)EditorGUILayout.ObjectField("Custom Material", fill.material, typeof(Material), allowSceneObjects: false);
 
+            if (oldMaterial != loadedMaterial)
+            {
+                didChange = true;
+                fill.material = loadedMaterial;
+
+                if (loadedMaterial == null)
+                {
+                    // Auto-generate material
+                    fill.material = fill.material;
+                }
+                else
+                {
+                    Log.Debug("Set custom material to {0}", loadedMaterial.name);
+                }
+            }
+
+            if (fill.type == FillGraphic.Type.Image) {
                 fill.image = (Image)EditorGUILayout.ObjectField("Target Image:", fill.image, typeof(Image), allowSceneObjects: true);
                 if (fill.image != null) {
                     Sprite oldSprite = fill.fillSprite;
                     fill.fillSprite = (Sprite)EditorGUILayout.ObjectField("Fill Sprite:", fill.fillSprite, typeof(Sprite), allowSceneObjects: false);
-                    if (fill.fillSprite != oldSprite && fill.fillSprite != null && fillImage.material != null) {
-                        fillImage.material.SetTexture("_FillTex", fill.fillSprite.texture);
+                    if (fill.fillSprite != oldSprite && fill.fillSprite != null && fill.material != null) {
+                        fill.material.SetTexture("_FillTex", fill.fillSprite.texture);
                         EditorUtility.SetDirty(fill);
                     }
 
@@ -52,34 +61,34 @@ namespace OpenGET.Editor.UI
                     fill.fillColor = EditorGUILayout.ColorField("Fill Color:", fill.fillColor);
                     if (oldColor != fill.fillColor)
                     {
-                        fillImage.material.SetColor("_FillColor", fill.fillColor);
+                        fill.material.SetColor("_FillColor", fill.fillColor);
                         isDirty = true;
                     }
 
-                    if (fill.baseSprite != null && fill.image.sprite != null && fillImage.material != null) {
+                    if (fill.baseSprite != null && fill.image.sprite != null && fill.material != null) {
                         // Default to whatever the image is using.
-                        fillImage.material.SetTexture("_MainTex", fill.baseSprite.texture); 
+                        fill.material.SetTexture("_MainTex", fill.baseSprite.texture); 
                     }
 
                     oldSprite = fill.baseSprite;
                     fill.baseSprite = (Sprite)EditorGUILayout.ObjectField("Base Sprite:", fill.baseSprite, typeof(Sprite), allowSceneObjects: false);
-                    if (fill.baseSprite != oldSprite && fillImage.material != null) {
-                        fillImage.material.SetTexture("_MainTex", fill.baseSprite?.texture);
+                    if (fill.baseSprite != oldSprite && fill.material != null) {
+                        fill.material.SetTexture("_MainTex", fill.baseSprite?.texture);
                     }
 
                     oldColor = fill.fillColor;
                     fill.baseColor = EditorGUILayout.ColorField("Base Color:", fill.baseColor);
                     if (oldColor != fill.fillColor)
                     {
-                        fillImage.material.SetColor("_BaseColor", fill.baseColor);
+                        fill.material.SetColor("_BaseColor", fill.baseColor);
                         isDirty = true;
                     }
 
                     if (fill.baseSprite != null && fill.fillSprite != null) {
                         // Show fill slider
-                        float oldValue = fill.implementation.GetValue();
-                        fill.implementation.SetValue(EditorGUILayout.Slider("Fill Value:", fill.implementation.GetValue(), 0.0f, 1.0f));
-                        if (fill.implementation.GetValue() != oldValue || isDirty) {
+                        float oldValue = fill.GetValue();
+                        fill.SetValue(EditorGUILayout.Slider("Fill Value:", fill.GetValue(), 0.0f, 1.0f));
+                        if (fill.GetValue() != oldValue || isDirty) {
                             EditorUtility.SetDirty(fill);
                         }
                     } else {
@@ -94,27 +103,18 @@ namespace OpenGET.Editor.UI
                     EditorGUILayout.HelpBox("You must specify a target image for this fill type.", MessageType.Warning);
                 }
 
-                fillImage.UpdateMaterial();
-
+                fill.UpdateMaterial();
             }
             else if (fill.type == FillGraphic.Type.Sprite)
             {
-                /// ImageFill editor
-                SpriteFill fillSprite = fill.implementation as SpriteFill;
-                if (fillSprite == null)
-                {
-                    fillSprite = new SpriteFill(fill);
-                    fill.implementation = fillSprite;
-                }
-
                 fill.target = (SpriteRenderer)EditorGUILayout.ObjectField("Target Sprite:", fill.target, typeof(SpriteRenderer), allowSceneObjects: true);
                 if (fill.target != null)
                 {
                     Sprite oldSprite = fill.fillSprite;
                     fill.fillSprite = (Sprite)EditorGUILayout.ObjectField("Fill Sprite:", fill.fillSprite, typeof(Sprite), allowSceneObjects: false);
-                    if (fill.fillSprite != oldSprite && fill.fillSprite != null && fillSprite.material != null)
+                    if (fill.fillSprite != oldSprite && fill.fillSprite != null && fill.material != null)
                     {
-                        fillSprite.material.SetTexture("_FillTex", fill.fillSprite.texture);
+                        fill.material.SetTexture("_FillTex", fill.fillSprite.texture);
                         EditorUtility.SetDirty(fill);
                     }
 
@@ -123,37 +123,37 @@ namespace OpenGET.Editor.UI
                     fill.fillColor = EditorGUILayout.ColorField("Fill Color:", fill.fillColor);
                     if (oldColor != fill.fillColor)
                     {
-                        fillSprite.material.SetColor("_FillColor", fill.fillColor);
+                        fill.material.SetColor("_FillColor", fill.fillColor);
                         isDirty = true;
                     }
 
-                    if (fill.baseSprite != null && fill.target.sprite != null && fillSprite.material != null)
+                    if (fill.baseSprite != null && fill.target.sprite != null && fill.material != null)
                     {
                         // Default to whatever the image is using.
-                        fillSprite.material.SetTexture("_MainTex", fill.baseSprite.texture);
+                        fill.material.SetTexture("_MainTex", fill.baseSprite.texture);
                     }
 
                     oldSprite = fill.baseSprite;
                     fill.baseSprite = (Sprite)EditorGUILayout.ObjectField("Base Sprite:", fill.baseSprite, typeof(Sprite), allowSceneObjects: false);
-                    if (fill.baseSprite != oldSprite && fillSprite.material != null)
+                    if (fill.baseSprite != oldSprite && fill.material != null)
                     {
-                        fillSprite.material.SetTexture("_MainTex", fill.baseSprite?.texture);
+                        fill.material.SetTexture("_MainTex", fill.baseSprite?.texture);
                     }
 
                     oldColor = fill.fillColor;
                     fill.baseColor = EditorGUILayout.ColorField("Base Color:", fill.baseColor);
                     if (oldColor != fill.fillColor)
                     {
-                        fillSprite.material.SetColor("_BaseColor", fill.baseColor);
+                        fill.material.SetColor("_BaseColor", fill.baseColor);
                         isDirty = true;
                     }
 
                     if (fill.baseSprite != null && fill.fillSprite != null)
                     {
                         // Show fill slider
-                        float oldValue = fill.implementation.GetValue();
-                        fill.implementation.SetValue(EditorGUILayout.Slider("Fill Value:", fill.implementation.GetValue(), 0.0f, 1.0f));
-                        if (fill.implementation.GetValue() != oldValue || isDirty)
+                        float oldValue = fill.GetValue();
+                        fill.SetValue(EditorGUILayout.Slider("Fill Value:", fill.GetValue(), 0.0f, 1.0f));
+                        if (fill.GetValue() != oldValue || isDirty)
                         {
                             EditorUtility.SetDirty(fill);
                         }
@@ -173,7 +173,7 @@ namespace OpenGET.Editor.UI
                     EditorGUILayout.HelpBox("You must specify a target sprite renderer for this fill type.", MessageType.Warning);
                 }
 
-                fillSprite.UpdateMaterial();
+                fill.UpdateMaterial();
             }
 
             if (didChange)

@@ -11,7 +11,7 @@ namespace OpenGET.UI
     /// A continuous fill bar used to display a ranged value such as progress.
     /// Can be used with UI images or sprite renderers.
     /// </summary>
-    public class FillGraphic : MonoBehaviour
+    public class FillGraphic : AutoBehaviour, IPercentValue
     {
 
         /// <summary>
@@ -23,104 +23,65 @@ namespace OpenGET.UI
             Sprite
         }
 
-        protected void Awake() {
-            Debug.Assert(fillSprite != null);
-            Debug.Assert(baseSprite != null);
-            isVertical = _verticalFill;
-            isFlipped = _flipFill;
+        protected override void Awake() {
+            base.Awake();
+            _verticalFill = isVertical;
+            _flipFill = isFlipped;
         }
 
+        [SerializeField]
+        [HideInInspector]
         public Type type;
 
         /// <summary>
-        /// Reference to the fader implementation.
-        /// </summary>
-        /// TODO: Upgrade to 2019.3, add [SerializeReference] attribute,
-        /// then instead of storing specific image/sprite stuff in this class
-        /// we can store it in the ImageFill itself.
-        public virtual IPercentValue implementation {
-            get {
-                if (impl == null)
-                {
-                    switch (type)
-                    {
-                        case Type.Image:
-                            Debug.Assert(image != null);
-                            impl = new ImageFill(this);
-                            ((ImageFill)impl).UpdateMaterial();
-                            break;
-                        case Type.Sprite:
-                            Debug.Assert(target != null);
-                            impl = new SpriteFill(this);
-                            break;
-                    }
-                }
-                return impl;
-            }
-            set {
-                impl = value;
-            }
-        }
-        protected IPercentValue impl = null;
-
-        /// <summary>
-        /// TODO: see IPercentValue implementation TODO.
         /// Target UI image.
         /// </summary>
+        [SerializeField]
+        [HideInInspector]
         public Image image;
 
         /// <summary>
         /// Target sprite renderer.
         /// </summary>
+        [SerializeField]
+        [HideInInspector]
         public SpriteRenderer target;
-
-        /// <summary>
-        /// Material associated with the target SpriteRenderer.
-        /// In the Unity editor out of play mode, using the local material causes leak errors
-        /// so the shared material is used instead.
-        /// </summary>
-        public Material targetMaterial {
-            get {
-                return
-#if UNITY_EDITOR
-                    !Application.isPlaying ? target.sharedMaterial :
-#endif
-                    target.material;
-            }
-            set {
-#if UNITY_EDITOR
-                if (!Application.isPlaying) {
-                    target.sharedMaterial = value;
-                    return;
-                }
-#endif
-                target.material = value;
-            }
-        }
 
         /// <summary>
         /// The "full", filled sprite.
         /// </summary>
+        [Auto.NullCheck]
+        [SerializeField]
+        [HideInInspector]
         public Sprite fillSprite;
 
         /// <summary>
         /// Colour tint applied to the filled sprite.
         /// </summary>
+        [SerializeField]
+        [HideInInspector]
         public Color fillColor = Color.white;
 
         /// <summary>
         /// The "empty", unfilled sprite.
         /// </summary>
+        [Auto.NullCheck]
+        [SerializeField]
+        [HideInInspector]
         public Sprite baseSprite;
 
         /// <summary>
         /// Colour tint applie to the unfilled base sprite.
         /// </summary>
+        [SerializeField]
+        [HideInInspector]
         public Color baseColor = Color.white;
 
         /// <summary>
         /// TODO: grayscale fill
         /// </summary>
+        [SerializeField]
+        [HideInInspector]
         public bool grayscale;
 
         [SerializeField]
@@ -136,19 +97,13 @@ namespace OpenGET.UI
         /// </summary>
         public bool isVertical {
             get { return _verticalFill; }
-            set { 
+            set {
                 _verticalFill = value;
-                if (image != null && image.material != null) {
+                if (material != null) {
                     if (value) {
-                        image.material.DisableKeyword("VERTICAL_FILL_OFF");
+                        material.DisableKeyword("VERTICAL_FILL_OFF");
                     } else {
-                        image.material.EnableKeyword("VERTICAL_FILL_OFF");
-                    }
-                } else if (target != null && targetMaterial != null) {
-                    if (value) {
-                        targetMaterial.DisableKeyword("VERTICAL_FILL_OFF");
-                    } else {
-                        targetMaterial.EnableKeyword("VERTICAL_FILL_OFF");
+                        material.EnableKeyword("VERTICAL_FILL_OFF");
                     }
                 }
             }
@@ -161,223 +116,147 @@ namespace OpenGET.UI
             get { return _flipFill; }
             set {
                 _flipFill = value;
-                if (image != null && image.material != null) {
+                if (target != null && material != null) {
                     if (value) {
-                        image.material.EnableKeyword("FLIP_FILL_ON");
+                        material.EnableKeyword("FLIP_FILL_ON");
                     } else {
-                        image.material.DisableKeyword("FLIP_FILL_ON");
-                    }
-                } else if (target != null && targetMaterial != null) {
-                    if (value) {
-                        targetMaterial.EnableKeyword("FLIP_FILL_ON");
-                    } else {
-                        targetMaterial.DisableKeyword("FLIP_FILL_ON");
+                        material.DisableKeyword("FLIP_FILL_ON");
                     }
                 }
             }
         }
 
+        public static readonly int propFill = Shader.PropertyToID("_FillAmount");
+        public static readonly int propTexMain = Shader.PropertyToID("_MainTex");
+        public static readonly int propTexFill = Shader.PropertyToID("_FillTex");
+        public static readonly int propColourMain = Shader.PropertyToID("_BaseColor");
+        public static readonly int propColourFill = Shader.PropertyToID("_FillColor");
+
         /// <summary>
-        /// Get or set the fill value of the ProgressFill implementation.
+        /// Material to use for the fill.
         /// </summary>
-        public float fill {
-            get { return implementation.GetValue(); }
-            set { implementation.SetValue(value); }
-        }
-
-    }
-
-    [Serializable]
-    public class ImageFill : IPercentValue
-    {
-
-        public FillGraphic parentFill;
-
-        [SerializeField]
-        [HideInInspector]
-        private float fill = 0;
-
-        public Material material {
+        public virtual Material material {
             get {
-                if (parentFill.image != null && _material == null) {
+                if (_material == null)
+                {
+                    Log.Debug("Setup new FillImage material on FillGraphic at \"{0}\"", SceneNavigator.GetGameObjectPath(gameObject));
                     Shader shader = Shader.Find("OpenGET/FillImage");
                     _material = new Material(shader);
-                    parentFill.image.material = _material;
+                    if (target != null)
+                    {
+                        target.sharedMaterial = _material;
+                    }
+                    if (image != null)
+                    {
+                        image.material = _material;
+                    }
+                    UpdateMaterial();
                 }
                 return _material;
             }
-            private set {
-                if (parentFill.image != null) {
+            set {
+                if (_material != value)
+                {
                     _material = value;
-                    parentFill.image.material = _material;
-                }
-            } 
-        }
-        private Material _material = null;
-
-        public readonly static int fillProperty = Shader.PropertyToID("_FillAmount");
-
-        public ImageFill(FillGraphic parentFill) {
-            this.parentFill = parentFill;
-        }
-
-        public void UpdateMaterial() {
-            if (parentFill.image != null) {
-                if (parentFill.image.sprite == null) {
-                    parentFill.image.sprite = parentFill.fillSprite;
-                }
-                material = material;
-                if (parentFill.baseSprite != null) {
-                    material.SetTexture("_MainTex", parentFill.baseSprite.texture);
-                    material.SetColor("_BaseColor", parentFill.baseColor);
-                }
-                if (parentFill.fillSprite != null) {
-                    material.SetTexture("_FillTex", parentFill.fillSprite.texture);
-                    material.SetColor("_FillColor", parentFill.fillColor);
+                    UpdateMaterial();
                 }
             }
         }
-
-        public float GetValue() {
-            return fill;
-        }
-
-        public void SetValue(float v) {
-            fill = Mathf.Clamp01(v);
-            material.SetFloat(fillProperty, fill);
-        }
-    }
-
-    [Serializable]
-    public class SpriteFill : IPercentValue
-    {
-        public FillGraphic parentFill;
-
         [SerializeField]
         [HideInInspector]
-        private float fill = 0;
+        protected Material _material;
 
-        public Material material {
-            get {
-                if (parentFill.target != null && parentFill.targetMaterial == null)
-                {
-                    parentFill.targetMaterial = new Material(Shader.Find("OpenGET/FillImage"));
-                }
-                return parentFill.target?.material;
-            }
-            private set {
-                if (parentFill.target != null)
-                {
-                    parentFill.targetMaterial = value;
-                }
-            }
+        /// <summary>
+        /// Used for material instancing.
+        /// </summary>
+        protected MaterialPropertyBlock propertyBlock;
+
+        /// <summary>
+        /// Get or set the fill value.
+        /// </summary>
+        public float fill { get { return GetValue(); } set { SetValue(value); } }
+
+        /// <summary>
+        /// Normalised fill value.
+        /// </summary>
+        [SerializeField]
+        [HideInInspector]
+        protected float _fill = 0;
+
+        /// <summary>
+        /// Get the normalised fill value.
+        /// </summary>
+        public virtual float GetValue()
+        {
+            return _fill;
         }
 
-        public SpriteFill(FillGraphic parentFill)
+        /// <summary>
+        /// Set the fill value (normalised 0 to 1).
+        /// </summary>
+        public virtual void SetValue(float v)
         {
-            this.parentFill = parentFill;
-        }
-
-        public readonly static int fillProperty = Shader.PropertyToID("_FillAmount");
-
-        public void UpdateMaterial()
-        {
-            if (parentFill.target != null)
+            _fill = v;
+            if (_fill != v)
             {
-                if (parentFill.target.sprite == null)
-                {
-                    parentFill.target.sprite = parentFill.fillSprite;
-                }
-                material = material;
-                if (parentFill.baseSprite != null)
-                {
-                    material.SetTexture("_MainTex", parentFill.baseSprite.texture);
-                    material.SetColor("_BaseColor", parentFill.baseColor);
-                }
-                if (parentFill.fillSprite != null)
-                {
-                    material.SetTexture("_FillTex", parentFill.fillSprite.texture);
-                    material.SetColor("_FillColor", parentFill.fillColor);
-                }
+                UpdateMaterial();
             }
         }
 
-        public float GetValue()
+        public virtual void UpdateMaterial()
         {
-            return fill;
-        }
-
-        public void SetValue(float v)
-        {
-            fill = Mathf.Clamp01(v);
-
-            // TODO: Support linear fill with 9-slice sprites
-
-            // Correct fill to account for non-linear 9-slice UVs
-            float correctedFill = fill;
-            if (false) {//parentFill.target != null && parentFill.target.drawMode == SpriteDrawMode.Sliced && parentFill.target.sprite != null) {
-                // Get 9-slice border and size of the rendered sprite in pixels
-                Vector4 border = parentFill.baseSprite.border;
-                
-                // Rendered sprite size in pixels
-                float renderSize;
-
-                // Texture size in pixels
-                float textureSize;
-                
-                // Border size in pixels
-                float borderSize;
-
-                if (parentFill.isVertical)
-                {
-                    borderSize = Mathf.Min(border.y, border.w);
-                    renderSize = parentFill.target.size.y;
-                    textureSize = parentFill.target.sprite.texture.height;
-                }
-                else
-                {
-                    borderSize = Mathf.Min(border.x, border.z);
-                    renderSize = parentFill.target.size.x;
-                    textureSize = parentFill.target.sprite.texture.width;
-                }
-                renderSize *= parentFill.target.sprite.pixelsPerUnit;
-
-                // Compute percentages for border and centre sizes
-                float renderBorderPercentage = borderSize / renderSize;
-                float textureBorderPercentage = borderSize / textureSize;
-                float renderCentrePercentage = (renderSize - borderSize * 2f) / renderSize;
-                float textureCentrePercentage = (textureSize - borderSize * 2f) / textureSize;
-                float textureCentreBorderPercentage = textureCentrePercentage + textureBorderPercentage;
-
-                float mappedSize = renderSize / textureSize;
-                float texels = MathUtils.MapRange(fill, 0, 1, 0, textureSize);
-
-                //float normWidth = 1.0f - (threshold * 2f);
-
-                if (fill < textureBorderPercentage)
-                {
-                    correctedFill = MathUtils.MapRange(fill, 0, renderBorderPercentage, 0, textureBorderPercentage);
-
-                    if (correctedFill >= textureBorderPercentage)
-                    {
-                        correctedFill += MathUtils.MapRange(
-                            fill - textureBorderPercentage,
-                            0, renderCentrePercentage,
-                            0, textureCentrePercentage
-                        );
-                    }
-                }
-                else if (fill < textureCentreBorderPercentage)
-                {
-                }
-                else
-                {
-                }
-                
+            if (image != null && image.sprite == null)
+            {
+                image.sprite = fillSprite;
+            }
+            if (target != null && target.sprite == null)
+            {
+                target.sprite = fillSprite;
             }
 
-            material.SetFloat(fillProperty, correctedFill);
+            material = material;
+
+            if (image != null)
+            {
+                // CanvasRenderer doesn't support material property blocks
+                _material.SetFloat(propFill, _fill);
+                if (baseSprite != null && baseSprite.texture != null)
+                {
+                    _material.SetTexture(propTexMain, baseSprite.texture);
+                    _material.SetColor(propColourMain, baseColor);
+                }
+                if (fillSprite != null && fillSprite.texture != null)
+                {
+                    _material.SetTexture(propTexFill, fillSprite.texture);
+                    _material.SetColor(propColourFill, fillColor);
+                }
+                Material instance = Material.Instantiate(_material);
+                instance.CopyPropertiesFromMaterial(_material);
+                image.material = instance;
+            }
+            else if (target != null)
+            {
+                if (propertyBlock == null)
+                {
+                    propertyBlock = new MaterialPropertyBlock();
+                }
+
+                if (baseSprite != null && baseSprite.texture != null)
+                {
+                    propertyBlock.SetTexture(propTexMain, baseSprite.texture);
+                    propertyBlock.SetColor(propColourMain, baseColor);
+                }
+                if (fillSprite != null && fillSprite.texture != null)
+                {
+                    propertyBlock.SetTexture(propTexFill, fillSprite.texture);
+                    propertyBlock.SetColor(propColourFill, fillColor);
+                }
+                propertyBlock.SetFloat(propFill, _fill);
+
+                target.SetPropertyBlock(propertyBlock);
+            }
         }
+
     }
 
 }

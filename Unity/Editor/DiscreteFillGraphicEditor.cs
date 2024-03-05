@@ -18,22 +18,12 @@ namespace OpenGET.Editor.UI
             DiscreteFillGraphic.Type oldFillType = fill.type;
             fill.type = (DiscreteFillGraphic.Type)EditorGUILayout.EnumPopup("Fill Type:", fill.type);
             bool didChange = fill.type != oldFillType;
-            if (didChange) {
-                fill.implementation = null;
-            }
 
             didChange |= fill.isFlipped;
             fill.isFlipped = EditorGUILayout.Toggle("Flipped:", fill.isFlipped);
             didChange |= didChange != fill.isFlipped;
 
             if (fill.type == DiscreteFillGraphic.Type.Image) {
-                /// DiscreteImagesFill editor
-                DiscreteFillGraphic.DiscreteImagesFill discreteFillImages = fill.implementation as DiscreteFillGraphic.DiscreteImagesFill;
-                if (discreteFillImages == null) {
-                    discreteFillImages = new DiscreteFillGraphic.DiscreteImagesFill(fill);
-                    fill.implementation = discreteFillImages;
-                }
-
                 // Unity doesn't provide the full inspector GUI API so work around with a serialised property instead
                 // for arrays.
                 SerializedObject obj = new SerializedObject(fill);
@@ -82,9 +72,9 @@ namespace OpenGET.Editor.UI
                         isDirty |= fill.discreteFill != discreteValue;
                         
                         // Show fill slider
-                        float oldValue = fill.implementation.GetValue();
-                        fill.implementation.SetValue(EditorGUILayout.Slider("Fill Value:", fill.implementation.GetValue(), 0.0f, 1.0f));
-                        if (fill.implementation.GetValue() != oldValue || isDirty) {
+                        float oldValue = fill.GetValue();
+                        fill.SetValue(EditorGUILayout.Slider("Fill Value:", fill.GetValue(), 0.0f, 1.0f));
+                        if (fill.GetValue() != oldValue || isDirty) {
                             EditorUtility.SetDirty(fill);
                         }
                     } else {
@@ -100,19 +90,11 @@ namespace OpenGET.Editor.UI
                 }
 
                 // Force update
-                discreteFillImages.SetValue(discreteFillImages.GetValue());
+                fill.SetValue(fill.GetValue());
 
             }
             else if (fill.type == DiscreteFillGraphic.Type.Sprite)
             {
-                /// DiscreteImagesFill editor
-                DiscreteFillGraphic.DiscreteSpritesFill discreteFillSprites = fill.implementation as DiscreteFillGraphic.DiscreteSpritesFill;
-                if (discreteFillSprites == null)
-                {
-                    discreteFillSprites = new DiscreteFillGraphic.DiscreteSpritesFill(fill);
-                    fill.implementation = discreteFillSprites;
-                }
-
                 // Unity doesn't provide the full inspector GUI API so work around with a serialised property instead
                 // for arrays.
                 SerializedObject obj = new SerializedObject(fill);
@@ -165,9 +147,9 @@ namespace OpenGET.Editor.UI
                         isDirty |= fill.discreteFill != discreteValue;
 
                         // Show fill slider
-                        float oldValue = fill.implementation.GetValue();
-                        fill.implementation.SetValue(EditorGUILayout.Slider("Fill Value:", fill.implementation.GetValue(), 0.0f, 1.0f));
-                        if (fill.implementation.GetValue() != oldValue || isDirty)
+                        float oldValue = fill.GetValue();
+                        fill.SetValue(EditorGUILayout.Slider("Fill Value:", fill.GetValue(), 0.0f, 1.0f));
+                        if (fill.GetValue() != oldValue || isDirty)
                         {
                             EditorUtility.SetDirty(fill);
                         }
@@ -188,7 +170,7 @@ namespace OpenGET.Editor.UI
                 }
 
                 // Force update
-                discreteFillSprites.SetValue(discreteFillSprites.GetValue());
+                fill.SetValue(fill.GetValue());
 
             }
 

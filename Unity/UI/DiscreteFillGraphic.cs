@@ -36,104 +36,33 @@ namespace OpenGET.UI {
         /// Number of discrete images/sprites that are currently shown as filled.
         /// </summary>
         public int discreteFill {
-            get { return Mathf.FloorToInt(fill * count); }
-            set { fill = count > 0 ? (float)Mathf.Clamp(value, 0, count) / count : 0; }
+            get { return Mathf.FloorToInt(_fill * count); }
+            set { _fill = count > 0 ? (float)Mathf.Clamp(value, 0, count) / count : 0; }
         }
 
-        /// <summary>
-        /// Get the fill implementation object.
-        /// </summary>
-        public override IPercentValue implementation {
-            get {
-                if (impl == null)
+        public override void SetValue(float v)
+        {
+            _fill = Mathf.Clamp01(v);
+            bool flip = isFlipped;
+            int fillValue = 0;
+            for (
+                int i = flip ? count - 1 : 0, counti = flip ? 0 : count;
+                flip ? i >= 0 : i < counti;
+                i = flip ? i - 1 : i + 1
+            )
+            
+            {
+                if (discreteImages[i] != null)
                 {
-                    switch (type)
+                    if (type == Type.Sprite)
                     {
-                        case Type.Image:
-                            Debug.Assert(discreteImages != null);
-                            impl = new DiscreteImagesFill(this);
-                            break;
-                        case Type.Sprite:
-                            Debug.Assert(discreteSpriteRenderers != null);
-                            impl = new DiscreteSpritesFill(this);
-                            break;
+                        discreteSpriteRenderers[i].sprite = discreteFill >= i ? fillSprite : baseSprite;
+                        discreteSpriteRenderers[i].color = discreteFill >= i ? fillColor : baseColor;
                     }
-                }
-                return impl;
-            }
-            set {
-                impl = value;
-            }
-        }
-
-        [System.Serializable]
-        public abstract class DiscreteFill : IPercentValue
-        {
-
-            public DiscreteFillGraphic parentFill;
-
-            [SerializeField]
-            [HideInInspector]
-            protected float fill = 0;
-
-            public DiscreteFill(DiscreteFillGraphic parentFill)
-            {
-                this.parentFill = parentFill;
-            }
-
-            public float GetValue()
-            {
-                return fill;
-            }
-
-            public abstract void SetValue(float v);
-        }
-
-        public class DiscreteImagesFill : DiscreteFill
-        {
-
-            public DiscreteImagesFill(DiscreteFillGraphic parentFill) : base(parentFill) { }
-
-            public override void SetValue(float v)
-            {
-                fill = Mathf.Clamp01(v);
-                int discreteFill = parentFill.discreteFill;
-                bool flip = parentFill.isFlipped;
-                int fillValue = 0;
-                for (
-                    int i = flip ? parentFill.count - 1 : 0, counti = flip ? 0 : parentFill.count;
-                    flip ? i >= 0 : i < counti;
-                    i = flip ? i - 1 : i + 1
-                ) {
-                    if (parentFill.discreteImages[i] != null)
+                    else
                     {
-                        parentFill.discreteImages[i].sprite = discreteFill > fillValue ? parentFill.fillSprite : parentFill.baseSprite;
-                        parentFill.discreteImages[i].color = discreteFill > fillValue ? parentFill.fillColor : parentFill.baseColor;
-                    }
-                    fillValue++;
-                }
-            }
-        }
-
-        public class DiscreteSpritesFill : DiscreteFill
-        {
-
-            public DiscreteSpritesFill(DiscreteFillGraphic parentFill) : base(parentFill) { }
-
-            public override void SetValue(float v)
-            {
-                fill = Mathf.Clamp01(v);
-                int discreteFill = parentFill.discreteFill;
-                bool flip = parentFill.isFlipped;
-                for (
-                    int i = flip ? parentFill.count : 0, counti = flip ? 0 : parentFill.count;
-                    flip ? i >= 0 : i < counti;
-                    i = flip ? i - 1 : i + 1
-                ) {
-                    if (parentFill.discreteImages[i] != null)
-                    {
-                        parentFill.discreteSpriteRenderers[i].sprite = discreteFill >= i ? parentFill.fillSprite : parentFill.baseSprite;
-                        parentFill.discreteSpriteRenderers[i].color = discreteFill >= i ? parentFill.fillColor : parentFill.baseColor;
+                        discreteImages[i].sprite = discreteFill > fillValue ? fillSprite : baseSprite;
+                        discreteImages[i].color = discreteFill > fillValue ? fillColor : baseColor;
                     }
                 }
             }
