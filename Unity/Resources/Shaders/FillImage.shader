@@ -13,7 +13,9 @@
         // No culling or depth
         Cull Off ZWrite Off ZTest Always
 		Blend SrcAlpha OneMinusSrcAlpha
-
+		
+		Tags { "Queue"="Transparent" }
+		
         Pass
         {
             CGPROGRAM
@@ -24,7 +26,7 @@
 			#pragma multi_compile GRAYSCALE_OFF GRAYSCALE_ON
 
             #include "UnityCG.cginc"
-
+			
             struct appdata
             {
                 float4 vertex : POSITION;

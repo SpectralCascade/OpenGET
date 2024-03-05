@@ -29,6 +29,11 @@ namespace OpenGET.UI
             _flipFill = isFlipped;
         }
 
+        protected void Start()
+        {
+            UpdateMaterial();
+        }
+
         [SerializeField]
         [HideInInspector]
         public Type type;
