@@ -109,7 +109,7 @@ namespace OpenGET.Editor.UI
                     Log.Error("Failed to find and draw property \"discreteSpriteRenderers\".");
                 }
 
-                if (fill.discreteImages != null)
+                if (fill.discreteSpriteRenderers != null)
                 {
                     Sprite oldSprite = fill.fillSprite;
                     fill.fillSprite = (Sprite)EditorGUILayout.ObjectField("Fill Sprite:", fill.fillSprite, typeof(Sprite), allowSceneObjects: false);

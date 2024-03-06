@@ -201,8 +201,9 @@ namespace OpenGET.UI
         /// </summary>
         public virtual void SetValue(float v)
         {
+            float old = _fill;
             _fill = v;
-            if (_fill != v)
+            if (old != v)
             {
                 UpdateMaterial();
             }
@@ -257,6 +258,12 @@ namespace OpenGET.UI
                     propertyBlock.SetColor(propColourFill, fillColor);
                 }
                 propertyBlock.SetFloat(propFill, _fill);
+
+                if (target.sharedMaterial == null || target.sharedMaterial != _material)
+                {
+                    Log.Debug("Changing material on target sprite renderer...");
+                    target.sharedMaterial = _material;
+                }
 
                 target.SetPropertyBlock(propertyBlock);
             }

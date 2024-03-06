@@ -110,43 +110,22 @@ namespace OpenGET.Editor.UI
                 fill.target = (SpriteRenderer)EditorGUILayout.ObjectField("Target Sprite:", fill.target, typeof(SpriteRenderer), allowSceneObjects: true);
                 if (fill.target != null)
                 {
+                    bool isDirty = false;
                     Sprite oldSprite = fill.fillSprite;
                     fill.fillSprite = (Sprite)EditorGUILayout.ObjectField("Fill Sprite:", fill.fillSprite, typeof(Sprite), allowSceneObjects: false);
-                    if (fill.fillSprite != oldSprite && fill.fillSprite != null && fill.material != null)
-                    {
-                        fill.material.SetTexture("_FillTex", fill.fillSprite.texture);
-                        EditorUtility.SetDirty(fill);
-                    }
+                    isDirty |= fill.fillSprite != oldSprite && fill.fillSprite != null;
 
-                    bool isDirty = false;
                     Color oldColor = fill.fillColor;
                     fill.fillColor = EditorGUILayout.ColorField("Fill Color:", fill.fillColor);
-                    if (oldColor != fill.fillColor)
-                    {
-                        fill.material.SetColor("_FillColor", fill.fillColor);
-                        isDirty = true;
-                    }
-
-                    if (fill.baseSprite != null && fill.target.sprite != null && fill.material != null)
-                    {
-                        // Default to whatever the image is using.
-                        fill.material.SetTexture("_MainTex", fill.baseSprite.texture);
-                    }
+                    isDirty |= oldColor != fill.fillColor;
 
                     oldSprite = fill.baseSprite;
                     fill.baseSprite = (Sprite)EditorGUILayout.ObjectField("Base Sprite:", fill.baseSprite, typeof(Sprite), allowSceneObjects: false);
-                    if (fill.baseSprite != oldSprite && fill.material != null)
-                    {
-                        fill.material.SetTexture("_MainTex", fill.baseSprite?.texture);
-                    }
+                    isDirty |= fill.baseSprite != oldSprite;
 
                     oldColor = fill.fillColor;
                     fill.baseColor = EditorGUILayout.ColorField("Base Color:", fill.baseColor);
-                    if (oldColor != fill.fillColor)
-                    {
-                        fill.material.SetColor("_BaseColor", fill.baseColor);
-                        isDirty = true;
-                    }
+                    isDirty |= oldColor != fill.fillColor;
 
                     if (fill.baseSprite != null && fill.fillSprite != null)
                     {
@@ -166,7 +145,6 @@ namespace OpenGET.Editor.UI
                         }
                         EditorGUILayout.HelpBox("You must specify a base sprite and filled sprite for the fill sprite to work.", MessageType.Warning);
                     }
-
                 }
                 else
                 {
