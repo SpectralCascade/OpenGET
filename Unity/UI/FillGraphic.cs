@@ -261,7 +261,6 @@ namespace OpenGET.UI
 
                 if (target.sharedMaterial == null || target.sharedMaterial != _material)
                 {
-                    Log.Debug("Changing material on target sprite renderer...");
                     target.sharedMaterial = _material;
                 }
 
