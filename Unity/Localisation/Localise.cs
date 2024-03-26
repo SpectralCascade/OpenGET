@@ -132,7 +132,7 @@ namespace OpenGET
         /// </summary>
         /// <param name="raw">Text string to be localised. This is also doubles as the localisation id.</param>
         public static string Text(string raw, params object[] args) {
-            if (language != null)
+            if (language != null && Application.isPlaying)
             {
                 Result<string> res = language.Get(raw);
 #if UNITY_EDITOR

@@ -13,6 +13,15 @@ namespace OpenGET {
             return component;
         }
 
+        public static void SwapRemoveAt<T>(this IList<T> list, int index)
+        {
+            int end = list.Count - 1;
+            T intermediate = list[list.Count - 1];
+            list[end] = list[index];
+            list[index] = intermediate;
+            list.RemoveAt(end);
+        }
+
     }
 
 }
