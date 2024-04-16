@@ -57,8 +57,8 @@ namespace OpenGET.UI {
                 {
                     if (Application.isPlaying)
                     {
-                        // Make sure panel is invisible so it can fade in
-                        canvasGroup.alpha = 0;
+                        // Make sure panel is in correct state to begin
+                        canvasGroup.alpha = startShown ? 1 : 0;
                     }
                     _fader = new Fader(canvasGroup);
                     _fader.OnFadeComplete += OnFaded;
@@ -218,6 +218,7 @@ namespace OpenGET.UI {
 
             if (backButton != null)
             {
+                backButton.onClick.RemoveAllListeners();
                 backButton.onClick.AddListener(OnBack);
             }
 
