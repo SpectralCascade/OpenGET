@@ -5,7 +5,7 @@ Open Game Engine Tools is a collection of handy scripts to speed up game develop
 - AutoBehaviour, a drop in replacement for MonoBehaviour that allows you to add attributes such as `[Auto.NullCheck]` and `[Auto.Hookup]` to automate runtime validation & hook up references in Unity automagically.
 - Coroutines, a helper class for utilising coroutines from anywhere in your Unity project
 - Fader, a helper class for showing or hiding things such as canvas groups.
-- A bare bones localisation system that automates string retrieval & translation. Tooling parses your code & any text gameobjects with a LocaliseText component attached to update a CSV file.
+- A bare bones localisation system that automates string retrieval & translation, where identifiers are just the raw strings for simplicity. Tooling parses your code & any text gameobjects with a LocaliseText component attached to update a CSV file.
 - Python script for adding copyright comments to the top of your code
 
 ## TODO
