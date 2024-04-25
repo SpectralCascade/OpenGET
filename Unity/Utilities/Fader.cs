@@ -59,17 +59,6 @@ namespace OpenGET
         }
 
         /// <summary>
-        /// Cleans up state so this fader can be safely disposed.
-        /// </summary>
-        public void Destroy()
-        {
-            if (fadeCoroutine != null)
-            {
-                Coroutines.Stop(fadeCoroutine);
-            }
-        }
-
-        /// <summary>
         /// Starts fading in, if we aren't fading in already.
         /// </summary>
         /// <param name="time"></param>

@@ -38,6 +38,11 @@ namespace OpenGET
             sharedInstance.StopAllCoroutines();
         }
 
+        private void OnDestroy()
+        {
+            StopAllCoroutines();
+        }
+
         private static Coroutines _sharedInstance;
 
         /// <summary>
