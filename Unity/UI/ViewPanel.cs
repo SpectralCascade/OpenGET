@@ -238,6 +238,10 @@ namespace OpenGET.UI {
             {
                 backButton.onClick.RemoveListener(OnBack);
             }
+            if (_fader != null)
+            {
+                _fader.Destroy();
+            }
         }
 
         protected virtual void Update() {
