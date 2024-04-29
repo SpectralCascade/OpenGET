@@ -287,10 +287,10 @@ namespace OpenGET.UI {
                 );
             }
 
+            overlay.SetShown(!inserting);
             if (autoPopOnBack && overlay.backButton != null) {
                 overlay.backButton.onClick.AddListener(Pop);
             }
-            overlay.SetShown(!inserting);
             above = overlay;
             above.below = this;
         }
