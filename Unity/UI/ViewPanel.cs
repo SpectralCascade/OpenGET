@@ -80,6 +80,7 @@ namespace OpenGET.UI {
             }
             else
             {
+                // TODO: Just turn off interactable & set alpha to 0; should be more performant!
                 gameObject.SetActive(false);
                 OnDidHide();
                 onSetShown?.Invoke(false);
@@ -142,6 +143,10 @@ namespace OpenGET.UI {
             {
                 if (!fader.isFadingIn)
                 {
+                    // TODO: Just turn on interactable & set alpha to 1; should be more performant!
+                    // However, we will need to make sure panels are awoken/active from the get go.
+                    // On the plus side that would help with null checks etc. taking place earlier
+                    // Also worth considering effects on Update() methods in children
                     gameObject.SetActive(true);
                     OnWillShow();
                     fader.FadeIn(fadeTime);

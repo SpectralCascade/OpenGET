@@ -43,7 +43,6 @@ namespace OpenGET
         /// <summary>
         /// Use CanvasGroup implementation.
         /// </summary>
-        /// <param name="canvasGroup"></param>
         public Fader(CanvasGroup canvasGroup, bool useUnscaledTime = true) {
             implementation = new CanvasGroupFader(canvasGroup);
             this.useUnscaledTime = useUnscaledTime;
@@ -52,7 +51,6 @@ namespace OpenGET
         /// <summary>
         /// Use Renderer implementation (e.g. MeshRenderer, SpriteRenderer).
         /// </summary>
-        /// <param name="renderer"></param>
         public Fader(Renderer renderer, bool useUnscaledTime = true) {
             implementation = new RendererFader(renderer);
             this.useUnscaledTime = useUnscaledTime;

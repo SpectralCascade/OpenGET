@@ -154,7 +154,7 @@ namespace OpenGET
         /// Returns a number with formatting applied in relation to the desired language.
         /// </summary>
         public static string Number(string formatting, float n) {
-            /// TODO: map to desired language.
+            // TODO: map to desired language.
             return string.Format(formatting, n);
         }
 
@@ -162,12 +162,12 @@ namespace OpenGET
         /// Returns the currency formatting related to the desired language, e.g. "$5" -> "5$"
         /// </summary>
         public static string Currency(float amount) {
-            /// TODO: map to desired language.
+            // TODO: map to desired language.
             return string.Format("£{0}", amount);
         }
 
         public static string Date(int day, int month, int year) {
-            /// TODO: map to desired language.
+            // TODO: map to desired language.
             return string.Format("{0}/{1}/{2}", day, month, year);
         }
 

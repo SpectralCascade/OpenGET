@@ -103,7 +103,7 @@ namespace OpenGET.UI
         /// Modal close button. This should be an X button in the upper right corner without any text.
         /// Not guaranteed to exist.
         /// </summary>
-        public ButtonController buttonClose;
+        public Button buttonClose;
 
         /// <summary>
         /// Primary input prompt or button image. Not guaranteed to exist.
