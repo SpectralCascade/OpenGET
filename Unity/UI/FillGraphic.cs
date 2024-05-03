@@ -25,8 +25,8 @@ namespace OpenGET.UI
 
         protected override void Awake() {
             base.Awake();
-            _verticalFill = isVertical;
-            _flipFill = isFlipped;
+            isVertical = isVertical;
+            isFlipped = isFlipped;
         }
 
         protected void Start()

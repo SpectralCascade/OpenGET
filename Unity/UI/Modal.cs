@@ -85,13 +85,26 @@ namespace OpenGET.UI
         /// <summary>
         /// Title text. Not guaranteed to exist.
         /// </summary>
-        public Text title;
+        public string title { get => GetText(textTitleGraphic); set => SetText(textTitleGraphic, value); }
+
+        /// <summary>
+        /// Text graphic for title.
+        /// </summary>
+        [Auto.NullCheck]
+        [SerializeField]
+        private MaskableGraphic textTitleGraphic;
 
         /// <summary>
         /// Description text. All modal popups must have this.
         /// </summary>
+        public string description { get => GetText(textDescriptionGraphic); set => SetText(textDescriptionGraphic, value); }
+
+        /// <summary>
+        /// Text graphic for description.
+        /// </summary>
         [Auto.NullCheck]
-        public Text description;
+        [SerializeField]
+        private MaskableGraphic textDescriptionGraphic;
 
         /// <summary>
         /// Image shown on the popup. Not used currently but here in case we need it in future.
@@ -114,7 +127,14 @@ namespace OpenGET.UI
         /// <summary>
         /// Primary input text. Not guaranteed to exist.
         /// </summary>
-        public Text textPrimary;
+        public string textPrimary { get => GetText(textPrimaryGraphic); set => SetText(textPrimaryGraphic, value); }
+
+        /// <summary>
+        /// Text graphic.
+        /// </summary>
+        [Auto.NullCheck]
+        [SerializeField]
+        private MaskableGraphic textPrimaryGraphic;
 
         /// <summary>
         /// Input action for the primary prompt, if available.
@@ -128,9 +148,16 @@ namespace OpenGET.UI
         public Image inputSecondary;
 
         /// <summary>
-        /// Secondary input text. Not guaranteed to exist.
+        /// Primary input text. Not guaranteed to exist.
         /// </summary>
-        public Text textSecondary;
+        public string textSecondary { get => GetText(textSecondaryGraphic); set => SetText(textSecondaryGraphic, value); }
+
+        /// <summary>
+        /// Text graphic.
+        /// </summary>
+        [Auto.NullCheck]
+        [SerializeField]
+        private MaskableGraphic textSecondaryGraphic;
 
         /// <summary>
         /// Input action for the secondary prompt, if available.
@@ -246,6 +273,30 @@ namespace OpenGET.UI
             return modal;
         }
 
+        /// <summary>
+        /// Get text string.
+        /// </summary>
+        private static string GetText(MaskableGraphic textGraphic)
+        {
+            return (textGraphic is TMPro.TextMeshProUGUI) ?
+                (textGraphic as TMPro.TextMeshProUGUI).text : (textGraphic as Text).text;
+        }
+
+        /// <summary>
+        /// Set text string.
+        /// </summary>
+        private static void SetText(MaskableGraphic textGraphic, string text)
+        {
+            if (textGraphic is TMPro.TextMeshProUGUI)
+            {
+                (textGraphic as TMPro.TextMeshProUGUI).text = text;
+            }
+            else
+            {
+                (textGraphic as Text).text = text;
+            }
+        }
+
         protected override void Awake()
         {
             base.Awake();
@@ -313,28 +364,34 @@ namespace OpenGET.UI
             }
             bool show = !string.IsNullOrEmpty(data.textPrimary);
             inputPrimary?.gameObject.SetActive(show);
-            if (textPrimary != null)
+            if (textPrimaryGraphic != null)
             {
-                textPrimary.text = data.textPrimary;
-                textPrimary.gameObject.SetActive(show);
+                textPrimary = data.textPrimary;
+                textPrimaryGraphic.gameObject.SetActive(show);
             }
             show = !string.IsNullOrEmpty(data.textSecondary);
             inputSecondary?.gameObject.SetActive(show);
-            if (textSecondary != null)
+            if (textSecondaryGraphic != null)
             {
-                textSecondary.text = data.textSecondary;
-                textSecondary.gameObject.SetActive(show);
+                textSecondary = data.textSecondary;
+                textSecondaryGraphic.gameObject.SetActive(show);
+            }
+
+            show |= data.actionSecondary != null;
+            if (textSecondaryGraphic != null)
+            {
+                textSecondaryGraphic.transform.parent.gameObject.SetActive(show);
             }
 
             // Setup all text
             // TODO: Localise text with IDs
             if (title != null && !string.IsNullOrEmpty(data.title))
             {
-                title.text = data.title;
+                title = data.title;
             }
             if (!string.IsNullOrEmpty(data.description))
             {
-                description.text = data.description;
+                description = data.description;
             }
 
             // TODO: Support images loaded from resources
