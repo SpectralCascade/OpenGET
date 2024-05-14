@@ -74,12 +74,13 @@ namespace OpenGET
 
             for (int i = 0, counti = fields.Length; i < counti; i++)
             {
-                if (fields[i].GetValue(obj) == null &&
-                    fields[i].FieldType.IsSubclassOf(typeof(Behaviour)) &&
-                    !fields[i].IsNotSerialized
+                System.Reflection.FieldInfo field = fields[i];
+                if (field.GetValue(obj) == null &&
+                    field.FieldType.IsSubclassOf(typeof(Behaviour)) &&
+                    !field.IsNotSerialized
                 )
                 {
-                    System.Reflection.CustomAttributeData attribute = fields[i].CustomAttributes.FirstOrDefault(
+                    System.Reflection.CustomAttributeData attribute = field.CustomAttributes.FirstOrDefault(
                         x => x.AttributeType == typeof(HookupAttribute)
                     );
                     if (attribute != null)
@@ -88,24 +89,72 @@ namespace OpenGET
                         switch (autoHook)
                         {
                             case Mode.Self:
-                                fields[i].SetValue(obj, obj.GetComponent(fields[i].FieldType));
+                                field.SetValue(obj, obj.GetComponent(field.FieldType));
                                 break;
                             case Mode.Children:
-                                fields[i].SetValue(obj, obj.GetComponentInChildren(fields[i].FieldType));
+                                field.SetValue(obj, obj.GetComponentInChildren(field.FieldType));
                                 break;
                             case Mode.Parent:
-                                fields[i].SetValue(obj, obj.GetComponentInParent(fields[i].FieldType));
+                                field.SetValue(obj, obj.GetComponentInParent(field.FieldType));
                                 break;
                             default:
                                 break;
                         }
 
-                        if (fields[i].GetValue(obj) != null)
+                        if (field.GetValue(obj) != null)
                         {
                             Log.Debug(
                                 "Successfully auto-assigned component to field \"{0}\" of type \"{1}\" on GameObject \"{2}\".",
-                                fields[i].Name,
-                                fields[i].FieldType,
+                                field.Name,
+                                field.FieldType,
+                                SceneNavigator.GetGameObjectPath(obj.gameObject)
+                            );
+                            UnityEditor.EditorUtility.SetDirty(obj);
+                        }
+                    }
+                }
+                else if (field.FieldType.IsArray && field.FieldType.GetElementType().IsSubclassOf(typeof(Component)) &&
+                    !field.IsNotSerialized)
+                {
+                    System.Reflection.CustomAttributeData attribute = field.CustomAttributes.FirstOrDefault(
+                        x => x.AttributeType == typeof(HookupAttribute)
+                    );
+                    if (attribute != null)
+                    {
+                        Mode autoHook = (Mode)attribute.ConstructorArguments[0].Value;
+
+                        System.Type elementType = field.FieldType.GetElementType();
+                        Component[] comps = null;
+
+                        switch (autoHook)
+                        {
+                            case Mode.Self:
+                                comps = obj.GetComponents(elementType);
+                                break;
+                            case Mode.Children:
+                                comps = obj.GetComponentsInChildren(elementType);
+                                break;
+                            case Mode.Parent:
+                                comps = obj.GetComponentsInParent(elementType);
+                                break;
+                            default:
+                                break;
+                        }
+                        System.Array instance = System.Array.CreateInstance(elementType, comps.Length);
+                        for (int j = 0, countj = instance.Length; j < countj; j++)
+                        {
+                            instance.SetValue(comps[j], j);
+                        }
+                        field.SetValue(obj, instance);
+
+                        object[] array = field.GetValue(obj) as object[];
+                        if (array != null && array.Length > 0)
+                        {
+                            Log.Debug(
+                                "Successfully auto-assigned {0} component(s) to field \"{1}\" of type \"{2}\" on GameObject \"{3}\".",
+                                array.Length,
+                                field.Name,
+                                field.FieldType,
                                 SceneNavigator.GetGameObjectPath(obj.gameObject)
                             );
                             UnityEditor.EditorUtility.SetDirty(obj);
@@ -144,14 +193,15 @@ namespace OpenGET
 
             for (int i = 0, counti = fields.Length; i < counti; i++)
             {
-                if (fields[i].FieldType.IsSubclassOf(typeof(Object)) &&
-                    !fields[i].IsNotSerialized &&
-                    fields[i].CustomAttributes.Where(x => x.AttributeType == typeof(NullCheckAttribute)).Count() > 0
+                var field = fields[i];
+                if (field.FieldType.IsSubclassOf(typeof(Object)) &&
+                    !field.IsNotSerialized &&
+                    field.CustomAttributes.Where(x => x.AttributeType == typeof(NullCheckAttribute)).Count() > 0
                 )
                 {
                     bool isGameObject = objType == typeof(GameObject);
                     bool isComponent = !isGameObject && objType.IsSubclassOf(typeof(MonoBehaviour));
-                    string message = "Missing reference to " + fields[i].FieldType.ToString();
+                    string message = "Missing reference to " + field.FieldType.ToString();
                     GameObject target = isGameObject ? obj as GameObject : (isComponent ? (obj as MonoBehaviour).gameObject : null);
                     if (target != null)
                     {
@@ -163,7 +213,7 @@ namespace OpenGET
                         message += " in instance of " + info.GetMethod()?.DeclaringType.FullName;
                     }
 
-                    Debug.Assert(fields[i].GetValue(obj) != null, Log.PrefixStackInfo(Log.Format("red", message)), isComponent ? (Object)((obj as MonoBehaviour).gameObject) : obj);
+                    Debug.Assert(field.GetValue(obj) != null, Log.PrefixStackInfo(Log.Format("red", message)), isComponent ? (Object)((obj as MonoBehaviour).gameObject) : obj);
                 }
             }
         }

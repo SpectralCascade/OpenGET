@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace OpenGET
 {
@@ -78,6 +80,18 @@ namespace OpenGET
         }
         private bool _lowestFirst = false;
 
+        public PriorityQueue() { }
+
+        public PriorityQueue(IEnumerable<Item> data)
+        {
+            items = data.ToList();
+        }
+
+        public PriorityQueue(IEnumerable<T> data)
+        {
+            items = data.Select(x => new Item(this, x, 0)).ToList();
+        }
+
         /// <summary>
         /// Add an element to the queue.
         /// </summary>
@@ -118,6 +132,22 @@ namespace OpenGET
         }
 
         /// <summary>
+        /// Peek at the top priority item.
+        /// </summary>
+        public Item PeekItem()
+        {
+            return items.Count > 0 ? items[items.Count - 1] : null;
+        }
+        
+        /// <summary>
+        /// Peek at the top priority data.
+        /// </summary>
+        public T Peek()
+        {
+            return PeekItem().data;
+        }
+
+        /// <summary>
         /// Sort the underlying data by priority. This is done automatically on dequeue if it hasn't been done since enqueue,
         /// or priority values have been modified.
         /// </summary>
@@ -143,6 +173,9 @@ namespace OpenGET
         {
             return items.GetEnumerator();
         }
+
+        [IndexerName("ItemIndexer")]
+        public Item this[int i] => items[i];
 
     }
 
