@@ -1,0 +1,306 @@
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Reflection;
+using UnityEngine;
+
+namespace OpenGET.UI
+{
+
+    /// <summary>
+    /// A custom generated list of interactable UI elements such as buttons, sliders, toggles etc.
+    /// </summary>
+    public class MenuList : ViewPanel
+    {
+
+        /// <summary>
+        /// The root GameObject instance that all generated interactables are placed under.
+        /// </summary>
+        [SerializeField]
+        [Auto.NullCheck]
+        private GameObject root;
+
+        /// <summary>
+        /// This gameobject will always be moved to the end of the generated menu list, if specified.
+        /// </summary>
+        [SerializeField]
+        private GameObject bottomRoot = null;
+
+        /// <summary>
+        /// The prefab for a toggle button element.
+        /// </summary>
+        [SerializeField]
+        [Auto.NullCheck]
+        private ButtonToggle elementTogglePrefab;
+
+        /// <summary>
+        /// The prefab for a slider element.
+        /// </summary>
+        [SerializeField]
+        [Auto.NullCheck]
+        private SliderElement elementSliderPrefab;
+
+        /// <summary>
+        /// The prefab for a dropdown list element.
+        /// </summary>
+        [SerializeField]
+        [Auto.NullCheck]
+        private OptionListElement elementOptionListPrefab;
+
+        /// <summary>
+        /// Optional container prefab for elements.
+        /// </summary>
+        [SerializeField]
+        private ElementContainer elementContainerPrefab;
+
+        /// <summary>
+        /// The ViewPanel instance to use for OptionListElement entries.
+        /// </summary>
+        [SerializeField]
+        [Auto.NullCheck]
+        private ViewPanel optionsMenu;
+
+        /// <summary>
+        /// The root gameobject to build OptionListElement options under.
+        /// </summary>
+        [SerializeField]
+        [Auto.NullCheck]
+        private GameObject optionsMenuRoot;
+
+        /// <summary>
+        /// The local menu builder instance.
+        /// </summary>
+        public readonly Builder builder = new Builder();
+
+        /// <summary>
+        /// Used to build the menu.
+        /// </summary>
+        public class Builder
+        {
+
+            /// <summary>
+            /// Has this build completed?
+            /// </summary>
+            public bool complete { get; private set; }
+
+            /// <summary>
+            /// List of all elements with a particular value associated.
+            /// </summary>
+            public readonly List<IElement> elements = new List<IElement>();
+
+            /// <summary>
+            /// List of all added components, regardless of whether they're an element or not.
+            /// </summary>
+            public readonly List<MonoBehaviour> added = new List<MonoBehaviour>();
+
+            /// <summary>
+            /// Begin the list generation/building process.
+            /// </summary>
+            public Builder Begin(GameObject root)
+            {
+                Clean();
+                this.root = root;
+                return this;
+            }
+
+            /// <summary>
+            /// Destroy all built objects.
+            /// </summary>
+            public Builder Clean()
+            {
+                for (int i = 0, counti = added.Count; i < counti; i++)
+                {
+                    if (added[i] != null)
+                    {
+                        Destroy(added[i].gameObject);
+                    }
+                }
+                added.Clear();
+                elements.Clear();
+                complete = false;
+                return this;
+            }
+
+            public delegate void OnAdded<T>(T added) where T : MonoBehaviour;
+
+            /// <summary>
+            /// Add a custom prefab that implements IElement.
+            /// </summary>
+            public ElementContainer Add<T, V>(T prefab, V value, OnAdded<T> onAdded = null, ElementContainer containerPrefab = null) where T : MonoBehaviour, IElement
+            {
+                ElementContainer container = containerPrefab != null ? Instantiate(containerPrefab, root.transform) : null;
+                T loaded = GameObject.Instantiate(prefab, container?.content.transform ?? root.transform);
+                if (container != null)
+                {
+                    container.element = loaded;
+                }
+                added.Add(container as MonoBehaviour ?? loaded);
+                elements.Add(container as IElement ?? loaded);
+
+                loaded.SetValue(value);
+                if (onAdded != null)
+                {
+                    onAdded(loaded);
+                }
+                return container;
+            }
+
+            /// <summary>
+            /// Add a custom prefab that doesn't implement IElement (such as a button).
+            /// </summary>
+            public Builder Add<T>(T prefab, OnAdded<T> onAdded = null) where T : MonoBehaviour
+            {
+                T loaded = GameObject.Instantiate(prefab, root.transform);
+                added.Add(loaded);
+                if (onAdded != null)
+                {
+                    onAdded(loaded);
+                }
+                return this;
+            }
+
+            /// <summary>
+            /// Initialise everything and end the list generating/building process.
+            /// </summary>
+            public void End()
+            {
+                complete = true;
+            }
+
+            /// <summary>
+            /// The root gameobject under which the UI elements are placed.
+            /// </summary>
+            private GameObject root;
+
+        }
+
+        /// <summary>
+        /// Build the menu list, using reflection. Returns the group type name.
+        /// </summary>
+        public string Build(object group)
+        {
+            // Start the generation process
+            builder.Begin(root);
+
+            // Get all fields in settings and automagically create appropriate elements for them.
+            System.Type groupType = group.GetType();
+            FieldInfo[] fields = groupType.GetFields(BindingFlags.Instance | BindingFlags.Public);
+            for (int i = 0, counti = fields.Length; i < counti; i++)
+            {
+                FieldInfo field = fields[i];
+                System.Type type = field.FieldType;
+                object fieldValue = field.GetValue(group);
+                object applyField = fieldValue;
+                ElementContainer container = null;
+                bool hasApplyInterface = fieldValue is IApplySetting;
+                if (hasApplyInterface)
+                {
+                    fieldValue = (fieldValue as IApplySetting).GetValue();
+                    type = fieldValue.GetType();
+                }
+                // TODO: Localise text on elements
+                if (type == typeof(float))
+                {
+                    // Slider
+                    container = builder.Add(elementSliderPrefab, fieldValue, (SliderElement slider) => {
+                        slider.text.text = (applyField as IApplySetting).GetName() ?? field.Name;
+                        slider.button.onClick.AddListener(() => {
+                            // TODO map slider value according to any field attributes if available.
+                            if (hasApplyInterface)
+                            {
+                                (applyField as IApplySetting).SetValue(slider.sliderValue);
+                                field.SetValue(group, applyField);
+                            }
+                            else
+                            {
+                                field.SetValue(group, slider.sliderValue);
+                            }
+                        });
+                        //slider.group = groupType.Name;
+                        slider.gameObject.name = field.Name;
+                    }, elementContainerPrefab);
+                }
+                else if (type == typeof(bool))
+                {
+                    // Toggle
+                    container = builder.Add(elementTogglePrefab, fieldValue, (ButtonToggle button) => {
+                        button.text.text = (applyField as IApplySetting).GetName() ?? field.Name;
+                        button.onToggle += (bool toggled) => {
+                            // Update the value in the referenced object.
+                            if (hasApplyInterface)
+                            {
+                                (applyField as IApplySetting).SetValue(toggled);
+                                field.SetValue(group, applyField);
+                            }
+                            else
+                            {
+                                field.SetValue(group, toggled);
+                            }
+                        };
+                        //button.group = groupType.Name;
+                        button.gameObject.name = field.Name;
+                    }, elementContainerPrefab);
+
+                }
+                else if (type.IsEnum)
+                {
+                    // Dropdown selection
+                    container = builder.Add(elementOptionListPrefab, (int)fieldValue, (OptionListElement optionList) => {
+                        // TODO: Localise option names instead of just grabbing enum member names...
+                        optionList.options = type.GetEnumNames();
+                        optionList.optionSelectionText = ((applyField as IApplySetting).GetName() ?? field.Name) + ": {0}";
+                        optionList.text.text = 
+                            string.Format(optionList.optionSelectionText, optionList.options[optionList.value]);
+                        optionList.onOptionChanged += (int value) => {
+                            // Update the value in the referenced object
+                            object valueEnum = Enum.ToObject(type, value);
+                            if (hasApplyInterface)
+                            {
+                                (applyField as IApplySetting).SetValue(valueEnum);
+                                field.SetValue(group, applyField);
+                            }
+                            else
+                            {
+                                field.SetValue(group, valueEnum);
+                            }
+                        };
+                        optionList.parentPanel = this;
+                        optionList.optionsMenu = optionsMenu;
+                        optionList.optionsRoot = optionsMenuRoot;
+                        // TODO set value
+                        //optionList.group = groupType.Name;
+                        optionList.gameObject.name = field.Name;
+                    }, elementContainerPrefab);
+                }
+                else
+                {
+                    // Unknown type!
+                    Debug.LogError("Cannot build settings element for field \"" + field.Name + "\" as it is of unhandled type " + type.ToString());
+                }
+
+                if (container != null)
+                {
+                    container.description.text = (applyField as IApplySetting).GetDescription();
+                }
+            }
+
+            // Make sure the player can use the back button, if available.
+            /*if (backButton != null)
+            {
+                backButton.group = groupType.Name;
+            }*/
+
+            // Move bottomRoot to the end, if available.
+            if (bottomRoot != null)
+            {
+                bottomRoot.transform.SetAsLastSibling();
+            }
+
+            builder.End();
+
+            return groupType.Name;
+        }
+
+    }
+
+}

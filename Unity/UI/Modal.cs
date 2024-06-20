@@ -26,7 +26,8 @@ namespace OpenGET.UI
                 string textPrimary, UnityAction actionPrimary,
                 string textSecondary, UnityAction actionSecondary,
                 UnityAction onClose,
-                bool showCloseInput
+                bool showCloseInput,
+                bool takeInputControl
             )
             {
                 this.title = title;
@@ -37,6 +38,7 @@ namespace OpenGET.UI
                 this.actionSecondary = actionSecondary;
                 this.onClose = onClose;
                 this.showCloseInput = showCloseInput;
+                this.takeInputControl = takeInputControl;
             }
 
             /// <summary>
@@ -79,6 +81,11 @@ namespace OpenGET.UI
             /// Should a dedicated close button be shown?
             /// </summary>
             public bool showCloseInput;
+            
+            /// <summary>
+            /// Has this modal taken input control?
+            /// </summary>
+            public bool takeInputControl;
 
         }
 
@@ -192,6 +199,11 @@ namespace OpenGET.UI
         public RectTransform tintBottom;
 
         /// <summary>
+        /// Hint(s) used to indicate something to the player at a given position.
+        /// </summary>
+        private Hint[] hints = new Hint[0];
+
+        /// <summary>
         /// Reference to the root UI controller.
         /// </summary>
         private UIController ui;
@@ -205,7 +217,7 @@ namespace OpenGET.UI
         /// <summary>
         /// Time in seconds the player must hold the secondary input to execute the action.
         /// </summary>
-        private float holdSecondaryTime = 0.5f;//GameData.Input.ButtonHoldTime;
+        private float holdSecondaryTime = 0.5f;
 
         /// <summary>
         /// Show a modal popup.
@@ -219,7 +231,10 @@ namespace OpenGET.UI
             string textPrimary = "OK", UnityAction actionPrimary = null,
             string textSecondary = null, UnityAction actionSecondary = null,
             UnityAction onClose = null,
-            bool showCloseInput = true
+            bool showCloseInput = true,
+            RectTransform root = null,
+            bool takeInputControl = true,
+            Hint[] hints = null
         )
         {
             return Show(
@@ -230,8 +245,61 @@ namespace OpenGET.UI
                 textPrimary, actionPrimary,
                 textSecondary, actionSecondary,
                 onClose,
-                showCloseInput
+                showCloseInput,
+                root,
+                takeInputControl,
+                hints
             );
+        }
+        
+        /// <summary>
+        /// Convenience method for showing a simple popup that points/hints towards some transform(s) in the world.
+        /// </summary>
+        public static Modal Show(
+            UIController ui,
+            Modal prefab,
+            string title,
+            string description,
+            Transform[] pointAtTargets,
+            Sprite pointerSprite = null,
+            string textPrimary = null, UnityAction actionPrimary = null,
+            UnityAction onClose = null,
+            bool showCloseInput = true,
+            RectTransform root = null,
+            bool takeInputControl = true
+        )
+        {
+            Hint[] hints = new Hint[pointAtTargets.Length];
+            if (pointerSprite == null)
+            {
+                pointerSprite = Resources.Load<Sprite>("Sprites/Pixel");
+            }
+            for (int i = 0, counti = pointAtTargets.Length; i < counti; i++)
+            {
+                GameObject hintObj = new GameObject("ModalHint_" + i);
+                hintObj.transform.parent = ui.modalsRoot;
+                hintObj.AddComponent<Image>().sprite = pointerSprite;
+                (hintObj.transform as RectTransform).sizeDelta = new Vector2(4, 4);
+                (hintObj.transform as RectTransform).pivot = new Vector2(0, 0.5f);
+                hints[i] = hintObj.AddComponent<PointerHint>();
+                PointerHint.Parameters args = new PointerHint.Parameters();
+                args.camera = Camera.main;
+                hints[i].SetHintTarget(pointAtTargets[i], args);
+            }
+            Modal modal = Show(
+                ui,
+                prefab,
+                title,
+                description,
+                textPrimary, actionPrimary,
+                null, null,
+                onClose,
+                showCloseInput,
+                root,
+                takeInputControl,
+                hints
+            );
+            return modal;
         }
 
         /// <summary>
@@ -246,7 +314,10 @@ namespace OpenGET.UI
             string textPrimary = "OK", UnityAction actionPrimary = null,
             string textSecondary = null, UnityAction actionSecondary = null,
             UnityAction onClose = null,
-            bool showCloseInput = true
+            bool showCloseInput = true,
+            RectTransform root = null,
+            bool takeInputControl = true,
+            Hint[] hints = null
         )
         {
             if (prefab == null)
@@ -258,13 +329,45 @@ namespace OpenGET.UI
             if (ui != null)
             {
                 // Create the modal and initialise it
-                modal = Instantiate(prefab, ui.modalsRoot ?? ui.transform);
+                modal = Instantiate(prefab, root ?? ui.modalsRoot ?? ui.transform);
                 modal.Init(new Parameters(
-                    title, description, textPrimary, actionPrimary, textSecondary, actionSecondary, onClose, showCloseInput
+                    title,
+                    description,
+                    textPrimary,
+                    actionPrimary,
+                    textSecondary,
+                    actionSecondary,
+                    onClose,
+                    showCloseInput,
+                    takeInputControl
                 ), ui);
                 // TODO: Fade in modal
                 modal.canvasGroup.alpha = 1;
-                ui.input.RequestInputControl(modal.gameObject);
+                if (takeInputControl)
+                {
+                    ui.input.RequestInputControl(modal.gameObject);
+                }
+                if (hints != null)
+                {
+                    modal.hints = hints;
+                    for (int i = 0, counti = hints.Length; i < counti; i++)
+                    {
+                        // For screen-space targets, make sure the pointer is attached & displayed beneath the popup
+                        // or to the specified origin
+                        hints[i].SetHintTarget(hints[i].target, hints[i].hintData, modal.transform);
+
+                        if (hints[i].target is RectTransform)
+                        {
+                            hints[i].transform.parent = modal.transform;
+                            hints[i].transform.localPosition = Vector3.zero;
+                            hints[i].transform.SetAsFirstSibling();
+                        }
+                    }
+                }
+                else
+                {
+                    modal.hints = new Hint[0];
+                }
             }
             else
             {
@@ -362,6 +465,8 @@ namespace OpenGET.UI
             {
                 buttonClose.gameObject.SetActive(data.showCloseInput);
             }
+
+            // Primary button
             bool show = !string.IsNullOrEmpty(data.textPrimary);
             inputPrimary?.gameObject.SetActive(show);
             if (textPrimaryGraphic != null)
@@ -369,6 +474,13 @@ namespace OpenGET.UI
                 textPrimary = data.textPrimary;
                 textPrimaryGraphic.gameObject.SetActive(show);
             }
+            show |= data.actionPrimary != null;
+            if (textPrimaryGraphic != null)
+            {
+                textPrimaryGraphic.transform.parent.gameObject.SetActive(show);
+            }
+
+            // Secondary button
             show = !string.IsNullOrEmpty(data.textSecondary);
             inputSecondary?.gameObject.SetActive(show);
             if (textSecondaryGraphic != null)
@@ -376,7 +488,6 @@ namespace OpenGET.UI
                 textSecondary = data.textSecondary;
                 textSecondaryGraphic.gameObject.SetActive(show);
             }
-
             show |= data.actionSecondary != null;
             if (textSecondaryGraphic != null)
             {
@@ -421,7 +532,15 @@ namespace OpenGET.UI
         [SerializeField]
         public void OnClose()
         {
-            ui.input.FreeInputControl(gameObject);
+            if (data.takeInputControl)
+            {
+                ui.input.FreeInputControl(gameObject);
+            }
+
+            for (int i = 0, counti = hints.Length; i < counti; i++)
+            {
+                Destroy(hints[i].gameObject);
+            }
 
             data.onClose?.Invoke();
             // TODO: Fade out before destroying

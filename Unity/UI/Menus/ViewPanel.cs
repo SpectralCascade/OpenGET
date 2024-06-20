@@ -22,13 +22,40 @@ namespace OpenGET.UI {
         /// <summary>
         /// The panel above this in stack, if any.
         /// </summary>
-        protected ViewPanel above = null;
+        public ViewPanel above { get; protected set; }
 
         /// <summary>
         /// The panel below this on the stack, if any.
         /// </summary>
-        protected ViewPanel below = null;
+        public ViewPanel below { get; protected set; }
 
+        /// <summary>
+        /// Get the panel at the top of the stack relative to this panel.
+        /// </summary>
+        public ViewPanel top {
+            get {
+                ViewPanel found = this;
+                while (found.above != null)
+                {
+                    found = found.above;
+                }
+                return found;
+            }
+        }
+
+        /// <summary>
+        /// Get the panel at the bottom of the stack relative to this panel.
+        /// </summary>
+        public ViewPanel bottom {
+            get {
+                ViewPanel found = this;
+                while (found.below != null)
+                {
+                    found = found.below;
+                }
+                return found;
+            }
+        }
         /// <summary>
         /// Canvas group used for fading.
         /// </summary>
@@ -276,7 +303,7 @@ namespace OpenGET.UI {
                     above.backButton?.onClick.AddListener(overlay.Pop);
                 }
                 overlay.above = above;
-                above = overlay;
+                above.below = overlay;
                 Log.Debug(
                     "Inserting ViewPanel into stack between \"{0}\" and \"{1}\"",
                     SceneNavigator.GetGameObjectPath(gameObject),

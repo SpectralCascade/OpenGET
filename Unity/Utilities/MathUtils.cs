@@ -62,6 +62,17 @@ namespace OpenGET
 			return combined / totalPoints;
 		}
 
+		/// <summary>
+		/// Tween functions, useful for animations among other things.
+		/// </summary>
+		public static class Tween
+		{
+			public static float InOutCubic(float x)
+			{
+				return x < 0.5f ? 4f * x * x * x : 1f - Mathf.Pow(-2f * x + 2f, 3f) / 2f;
+			}
+		}
+
 	}
 
 	/// <summary>
