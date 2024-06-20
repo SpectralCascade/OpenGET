@@ -17,17 +17,20 @@ namespace OpenGET.UI
         /// <summary>
         /// The panel to use.
         /// </summary>
+        [Auto.NullCheck]
         public ViewPanel optionsMenu;
 
         /// <summary>
         /// The root gameobject to build options under.
         /// </summary>
+        [Auto.NullCheck]
         public GameObject optionsRoot;
 
         /// <summary>
         /// The prefab to use for generating the option buttons.
         /// </summary>
         [SerializeField]
+        [Auto.NullCheck]
         private TextButton optionButtonPrefab;
 
         /// <summary>
@@ -42,7 +45,6 @@ namespace OpenGET.UI
 
         /// <summary>
         /// Array of all possible option names.
-        /// TODO: Use localisation IDs.
         /// </summary>
         public string[] options = new string[0];
 

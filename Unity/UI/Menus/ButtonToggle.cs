@@ -16,6 +16,7 @@ namespace OpenGET.UI
         /// <summary>
         /// The toggle checkbox mark, indicating whether the setting is on or off.
         /// </summary>
+        [Auto.NullCheck]
         public GameObject checkmark;
 
         /// <summary>

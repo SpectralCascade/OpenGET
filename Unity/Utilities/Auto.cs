@@ -201,7 +201,7 @@ namespace OpenGET
                 {
                     bool isGameObject = objType == typeof(GameObject);
                     bool isComponent = !isGameObject && objType.IsSubclassOf(typeof(MonoBehaviour));
-                    string message = "Missing reference to " + field.FieldType.ToString();
+                    string message = "Missing " + field.FieldType.ToString() + " reference '" + field.Name + "' on instance of type " + field.DeclaringType.Name;
                     GameObject target = isGameObject ? obj as GameObject : (isComponent ? (obj as MonoBehaviour).gameObject : null);
                     if (target != null)
                     {

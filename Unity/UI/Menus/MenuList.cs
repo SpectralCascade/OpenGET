@@ -13,58 +13,42 @@ namespace OpenGET.UI
     public class MenuList : ViewPanel
     {
 
-        /// <summary>
-        /// The root GameObject instance that all generated interactables are placed under.
-        /// </summary>
         [SerializeField]
         [Auto.NullCheck]
+        [Tooltip("The root GameObject instance that all generated interactables are placed under.")]
         private GameObject root;
 
-        /// <summary>
-        /// This gameobject will always be moved to the end of the generated menu list, if specified.
-        /// </summary>
         [SerializeField]
+        [Tooltip("This gameobject will always be moved to the end of the generated menu list, if specified.")]
         private GameObject bottomRoot = null;
 
-        /// <summary>
-        /// The prefab for a toggle button element.
-        /// </summary>
         [SerializeField]
         [Auto.NullCheck]
+        [Tooltip("The prefab for a toggle button element.")]
         private ButtonToggle elementTogglePrefab;
 
-        /// <summary>
-        /// The prefab for a slider element.
-        /// </summary>
         [SerializeField]
         [Auto.NullCheck]
+        [Tooltip("The prefab for a slider element.")]
         private SliderElement elementSliderPrefab;
 
-        /// <summary>
-        /// The prefab for a dropdown list element.
-        /// </summary>
         [SerializeField]
         [Auto.NullCheck]
+        [Tooltip("The prefab for a dropdown list element.")]
         private OptionListElement elementOptionListPrefab;
 
-        /// <summary>
-        /// Optional container prefab for elements.
-        /// </summary>
         [SerializeField]
+        [Tooltip("Optional container prefab for elements.")]
         private ElementContainer elementContainerPrefab;
 
-        /// <summary>
-        /// The ViewPanel instance to use for OptionListElement entries.
-        /// </summary>
         [SerializeField]
         [Auto.NullCheck]
+        [Tooltip("The ViewPanel instance to use for OptionListElement entries.")]
         private ViewPanel optionsMenu;
 
-        /// <summary>
-        /// The root gameobject to build OptionListElement options under.
-        /// </summary>
         [SerializeField]
         [Auto.NullCheck]
+        [Tooltip("The root gameobject to build OptionListElement options under.")]
         private GameObject optionsMenuRoot;
 
         /// <summary>
