@@ -151,8 +151,9 @@ namespace OpenGET.UI
 
         /// <summary>
         /// Build the menu list, using reflection. Returns the group type name.
+        /// Optionally specify tooltip text that should be set when elements are hovered.
         /// </summary>
-        public string Build(object group)
+        public string Build(object group, TMPro.TextMeshProUGUI tooltipText = null, string groupDescription = null)
         {
             // Start the generation process
             builder.Begin(root);
@@ -191,6 +192,19 @@ namespace OpenGET.UI
                                 field.SetValue(group, slider.sliderValue);
                             }
                         });
+                        if (tooltipText != null)
+                        {
+                            slider.onHoverChange.AddListener((bool enter) => {
+                                if (enter)
+                                {
+                                    tooltipText.text = Localise.Text((applyField as IApplySetting).GetDescription());
+                                }
+                                else
+                                {
+                                    tooltipText.text = Localise.Text(groupDescription);
+                                }
+                            });
+                        }
                         //slider.group = groupType.Name;
                         slider.gameObject.name = field.Name;
                     }, elementContainerPrefab);
@@ -212,6 +226,19 @@ namespace OpenGET.UI
                                 field.SetValue(group, toggled);
                             }
                         };
+                        if (tooltipText != null)
+                        {
+                            button.onHoverChange.AddListener((bool enter) => {
+                                if (enter)
+                                {
+                                    tooltipText.text = Localise.Text((applyField as IApplySetting).GetDescription());
+                                }
+                                else
+                                {
+                                    tooltipText.text = Localise.Text(groupDescription);
+                                }
+                            });
+                        }
                         //button.group = groupType.Name;
                         button.gameObject.name = field.Name;
                     }, elementContainerPrefab);
@@ -245,6 +272,19 @@ namespace OpenGET.UI
                                 field.SetValue(group, valueChange);
                             }
                         };
+                        if (tooltipText != null)
+                        {
+                            dropdown.onHoverChange.AddListener((bool enter) => {
+                                if (enter)
+                                {
+                                    tooltipText.text = Localise.Text((applyField as IApplySetting).GetDescription());
+                                }
+                                else
+                                {
+                                    tooltipText.text = Localise.Text(groupDescription);
+                                }
+                            });
+                        }
                         dropdown.gameObject.name = field.Name;
                         dropdown.Init();
                     }, elementContainerPrefab);

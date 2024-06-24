@@ -147,7 +147,7 @@ namespace OpenGET
 #endif
                 return res.hasValue ? string.Format(res.value, args) : "[MISSING STRING: \"" + raw + "\"]";
             }
-            return string.Format(raw, args);
+            return raw != null ? string.Format(raw, args) : null;
         }
 
         /// <summary>

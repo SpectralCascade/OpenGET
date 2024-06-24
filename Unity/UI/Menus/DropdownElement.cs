@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using System.Linq;
 
 namespace OpenGET.UI
@@ -10,8 +11,10 @@ namespace OpenGET.UI
     /// <summary>
     /// Similar to a dropdown but rather than overlaying on the current screen, acts as it's own view.
     /// </summary>
-    public class DropdownElement : AutoBehaviour, IElement
+    public class DropdownElement : AutoBehaviour, IElement, IPointerEnterHandler, IPointerExitHandler
     {
+
+        public UnityEngine.Events.UnityEvent<bool> onHoverChange = new UnityEngine.Events.UnityEvent<bool>();
 
         /// <summary>
         /// Text showing the name of this element.
@@ -87,6 +90,15 @@ namespace OpenGET.UI
             return dropdown.value;
         }
 
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            onHoverChange?.Invoke(true);
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            onHoverChange?.Invoke(false);
+        }
     }
 
 }
