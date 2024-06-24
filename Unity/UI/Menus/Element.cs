@@ -66,4 +66,15 @@ namespace OpenGET.UI
         }
     }
 
+    /// <summary>
+    /// Attribute for dropdown elements, to be used on integer fields (the integer value is used for indexing the dropdown).
+    /// </summary>
+    [System.AttributeUsage(System.AttributeTargets.Field)]
+    public class DropdownAttribute : ElementAttribute
+    {
+        public DropdownAttribute(string name = "") : base(name)
+        {
+        }
+    }
+
 }

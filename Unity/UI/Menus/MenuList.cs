@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
+using System.Linq;
 
 namespace OpenGET.UI
 {
@@ -35,21 +36,11 @@ namespace OpenGET.UI
         [SerializeField]
         [Auto.NullCheck]
         [Tooltip("The prefab for a dropdown list element.")]
-        private OptionListElement elementOptionListPrefab;
+        private DropdownElement elementDropdownPrefab;
 
         [SerializeField]
         [Tooltip("Optional container prefab for elements.")]
         private ElementContainer elementContainerPrefab;
-
-        [SerializeField]
-        [Auto.NullCheck]
-        [Tooltip("The ViewPanel instance to use for OptionListElement entries.")]
-        private ViewPanel optionsMenu;
-
-        [SerializeField]
-        [Auto.NullCheck]
-        [Tooltip("The root gameobject to build OptionListElement options under.")]
-        private GameObject optionsMenuRoot;
 
         /// <summary>
         /// The local menu builder instance.
@@ -226,34 +217,35 @@ namespace OpenGET.UI
                     }, elementContainerPrefab);
 
                 }
-                else if (type.IsEnum)
+                else if (type.IsEnum || type == typeof(int))
                 {
                     // Dropdown selection
-                    container = builder.Add(elementOptionListPrefab, (int)fieldValue, (OptionListElement optionList) => {
+                    container = builder.Add(elementDropdownPrefab, (int)fieldValue, (DropdownElement dropdown) => {
                         // TODO: Localise option names instead of just grabbing enum member names...
-                        optionList.options = type.GetEnumNames();
-                        optionList.optionSelectionText = ((applyField as IApplySetting).GetName() ?? field.Name) + ": {0}";
-                        optionList.text.text = 
-                            string.Format(optionList.optionSelectionText, optionList.options[optionList.value]);
-                        optionList.onOptionChanged += (int value) => {
+                        bool isEnum = type.IsEnum;
+                        if (isEnum)
+                        {
+                            dropdown.options = type.GetEnumNames();
+                        }
+                        else
+                        {
+                            dropdown.options = ((Setting<int>)applyField).customData.Select(x => x.ToString()).ToArray();
+                        }
+                        dropdown.text.text = Localise.Text((applyField as IApplySetting).GetName() ?? field.Name);
+                        dropdown.onOptionChanged += (int value) => {
                             // Update the value in the referenced object
-                            object valueEnum = Enum.ToObject(type, value);
+                            object valueChange = isEnum ? Enum.ToObject(type, value) : value;
                             if (hasApplyInterface)
                             {
-                                (applyField as IApplySetting).SetValue(valueEnum);
+                                (applyField as IApplySetting).SetValue(valueChange);
                                 field.SetValue(group, applyField);
                             }
                             else
                             {
-                                field.SetValue(group, valueEnum);
+                                field.SetValue(group, valueChange);
                             }
                         };
-                        optionList.parentPanel = this;
-                        optionList.optionsMenu = optionsMenu;
-                        optionList.optionsRoot = optionsMenuRoot;
-                        // TODO set value
-                        //optionList.group = groupType.Name;
-                        optionList.gameObject.name = field.Name;
+                        dropdown.gameObject.name = field.Name;
                     }, elementContainerPrefab);
                 }
                 else

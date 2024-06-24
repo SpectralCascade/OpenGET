@@ -8,6 +8,150 @@ using System.Linq;
 
 namespace OpenGET
 {
+    /// <summary>
+    /// Individual settings should use this wrapper class so they can be applied in some way once a value is selected.
+    /// </summary>
+    [Serializable]
+    public struct Setting<T> : IApplySetting
+    {
+        public delegate void ApplySetting(T current);
+
+        public delegate string GetText();
+
+        /// <summary>
+        /// Create a new setting.
+        /// </summary>
+        /// <param name="value">The initial setting value.</param>
+        /// <param name="apply">Callback for applying the setting.</param>
+        /// <param name="previewOnChange">Whether this setting be applied for preview immediately upon changing it.</param>
+        /// <param name="autoRevertTime">
+        /// Show a confirmation dialog that auto-reverts the setting if the specified time in seconds elapses.
+        /// If a time of zero or less is speciified, no confirmation dialog or auto-revert takes place for this setting.
+        /// Please note this option is only adhered to for settings that are applied for preview on change.
+        /// </param>
+        /// <param name="name">Get a text string to use as the setting name. If null, uses member name.</param>
+        /// <param name="desc">Get a text string to use as the setting description.</param>
+        /// <param name="customData">Custom non-serialised data that can be accessed & changed dynamically at runtime.</param>
+        public Setting(
+            T value = default,
+            ApplySetting apply = null,
+            bool previewOnChange = false,
+            float autoRevertTime = 0,
+            GetText name = null,
+            GetText desc = null,
+            object[] customData = null
+        )
+        {
+            this.value = value;
+            this.apply = apply;
+            this.previewOnChange = previewOnChange;
+            this.autoRevertTime = autoRevertTime;
+            this.getName = name;
+            this.getDescription = desc;
+            this.customData = customData;
+        }
+
+        public static implicit operator T(Setting<T> s)
+        {
+            return s.value;
+        }
+
+        public static implicit operator Setting<T>(T s)
+        {
+            return new Setting<T>(s);
+        }
+
+        /// <summary>
+        /// The setting value to be serialised.
+        /// </summary>
+        [SerializeField]
+        private T value;
+
+        /// <summary>
+        /// Function used to apply the given setting.
+        /// </summary>
+        private ApplySetting apply;
+
+        /// <summary>
+        /// Should this setting be immediately applied for preview when it is changed?
+        /// </summary>
+        public readonly bool previewOnChange;
+
+        /// <summary>
+        /// Time to elapse before the preview is automatically reverted.
+        /// </summary>
+        public readonly float autoRevertTime;
+
+        /// <summary>
+        /// Get the name of this setting to use as UI text.
+        /// </summary>
+        private GetText getName;
+
+        /// <summary>
+        /// Get the description of this setting to use as UI text.
+        /// </summary>
+        private GetText getDescription;
+
+        /// <summary>
+        /// Custom data that is not serialised.
+        /// </summary>
+        [NonSerialized]
+        public object[] customData;
+
+        /// <summary>
+        /// Apply the setting.
+        /// </summary>
+        public void Apply()
+        {
+            apply?.Invoke(value);
+        }
+
+        /// <summary>
+        /// Check if the setting has a different value to another.
+        /// </summary>
+        public bool HasDifference(IApplySetting other)
+        {
+            return !((Setting<T>)other).value.Equals(value);
+        }
+
+        /// <summary>
+        /// Get the setting value as an object. This is not recommended for general use.
+        /// </summary>
+        public object GetValue()
+        {
+            return value;
+        }
+
+        /// <summary>
+        /// Set the setting value as an object. This is not recommended for general use.
+        /// </summary>
+        public void SetValue(object value)
+        {
+            bool changed = !this.value.Equals((T)value);
+            this.value = (T)value;
+            // Apply this setting temporarily if preview is expected
+            if (changed && previewOnChange)
+            {
+                apply?.Invoke(this.value);
+            }
+        }
+
+        /// <summary>
+        /// Callback setting name.
+        /// </summary>
+        public string GetName()
+        {
+            return getName?.Invoke();
+        }
+
+        /// <summary>
+        /// Callback setting description.
+        /// </summary>
+        public string GetDescription()
+        {
+            return getDescription?.Invoke();
+        }
+    }
 
     /// <summary>
     /// Stores the game settings. Derive from this class using the CRTP pattern, e.g.
@@ -17,140 +161,6 @@ namespace OpenGET
     [Serializable]
     public class Settings<Derived> where Derived : Settings<Derived>, new()
     {
-        /// <summary>
-        /// Individual settings should use this wrapper class so they can be applied in some way once a value is selected.
-        /// </summary>
-        [Serializable]
-        public struct Setting<T> : IApplySetting
-        {
-            public delegate void ApplySetting(T current);
-
-            public delegate string GetText();
-
-            /// <summary>
-            /// Create a new setting.
-            /// </summary>
-            /// <param name="value">The initial setting value.</param>
-            /// <param name="apply">Callback for applying the setting.</param>
-            /// <param name="previewOnChange">Whether this setting be applied for preview immediately upon changing it.</param>
-            /// <param name="autoRevertTime">
-            /// Show a confirmation dialog that auto-reverts the setting if the specified time in seconds elapses.
-            /// If a time of zero or less is speciified, no confirmation dialog or auto-revert takes place for this setting.
-            /// Please note this option is only adhered to for settings that are applied for preview on change.
-            /// </param>
-            /// <param name="name">Get a text string to use as the setting name. If null, uses member name.</param>
-            /// <param name="desc">Get a text string to use as the setting description.</param>
-            public Setting(
-                T value = default,
-                ApplySetting apply = null,
-                bool previewOnChange = false,
-                float autoRevertTime = 0,
-                GetText name = null,
-                GetText desc = null
-            ) {
-                this.value = value;
-                this.apply = apply;
-                this.previewOnChange = previewOnChange;
-                this.autoRevertTime = autoRevertTime;
-                this.getName = name;
-                this.getDescription = desc;
-            }
-
-            public static implicit operator T(Setting<T> s)
-            {
-                return s.value;
-            }
-
-            public static implicit operator Setting<T>(T s)
-            {
-                return new Setting<T>(s);
-            }
-
-            /// <summary>
-            /// The setting value to be serialised.
-            /// </summary>
-            [SerializeField]
-            private T value;
-
-            /// <summary>
-            /// Function used to apply the given setting.
-            /// </summary>
-            private ApplySetting apply;
-
-            /// <summary>
-            /// Should this setting be immediately applied for preview when it is changed?
-            /// </summary>
-            public readonly bool previewOnChange;
-
-            /// <summary>
-            /// Time to elapse before the preview is automatically reverted.
-            /// </summary>
-            public readonly float autoRevertTime;
-
-            /// <summary>
-            /// Get the name of this setting to use as UI text.
-            /// </summary>
-            private GetText getName;
-
-            /// <summary>
-            /// Get the description of this setting to use as UI text.
-            /// </summary>
-            private GetText getDescription;
-
-            /// <summary>
-            /// Apply the setting.
-            /// </summary>
-            public void Apply()
-            {
-                apply?.Invoke(value);
-            }
-
-            /// <summary>
-            /// Check if the setting has a different value to another.
-            /// </summary>
-            public bool HasDifference(IApplySetting other)
-            {
-                return !((Setting<T>)other).value.Equals(value);
-            }
-
-            /// <summary>
-            /// Get the setting value as an object. This is not recommended for general use.
-            /// </summary>
-            public object GetValue()
-            {
-                return value;
-            }
-
-            /// <summary>
-            /// Set the setting value as an object. This is not recommended for general use.
-            /// </summary>
-            public void SetValue(object value)
-            {
-                bool changed = !this.value.Equals((T)value);
-                this.value = (T)value;
-                // Apply this setting temporarily if preview is expected
-                if (changed && previewOnChange)
-                {
-                    apply?.Invoke(this.value);
-                }
-            }
-
-            /// <summary>
-            /// Callback setting name.
-            /// </summary>
-            public string GetName()
-            {
-                return getName?.Invoke();
-            }
-
-            /// <summary>
-            /// Callback setting description.
-            /// </summary>
-            public string GetDescription()
-            {
-                return getDescription?.Invoke();
-            }
-        }
 
         /// <summary>
         /// The current active settings.
