@@ -246,6 +246,7 @@ namespace OpenGET.UI
                             }
                         };
                         dropdown.gameObject.name = field.Name;
+                        dropdown.Init();
                     }, elementContainerPrefab);
                 }
                 else
