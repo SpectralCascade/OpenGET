@@ -84,23 +84,65 @@ namespace OpenGET.Bootstrap
         public class Audio
         {
             /// <summary>
-            /// Volume of sound effects.
+            /// Set the volume of an audio bus.
             /// </summary>
-            [Slider]
-            public Setting<float> volumeSFX = 1.0f;
+            protected static void ApplyVolume(string channel, float v)
+            {
+                AudioController.Bus bus = AudioController.Channel(channel);
+                if (bus != null)
+                {
+                    bus.volume = v;
+                }
+            }
 
             /// <summary>
-            /// Volume of ambient environment sounds.
+            /// Master volume.
             /// </summary>
             [Slider]
-            public Setting<float> volumeAmbient = 1.0f;
+            public Setting<float> volumeMaster = new Setting<float>(
+                1,
+                v => ApplyVolume("Master", v),
+                true,
+                name: () => "Master Volume",
+                desc: () => "Overall volume of all audio in the game."
+            );
 
             /// <summary>
-            /// Volume of background music.
+            /// Volume of sound effects such as ambient environment sounds or NPCs interacting with objects.
             /// </summary>
             [Slider]
-            public Setting<float> volumeMusic = 1.0f;
+            public Setting<float> volumeSFX = new Setting<float>(
+                1,
+                v => ApplyVolume("SFX", v),
+                true,
+                name: () => "Sound Effects Volume",
+                desc: () => "Volume level of non-UI sound effects in the game."
+            );
 
+            /// <summary>
+            /// Volume of UI sounds.
+            /// </summary>
+            [Slider]
+            public Setting<float> volumeUI = new Setting<float>(
+                1,
+                v => ApplyVolume("UI", v),
+                true,
+                name: () => "UI Volume",
+                desc: () => "Volume level of UI sounds in the game."
+            );
+
+            /// <summary>
+            /// Volume of music.
+            /// </summary>
+            [Slider]
+            public Setting<float> volumeMusic = new Setting<float>(
+                1,
+                v => ApplyVolume("Music", v),
+                true,
+                name: () => "Music Volume",
+                desc: () => "Volume level of music in the game."
+            );
+            
         }
 
         /// <summary>

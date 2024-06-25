@@ -314,7 +314,7 @@ namespace OpenGET
         /// <summary>
         /// Apply shared settings.
         /// </summary>
-        public static bool Apply()
+        public static bool Apply(bool force = false)
         {
             CheckInit();
 
@@ -344,7 +344,7 @@ namespace OpenGET
                     IApplySetting settingCurrent = fields[j].GetValue(groups[i]) as IApplySetting;
                     IApplySetting settingApplied = fields[j].GetValue(appliedGroups[i]) as IApplySetting;
                     //Log.Debug("Setting {0} current: {1}, applied: {2}", fields[j].Name, settingCurrent.GetValue(), settingApplied.GetValue());
-                    if (settingCurrent.HasDifference(settingApplied) || firstTime)
+                    if (settingCurrent.HasDifference(settingApplied) || firstTime || force)
                     {
                         settingCurrent.Apply();
                         changed = true;
@@ -374,6 +374,7 @@ namespace OpenGET
             {
                 // Use specified "previous" settings when available
                 shared.CopyIn(previous ?? applied);
+                Apply(force: true);
             }
         }
 
