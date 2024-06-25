@@ -35,7 +35,10 @@ namespace OpenGET.UI
         /// </summary>
         public void Play()
         {
-            AudioController.Channel(mixerGroup).Play(clip, loop: mixerGroup == AudioController.Instance.music.group);
+            if (clip != null && mixerGroup != null)
+            {
+                AudioController.Channel(mixerGroup).Play(clip, loop: mixerGroup == AudioController.Instance.music.group);
+            }
         }
 
         protected virtual void Start()
