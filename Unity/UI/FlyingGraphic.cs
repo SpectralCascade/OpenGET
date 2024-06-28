@@ -9,18 +9,8 @@ namespace OpenGET.UI
     /// <summary>
     /// Temporary graphic used to give quick feedback to players without sacrificing a dedicated area on screen.
     /// </summary>
-    public class FlyingGraphic : AutoBehaviour
+    public class FlyingGraphic : Follower
     {
-        /// <summary>
-        /// Target to follow.
-        /// </summary>
-        private Transform target;
-
-        /// <summary>
-        /// Camera reference for worldspace target following.
-        /// </summary>
-        private Camera cam;
-
         /// <summary>
         /// Offset position tracked independently of target movement.
         /// </summary>
@@ -104,7 +94,7 @@ namespace OpenGET.UI
             }
         }
 
-        protected void Update()
+        protected override void Update()
         {
             timer += Time.deltaTime;
 
