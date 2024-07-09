@@ -35,36 +35,30 @@ namespace OpenGET
             {
                 return default(T);
             }
+
+            // Sum up weights cumulatively
             float sum = 0;
+            int length = array.Count;// weightGroups.Length;
+            float[] cumulativeWeights = array.Select(
+                x => { float v = sum + x.Item2; sum += x.Item2; return v; }
+            ).ToArray();
 
-            // Group & sort by weights, such that multiple items with the same weight are treated equally
-            System.Tuple<float, T[]>[] weightGroups = array.GroupBy(
-                x => x.Item2,
-                x => x.Item1,
-                (weight, group) => System.Tuple.Create(weight, group.ToArray())
-            ).OrderBy(x => x.Item1).ToArray();
-
-            int length = weightGroups.Length;
-
-            float[] weights = weightGroups.Select(x => x.Item1).ToArray();
             float pick = Random.Range(0, sum);
-            Log.Debug("Performing binary search with weights: {0}", string.Join(", ", weights.Select(x => x.ToString())));
-            int index = MathUtils.BinarySearch(weights, pick, out int nearest);
+            int index = MathUtils.BinarySearch(cumulativeWeights, pick, out int nearest);
             
             if (index < 0 && nearest >= 0)
             {
                 // Use the closest weight
-                Log.Debug("Found nearest = {0}", nearest);
                 index = Mathf.Clamp(nearest + Mathf.RoundToInt(MathUtils.MapRange(
-                    weights[nearest],
-                    nearest > 0 ? weights[nearest - 1] : weights[nearest],
-                    nearest < length - 1 ? weights[nearest + 1] : weights[nearest],
+                    cumulativeWeights[nearest],
+                    nearest > 0 ? cumulativeWeights[nearest - 1] : cumulativeWeights[nearest],
+                    nearest < length - 1 ? cumulativeWeights[nearest + 1] : cumulativeWeights[nearest],
                     -1,
                     1
                 )), 0, length - 1);
             }
 
-            return Pick(weightGroups[index].Item2);
+            return array[index].Item1;
         }
 
         /// <summary>
