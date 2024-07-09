@@ -63,6 +63,57 @@ namespace OpenGET
 		}
 
 		/// <summary>
+		/// Binary search. Returns the index of the item found in the array, or -1 if not found.
+		/// Also outputs the "nearest" (last evaluated) index even if not found.
+		/// Note: The array you provide MUST be sorted in ascending order.
+		/// Optionally specify the low and high indices of the array to search between.
+		/// If high is < 0, the last index of the array is used.
+		/// </summary>
+		public static int BinarySearch<T>(T[] sortedData, T target, out int nearest, int low = 0, int high = -1) where T : System.IComparable
+		{
+			if (high < 0)
+			{
+				// Consider the entire array
+				high = sortedData.Length - 1;
+				if (high < 0)
+				{
+					// Array is empty
+					nearest = -1;
+					return -1;
+				}
+			}
+
+			if (high >= low)
+			{
+				int mid = low + (high - low) / 2;
+
+				if (sortedData[mid].Equals(target))
+				{
+					nearest = mid;
+					return mid;
+				}
+
+				// Account for edge cases
+				if (high == low || mid == low)
+				{
+					// End of the line, mid point is best bet
+					nearest = mid;
+					return -1;
+				}
+
+				if (sortedData[mid].CompareTo(target) > 0)
+				{
+					return BinarySearch(sortedData, target, out nearest, low, mid - 1);
+				}
+
+				return BinarySearch(sortedData, target, out nearest, mid + 1, high);
+			}
+
+			nearest = low;
+			return -1;
+		}
+
+		/// <summary>
 		/// Tween functions, useful for animations among other things.
 		/// </summary>
 		public static class Tween
@@ -70,6 +121,11 @@ namespace OpenGET
 			public static float InOutCubic(float x)
 			{
 				return x < 0.5f ? 4f * x * x * x : 1f - Mathf.Pow(-2f * x + 2f, 3f) / 2f;
+			}
+
+			public static float InExponential(float x)
+            {
+				return x == 0 ? 0 : Mathf.Pow(2, 10 * x - 10);
 			}
 		}
 
