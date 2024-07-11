@@ -15,7 +15,7 @@ namespace OpenGET.UI
         /// <summary>
         /// Custom parameters for the pointing/highlight.
         /// </summary>
-        public abstract class Parameters
+        public class Parameters
         {
             /// <summary>
             /// Camera used for world-to-screen space positioning.
@@ -91,6 +91,79 @@ namespace OpenGET.UI
                     SetHintAt(target.position, hintData);
                 }
             }
+        }
+
+        /// <summary>
+        /// Convenience method to create a hint for a world target.
+        /// </summary>
+        public static T Create<T, ParamsType>(T prefab, Transform worldTarget = null, Camera cam = null, Transform root = null)
+            where T : Hint where ParamsType : Parameters, new()
+        {
+            T created = root != null ? Instantiate(prefab, root) : Instantiate(prefab);
+            if (worldTarget != null)
+            {
+                ParamsType args = new ParamsType();
+                if (cam == null)
+                {
+                    cam = Camera.main;
+                }
+                args.camera = cam;
+                created.SetHintTarget(worldTarget, args);
+            }
+            return created;
+        }
+
+        /// <summary>
+        /// Convenience method to create a hint for a world target.
+        /// </summary>
+        public static T Create<T>(T prefab, Transform worldTarget = null, Camera cam = null, Transform root = null) where T : Hint
+        {
+            return Create<T, Parameters>(prefab, worldTarget, cam, root);
+        }
+
+        /// <summary>
+        /// Convenience method to create a hint for a screen target.
+        /// </summary>
+        public static T Create<T, ParamsType>(T prefab, RectTransform screenTarget = null, Transform root = null)
+            where T : Hint where ParamsType : Parameters, new()
+        {
+            T created = root != null ? Instantiate(prefab, root) : Instantiate(prefab);
+            Log.Debug("Created {0} instance of prefab {1} at {2} (root = {3})", typeof(T).Name, prefab.name, SceneNavigator.GetGameObjectPath(created.gameObject), root?.gameObject?.name);
+            if (screenTarget != null)
+            {
+                ParamsType args = new ParamsType();
+                created.SetHintTarget(screenTarget, args);
+            }
+            return created;
+        }
+
+        /// <summary>
+        /// Convenience method to create a hint for a screen target.
+        /// </summary>
+        public static T Create<T>(T prefab, RectTransform screenTarget = null, Transform root = null) where T : Hint
+        {
+            return Create<T, Parameters>(prefab, screenTarget, root);
+        }
+
+        /// <summary>
+        /// Create a new hint (optionally setup with a target using pre-initialised parameters).
+        /// </summary>
+        public static T Create<T, ParamsType>(T prefab, Transform target = null, Transform root = null, ParamsType args = null) 
+            where T : Hint where ParamsType : Parameters
+        {
+            T created = root != null ? Instantiate(prefab, root) : Instantiate(prefab);
+            if (target != null && args != null)
+            {
+                if (target is RectTransform)
+                {
+                    created.SetHintTarget(target as RectTransform, args);
+                }
+                else
+                {
+                    created.SetHintTarget(target, args);
+                }
+            }
+            return created;
         }
 
     }

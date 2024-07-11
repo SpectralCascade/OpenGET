@@ -59,39 +59,6 @@ namespace OpenGET.UI
             base.SetHintTarget(worldTarget, parameters, origin);
         }
 
-        /// <summary>
-        /// Convenience method to create a PointerHint given a prefab.
-        /// </summary>
-        public static PointerHint Create(PointerHint prefab, Transform worldTarget = null, Camera cam = null, Transform root = null)
-        {
-            PointerHint created = root != null ? Instantiate(prefab, root) : Instantiate(prefab);
-            if (worldTarget != null)
-            {
-                Parameters args = new Parameters();
-                if (cam == null)
-                {
-                    cam = Camera.main;
-                }
-                args.camera = cam;
-                created.SetHintTarget(worldTarget, args);
-            }
-            return created;
-        }
-
-        /// <summary>
-        /// Convenience method to create a PointerHint given a prefab.
-        /// </summary>
-        public static PointerHint Create(PointerHint prefab, RectTransform screenTarget = null, Transform root = null)
-        {
-            PointerHint created = root != null ? Instantiate(prefab, root) : Instantiate(prefab);
-            if (screenTarget != null)
-            {
-                Parameters args = new Parameters();
-                created.SetHintTarget(screenTarget, args);
-            }
-            return created;
-        }
-
     }
 
 }

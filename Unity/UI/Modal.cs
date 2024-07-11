@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 using OpenGET.Input;
+using System.Linq;
 
 namespace OpenGET.UI
 {
@@ -88,6 +89,8 @@ namespace OpenGET.UI
             public bool takeInputControl;
 
         }
+
+        public delegate Hint MakeHint(Modal modal);
 
         /// <summary>
         /// Title text. Not guaranteed to exist.
@@ -181,22 +184,11 @@ namespace OpenGET.UI
         /// </summary>
         [Auto.NullCheck]
         public CanvasGroup canvasGroup;
-
+        
         /// <summary>
-        /// The canvas group associated with the background tint.
+        /// Optional background.
         /// </summary>
-        [Auto.NullCheck]
-        public CanvasGroup tintCanvasGroup;
-
-        // Background tints, behind the popup itself. These can be used to highlight a specific part of the screen.
-        [Auto.NullCheck]
-        public RectTransform tintLeft;
-        [Auto.NullCheck]
-        public RectTransform tintRight;
-        [Auto.NullCheck]
-        public RectTransform tintTop;
-        [Auto.NullCheck]
-        public RectTransform tintBottom;
+        public RectTransform backgroundRoot;
 
         /// <summary>
         /// Hint(s) used to indicate something to the player at a given position.
@@ -234,7 +226,7 @@ namespace OpenGET.UI
             bool showCloseInput = true,
             RectTransform root = null,
             bool takeInputControl = true,
-            Hint[] hints = null
+            MakeHint[] hints = null
         )
         {
             return Show(
@@ -269,22 +261,26 @@ namespace OpenGET.UI
             bool takeInputControl = true
         )
         {
-            Hint[] hints = new Hint[pointAtTargets.Length];
+            MakeHint[] hints = new MakeHint[pointAtTargets.Length];
             if (pointerSprite == null)
             {
                 pointerSprite = Resources.Load<Sprite>("Sprites/Pixel");
             }
             for (int i = 0, counti = pointAtTargets.Length; i < counti; i++)
             {
-                GameObject hintObj = new GameObject("ModalHint_" + i);
-                hintObj.transform.parent = ui.modalsRoot;
-                hintObj.AddComponent<Image>().sprite = pointerSprite;
-                (hintObj.transform as RectTransform).sizeDelta = new Vector2(4, 4);
-                (hintObj.transform as RectTransform).pivot = new Vector2(0, 0.5f);
-                hints[i] = hintObj.AddComponent<PointerHint>();
-                PointerHint.Parameters args = new PointerHint.Parameters();
-                args.camera = Camera.main;
-                hints[i].SetHintTarget(pointAtTargets[i], args);
+                int index = i;
+                hints[i] = (Modal modal) => {
+                    GameObject hintObj = new GameObject("ModalHint_" + index);
+                    hintObj.transform.parent = ui.modalsRoot;
+                    hintObj.AddComponent<Image>().sprite = pointerSprite;
+                    (hintObj.transform as RectTransform).sizeDelta = new Vector2(4, 4);
+                    (hintObj.transform as RectTransform).pivot = new Vector2(0, 0.5f);
+                    Hint hint = hintObj.AddComponent<PointerHint>();
+                    PointerHint.Parameters args = new PointerHint.Parameters();
+                    args.camera = Camera.main;
+                    hint.SetHintTarget(pointAtTargets[index], args);
+                    return hint;
+                };
             }
             Modal modal = Show(
                 ui,
@@ -317,7 +313,7 @@ namespace OpenGET.UI
             bool showCloseInput = true,
             RectTransform root = null,
             bool takeInputControl = true,
-            Hint[] hints = null
+            MakeHint[] hints = null
         )
         {
             if (prefab == null)
@@ -349,18 +345,17 @@ namespace OpenGET.UI
                 }
                 if (hints != null)
                 {
-                    modal.hints = hints;
+                    modal.hints = hints.Select(x => x(modal)).ToArray();
                     for (int i = 0, counti = hints.Length; i < counti; i++)
                     {
                         // For screen-space targets, make sure the pointer is attached & displayed beneath the popup
                         // or to the specified origin
-                        hints[i].SetHintTarget(hints[i].target, hints[i].hintData, modal.transform);
+                        modal.hints[i].SetHintTarget(modal.hints[i].target, modal.hints[i].hintData, modal.transform);
 
-                        if (hints[i].target is RectTransform)
+                        if (modal.hints[i].target is RectTransform)
                         {
-                            hints[i].transform.parent = modal.transform;
-                            hints[i].transform.localPosition = Vector3.zero;
-                            hints[i].transform.SetAsFirstSibling();
+                            modal.hints[i].transform.localPosition = Vector3.zero;
+                            modal.hints[i].transform.SetAsFirstSibling();
                         }
                     }
                 }
