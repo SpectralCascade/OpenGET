@@ -186,9 +186,14 @@ namespace OpenGET.UI
         public CanvasGroup canvasGroup;
         
         /// <summary>
-        /// Optional background.
+        /// Optional background root.
         /// </summary>
-        public RectTransform backgroundRoot;
+        public RectTransform hintsRoot;
+        
+        /// <summary>
+        /// Optional background image.
+        /// </summary>
+        public Image background;
 
         /// <summary>
         /// Hint(s) used to indicate something to the player at a given position.
@@ -226,6 +231,7 @@ namespace OpenGET.UI
             bool showCloseInput = true,
             RectTransform root = null,
             bool takeInputControl = true,
+            bool showBackground = true,
             MakeHint[] hints = null
         )
         {
@@ -240,6 +246,7 @@ namespace OpenGET.UI
                 showCloseInput,
                 root,
                 takeInputControl,
+                showBackground,
                 hints
             );
         }
@@ -258,7 +265,8 @@ namespace OpenGET.UI
             UnityAction onClose = null,
             bool showCloseInput = true,
             RectTransform root = null,
-            bool takeInputControl = true
+            bool takeInputControl = true,
+            bool showBackground = true
         )
         {
             MakeHint[] hints = new MakeHint[pointAtTargets.Length];
@@ -293,6 +301,7 @@ namespace OpenGET.UI
                 showCloseInput,
                 root,
                 takeInputControl,
+                showBackground,
                 hints
             );
             return modal;
@@ -313,6 +322,7 @@ namespace OpenGET.UI
             bool showCloseInput = true,
             RectTransform root = null,
             bool takeInputControl = true,
+            bool showBackground = true,
             MakeHint[] hints = null
         )
         {
@@ -337,6 +347,7 @@ namespace OpenGET.UI
                     showCloseInput,
                     takeInputControl
                 ), ui);
+                modal.background?.gameObject?.SetActive(showBackground);
                 // TODO: Fade in modal
                 modal.canvasGroup.alpha = 1;
                 if (takeInputControl)
@@ -345,8 +356,8 @@ namespace OpenGET.UI
                 }
                 if (hints != null)
                 {
-                    modal.hints = hints.Select(x => x(modal)).ToArray();
-                    for (int i = 0, counti = hints.Length; i < counti; i++)
+                    modal.hints = hints.Where(x => x != null).Select(x => x(modal)).ToArray();
+                    for (int i = 0, counti = modal.hints.Length; i < counti; i++)
                     {
                         // For screen-space targets, make sure the pointer is attached & displayed beneath the popup
                         // or to the specified origin
