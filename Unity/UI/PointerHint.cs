@@ -33,13 +33,12 @@ namespace OpenGET.UI
             rectTransform.rotation = Quaternion.Euler(0, 0, Vector2.SignedAngle(Vector2.right, dir.normalized));
         }
 
-        public override void SetHintAt(Vector3 worldPos, Hint.Parameters parameters)
+        public override void SetHintAt(Vector3 worldPos, Hint.Parameters parameters = null)
         {
-            SetHintData(parameters as Parameters);
-            Parameters args = parameters as Parameters;
-            if (args != null && args.camera != null)
+            SetHintData(parameters);
+            if (parameters != null && parameters.camera != null)
             {
-                SetHintAt((Vector2)args.camera.WorldToScreenPoint(worldPos), parameters);
+                SetHintAt((Vector2)parameters.camera.WorldToScreenPoint(worldPos), parameters);
             }
             else
             {
@@ -49,13 +48,13 @@ namespace OpenGET.UI
 
         public override void SetHintTarget(RectTransform screenTarget, Hint.Parameters parameters = null, Transform origin = null)
         {
-            SetHintData(parameters as Parameters);
+            SetHintData(parameters);
             base.SetHintTarget(screenTarget, parameters, origin);
         }
 
         public override void SetHintTarget(Transform worldTarget, Hint.Parameters parameters, Transform origin = null)
         {
-            SetHintData(parameters as Parameters);
+            SetHintData(parameters);
             base.SetHintTarget(worldTarget, parameters, origin);
         }
 

@@ -351,12 +351,6 @@ namespace OpenGET.UI
                         // For screen-space targets, make sure the pointer is attached & displayed beneath the popup
                         // or to the specified origin
                         modal.hints[i].SetHintTarget(modal.hints[i].target, modal.hints[i].hintData, modal.transform);
-
-                        if (modal.hints[i].target is RectTransform)
-                        {
-                            modal.hints[i].transform.localPosition = Vector3.zero;
-                            modal.hints[i].transform.SetAsFirstSibling();
-                        }
                     }
                 }
                 else

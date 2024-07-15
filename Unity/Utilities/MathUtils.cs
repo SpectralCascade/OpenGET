@@ -152,7 +152,8 @@ namespace OpenGET
 	{
 
 		/// <summary>
-		/// Move the pivot point without modifying the position of the RectTransform
+		/// Move the pivot point without modifying the position of the RectTransform.
+		/// Assumes a rect transform with identical anchors!
 		/// </summary>
 		public static void SetOrigin(this RectTransform rectTransform, Vector2 origin)
 		{
@@ -162,6 +163,24 @@ namespace OpenGET
 			rectTransform.pivot = origin;
 			rectTransform.localPosition -= offset;
 		}
+
+		/// <summary>
+		/// Return the true bounds of a RectTransform in global space.
+		/// Assumes that the transform has been updated. Don't call on Awake or Start.
+		/// </summary>
+		public static Bounds GetTrueBounds(this RectTransform rt)
+        {
+			Vector3[] corners = new Vector3[4];
+			rt.GetWorldCorners(corners);
+			Vector2 scale = rt.lossyScale;
+			Vector2 size = (corners[2] - corners[0]);
+			Vector2 globalSize = Vector2.Scale(size, new Vector2(1f / scale.x, 1f / scale.y));
+
+			return new Bounds(
+				((Vector2)corners[0] + (size * 0.5f)),
+				globalSize
+			);
+        }
 
 	}
 

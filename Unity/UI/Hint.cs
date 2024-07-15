@@ -84,7 +84,7 @@ namespace OpenGET.UI
             {
                 if (isTargetScreen)
                 {
-                    SetHintAt((Vector2)target.position, hintData);
+                    SetHintAt((Vector2)(target as RectTransform).GetTrueBounds().center, hintData);
                 }
                 else
                 {
@@ -124,25 +124,16 @@ namespace OpenGET.UI
         /// <summary>
         /// Convenience method to create a hint for a screen target.
         /// </summary>
-        public static T Create<T, ParamsType>(T prefab, RectTransform screenTarget = null, Transform root = null)
+        public static T Create<T, ParamsType>(T prefab, RectTransform screenTarget = null, Transform root = null, ParamsType args = null)
             where T : Hint where ParamsType : Parameters, new()
         {
             T created = root != null ? Instantiate(prefab, root) : Instantiate(prefab);
-            Log.Debug("Created {0} instance of prefab {1} at {2} (root = {3})", typeof(T).Name, prefab.name, SceneNavigator.GetGameObjectPath(created.gameObject), root?.gameObject?.name);
+            //Log.Debug("Created {0} instance of prefab {1} at {2} (root = {3})", typeof(T).Name, prefab.name, SceneNavigator.GetGameObjectPath(created.gameObject), root?.gameObject?.name);
             if (screenTarget != null)
             {
-                ParamsType args = new ParamsType();
                 created.SetHintTarget(screenTarget, args);
             }
             return created;
-        }
-
-        /// <summary>
-        /// Convenience method to create a hint for a screen target.
-        /// </summary>
-        public static T Create<T>(T prefab, RectTransform screenTarget = null, Transform root = null) where T : Hint
-        {
-            return Create<T, Parameters>(prefab, screenTarget, root);
         }
 
         /// <summary>
