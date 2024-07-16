@@ -40,11 +40,19 @@ namespace OpenGET
 		}
 
 		/// <summary>
-		/// Returns the largest value by absolute comparison.
+		/// Returns the largest value by absolute comparison i.e. furthest from zero.
 		/// </summary>
-		public static float Extreme(float a, float b)
+		public static float ExtremeMax(float a, float b)
 		{
 			return Mathf.Abs(a) >= Mathf.Abs(b) ? a : b;
+		}
+		
+		/// <summary>
+		/// Returns the smallest value by absolute comparison i.e. closest to zero.
+		/// </summary>
+		public static float ExtremeMin(float a, float b)
+		{
+			return Mathf.Abs(a) <= Mathf.Abs(b) ? a : b;
 		}
 
 		/// <summary>
@@ -143,6 +151,45 @@ namespace OpenGET
 		{
 			return new Vector2(Mathf.Clamp(vec.x, min, max), Mathf.Clamp(vec.y, min, max));
 		}
+	}
+
+	/// <summary>
+	/// Additional Bounds maths convenience methods.
+	/// </summary>
+	public static class BoundsExtensions
+    {
+		/// <summary>
+		/// Calculate the vector difference to make two overlapping bounds no longer overlap, based on the centre.
+		/// Returns Vector2.zero if the bounds are not overlapping.
+		/// </summary>
+		public static Vector2 GetOverlapDelta(this Bounds bounds, Bounds overlapped)
+		{
+			if (overlapped.Contains(bounds.max) || overlapped.Contains(bounds.min))
+            {
+				return new Vector2(
+					bounds.center.x < overlapped.center.x ?
+						MathUtils.ExtremeMin(
+							-(bounds.extents.x + overlapped.extents.x),
+							overlapped.min.x - bounds.max.x
+						) :
+						MathUtils.ExtremeMin(
+							bounds.extents.x + overlapped.extents.x,
+							overlapped.max.x - bounds.min.x
+						),
+					bounds.center.y < overlapped.center.y ?
+						MathUtils.ExtremeMin(
+							-(bounds.extents.y + overlapped.extents.y),
+							overlapped.min.y - bounds.max.y
+						) :
+						MathUtils.ExtremeMin(
+							bounds.extents.y + overlapped.extents.y,
+							overlapped.max.y - bounds.min.y
+						)
+				);
+            }
+			return Vector2.zero;
+		}
+
 	}
 
 	/// <summary>

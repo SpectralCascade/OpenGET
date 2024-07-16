@@ -93,6 +93,12 @@ namespace OpenGET.UI
         public delegate Hint MakeHint(Modal modal);
 
         /// <summary>
+        /// The main part of the modal popup, i.e. the visual popup itself not including the background or hints.
+        /// </summary>
+        [Auto.NullCheck]
+        public RectTransform main;
+
+        /// <summary>
         /// Title text. Not guaranteed to exist.
         /// </summary>
         public string title { get => GetText(textTitleGraphic); set => SetText(textTitleGraphic, value); }
@@ -215,6 +221,16 @@ namespace OpenGET.UI
         /// Time in seconds the player must hold the secondary input to execute the action.
         /// </summary>
         private float holdSecondaryTime = 0.5f;
+
+        /// <summary>
+        /// Function to obtain bounds that this modal should avoid overlapping.
+        /// </summary>
+        public delegate Bounds GetAvoidanceArea();
+
+        /// <summary>
+        /// Callback to get the bounds this modal should avoid overlap with.
+        /// </summary>
+        private GetAvoidanceArea avoid;
 
         /// <summary>
         /// Show a modal popup.
@@ -411,6 +427,14 @@ namespace OpenGET.UI
         }
 
         /// <summary>
+        /// Automatically reposition to avoid overlap with the given bounds.
+        /// </summary>
+        public void SetAvoidance(GetAvoidanceArea callback)
+        {
+            avoid = callback;
+        }
+
+        /// <summary>
         /// Handle input events.
         /// </summary>
         private void Update()
@@ -449,6 +473,18 @@ namespace OpenGET.UI
                         promptFillSecondary.fillAmount = 1;
                     }
                 }
+            }
+
+            if (avoid != null)
+            {
+                main.localPosition = Vector3.zero;
+                Bounds bounds = main.GetTrueBounds();
+                Vector2 delta = bounds.GetOverlapDelta(avoid()) * main.lossyScale * 0.5f;
+                if (delta != Vector2.zero)
+                {
+                    //Log.Debug("Moving bounds from {0} to {1} (delta = {2})", bounds.center, bounds.center + (Vector3)delta, delta);
+                }
+                main.position = bounds.center + (Vector3)delta;
             }
         }
 

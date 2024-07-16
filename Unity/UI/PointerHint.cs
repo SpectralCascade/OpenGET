@@ -26,7 +26,7 @@ namespace OpenGET.UI
             SetHintData(parameters as Parameters);
             Vector2 dir = (screenPos - (Vector2)transform.position);
             rectTransform.localScale = new Vector3(
-                dir.magnitude / (rectTransform.rect.width * 0.5f),
+                (dir.magnitude * (1f / rectTransform.parent.lossyScale.x) * 0.5f) / (rectTransform.rect.width * 0.5f),
                 1,
                 1
             );
