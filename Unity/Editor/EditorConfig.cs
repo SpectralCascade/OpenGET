@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEditor;
 
 namespace OpenGET
 {
@@ -45,10 +46,43 @@ namespace OpenGET
 
         }
 
+        [System.Serializable]
+        public class PrefabToSprite
+        {
+            /// <summary>
+            /// Callback to read and write assets.
+            /// </summary>
+            public EditorAssetBatcher assetLoader;
+
+            /// <summary>
+            /// Scene used to render the prefab(s) to sprites.
+            /// </summary>
+            public SceneAsset renderScene;
+
+            public int spriteWidth = 256;
+            public int spriteHeight = 256;
+
+            /// <summary>
+            /// Sprites output directory.
+            /// </summary>
+            public string outputFolder = "Sprites";
+
+            /// <summary>
+            /// Optional filename prefix for output sprites.
+            /// </summary>
+            public string outputFilenamePrefix = "";
+
+        }
+
         /// <summary>
         /// Editor localisation settings.
         /// </summary>
         public Localisation localisation;
+
+        /// <summary>
+        /// Tooling data for rendering a prefab to a 2D sprite.
+        /// </summary>
+        public PrefabToSprite prefabToSprite;
 
     }
 

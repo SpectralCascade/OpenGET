@@ -13,6 +13,11 @@ namespace OpenGET {
             return component;
         }
 
+        /// <summary>
+        /// Swap the item at the given index with the last item in the list, then remove the item.
+        /// Use this when order does not matter; theoretically more efficient than other removal methods.
+        /// Can safely used to remove only some items as you iterate from end to beginning of a list.
+        /// </summary>
         public static void SwapRemoveAt<T>(this IList<T> list, int index)
         {
             int end = list.Count - 1;

@@ -21,6 +21,11 @@ namespace OpenGET.UI
             /// Camera used for world-to-screen space positioning.
             /// </summary>
             public Camera camera = null;
+
+            /// <summary>
+            /// Target world position, if given.
+            /// </summary>
+            public Vector3? targetWorldPosition = null;
         }
 
         /// <summary>
@@ -91,12 +96,16 @@ namespace OpenGET.UI
                     SetHintAt(target.position, hintData);
                 }
             }
+            else if (hintData != null && hintData.targetWorldPosition.HasValue) {
+                SetHintAt(hintData.targetWorldPosition.Value, hintData);
+                Log.Debug("Set target world pos to {0}", hintData.targetWorldPosition.Value);
+            }
         }
 
         /// <summary>
         /// Convenience method to create a hint for a world target.
         /// </summary>
-        public static T Create<T, ParamsType>(T prefab, Transform worldTarget = null, Camera cam = null, Transform root = null)
+        public static T Create<T, ParamsType>(T prefab, Transform worldTarget = null, Camera cam = null, Transform root = null, Transform origin = null)
             where T : Hint where ParamsType : Parameters, new()
         {
             T created = root != null ? Instantiate(prefab, root) : Instantiate(prefab);
@@ -108,7 +117,7 @@ namespace OpenGET.UI
                     cam = Camera.main;
                 }
                 args.camera = cam;
-                created.SetHintTarget(worldTarget, args);
+                created.SetHintTarget(worldTarget, args, origin);
             }
             return created;
         }
@@ -116,22 +125,22 @@ namespace OpenGET.UI
         /// <summary>
         /// Convenience method to create a hint for a world target.
         /// </summary>
-        public static T Create<T>(T prefab, Transform worldTarget = null, Camera cam = null, Transform root = null) where T : Hint
+        public static T Create<T>(T prefab, Transform worldTarget = null, Camera cam = null, Transform root = null, Transform origin = null) where T : Hint
         {
-            return Create<T, Parameters>(prefab, worldTarget, cam, root);
+            return Create<T, Parameters>(prefab, worldTarget, cam, root, origin);
         }
 
         /// <summary>
         /// Convenience method to create a hint for a screen target.
         /// </summary>
-        public static T Create<T, ParamsType>(T prefab, RectTransform screenTarget = null, Transform root = null, ParamsType args = null)
+        public static T Create<T, ParamsType>(T prefab, RectTransform screenTarget = null, Transform root = null, ParamsType args = null, Transform origin = null)
             where T : Hint where ParamsType : Parameters, new()
         {
             T created = root != null ? Instantiate(prefab, root) : Instantiate(prefab);
             //Log.Debug("Created {0} instance of prefab {1} at {2} (root = {3})", typeof(T).Name, prefab.name, SceneNavigator.GetGameObjectPath(created.gameObject), root?.gameObject?.name);
             if (screenTarget != null)
             {
-                created.SetHintTarget(screenTarget, args);
+                created.SetHintTarget(screenTarget, args, origin);
             }
             return created;
         }
@@ -139,20 +148,24 @@ namespace OpenGET.UI
         /// <summary>
         /// Create a new hint (optionally setup with a target using pre-initialised parameters).
         /// </summary>
-        public static T Create<T, ParamsType>(T prefab, Transform target = null, Transform root = null, ParamsType args = null) 
-            where T : Hint where ParamsType : Parameters
+        public static T Create<T, ParamsType>(T prefab, Transform target = null, Transform root = null, ParamsType args = null, Transform origin = null) 
+            where T : Hint where ParamsType : Parameters, new()
         {
             T created = root != null ? Instantiate(prefab, root) : Instantiate(prefab);
             if (target != null && args != null)
             {
                 if (target is RectTransform)
                 {
-                    created.SetHintTarget(target as RectTransform, args);
+                    created.SetHintTarget(target as RectTransform, args, origin);
                 }
                 else
                 {
-                    created.SetHintTarget(target, args);
+                    created.SetHintTarget(target, args, origin);
                 }
+            }
+            else if (args != null)
+            {
+                created.SetHintData(args);
             }
             return created;
         }

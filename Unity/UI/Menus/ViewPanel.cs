@@ -70,6 +70,11 @@ namespace OpenGET.UI {
         public UnityEngine.UI.Button backButton = null;
 
         /// <summary>
+        /// Should the onClick of backButton be used to handle built in back button inputs (e.g. Escape key)?
+        /// </summary>
+        public bool handleBackInputs = true;
+
+        /// <summary>
         /// Should this panel be shown when first loaded? Should help to prevent issues where people forget to turn on/off screens in the scene.
         /// </summary>
         [SerializeField]
@@ -274,7 +279,7 @@ namespace OpenGET.UI {
 
         protected virtual void Update() {
             // Trigger the back button if available, when the cancel action occurs.
-            if (backButton != null
+            if (handleBackInputs && backButton != null
                 && UI.input.HasControl(transform.parent != null ? transform.parent.gameObject : UI.gameObject)
                 && UI.actionCancel.action.WasPressedThisFrame() 
             ) {

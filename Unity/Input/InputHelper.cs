@@ -260,7 +260,7 @@ namespace OpenGET.Input
                 {
                     GameObject group = controlStack.Pop();
                     requestCounts.Remove(group);
-                    Log.Debug("Request group {0} was popped off the top of the input control stack.", group.gameObject.name);
+                    Log.Debug("Request group {0} was popped off the top of the input control stack.", group?.name);
                 }
             }
 

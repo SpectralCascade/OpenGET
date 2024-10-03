@@ -479,12 +479,17 @@ namespace OpenGET.UI
             {
                 main.localPosition = Vector3.zero;
                 Bounds bounds = main.GetTrueBounds();
-                Vector2 delta = bounds.GetOverlapDelta(avoid()) * main.lossyScale * 0.5f;
+                Vector2 delta = bounds.GetOverlapDelta(avoid()) * transform.lossyScale;
                 if (delta != Vector2.zero)
                 {
-                    //Log.Debug("Moving bounds from {0} to {1} (delta = {2})", bounds.center, bounds.center + (Vector3)delta, delta);
+                    // Use shortest overlap distance
+                    delta *= Mathf.Abs(delta.x) < Mathf.Abs(delta.y) ? Vector2.right : Vector2.up;
+                    //Log.Debug("Moving bounds from {0} to {1} (delta = {2})", bounds, bounds.center + (Vector3)delta, delta);
                 }
-                main.position = bounds.center + (Vector3)delta;
+                main.position = new Vector2(
+                    Mathf.Clamp(bounds.center.x + delta.x, bounds.extents.x, Screen.width - bounds.extents.x),
+                    Mathf.Clamp(bounds.center.y + delta.y, bounds.extents.y, Screen.height - bounds.extents.y)
+                );
             }
         }
 

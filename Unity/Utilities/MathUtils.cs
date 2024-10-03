@@ -164,30 +164,32 @@ namespace OpenGET
 		/// </summary>
 		public static Vector2 GetOverlapDelta(this Bounds bounds, Bounds overlapped)
 		{
-			if (overlapped.Contains(bounds.max) || overlapped.Contains(bounds.min))
+			Vector2 delta = Vector2.zero;
+			bool isLeftwards = bounds.center.x < overlapped.center.x;
+			if ((overlapped.min.x >= bounds.min.x && overlapped.min.x <= bounds.max.x) || (bounds.min.x >= overlapped.min.x && bounds.min.x <= overlapped.max.x))
             {
-				return new Vector2(
-					bounds.center.x < overlapped.center.x ?
-						MathUtils.ExtremeMin(
-							-(bounds.extents.x + overlapped.extents.x),
-							overlapped.min.x - bounds.max.x
-						) :
-						MathUtils.ExtremeMin(
-							bounds.extents.x + overlapped.extents.x,
-							overlapped.max.x - bounds.min.x
-						),
-					bounds.center.y < overlapped.center.y ?
-						MathUtils.ExtremeMin(
-							-(bounds.extents.y + overlapped.extents.y),
-							overlapped.min.y - bounds.max.y
-						) :
-						MathUtils.ExtremeMin(
-							bounds.extents.y + overlapped.extents.y,
-							overlapped.max.y - bounds.min.y
-						)
-				);
-            }
-			return Vector2.zero;
+				delta.x = isLeftwards ?
+					overlapped.min.x - bounds.max.x : overlapped.max.x - bounds.min.x;
+			}
+			else if ((overlapped.max.x <= bounds.max.x && overlapped.max.x >= bounds.min.x) || (bounds.max.x >= overlapped.min.x && bounds.max.x <= overlapped.max.x))
+			{
+				delta.x = isLeftwards ?
+					overlapped.min.x - bounds.max.x : overlapped.max.x - bounds.min.x;
+			}
+
+			bool isDownwards = bounds.center.y < overlapped.center.y;
+			if ((overlapped.min.y >= bounds.min.y && overlapped.min.y <= bounds.max.y) || (bounds.min.y >= overlapped.min.y && bounds.min.y <= overlapped.max.y))
+            {
+				delta.y = isDownwards ?
+					overlapped.min.y - bounds.max.y : overlapped.max.y - bounds.min.y;
+			}
+			else if ((overlapped.max.y <= bounds.max.y && overlapped.max.y >= bounds.min.y) || (bounds.max.y >= overlapped.min.y && bounds.max.y <= overlapped.max.y))
+			{
+				delta.y = isDownwards ?
+					overlapped.min.y - bounds.max.y : overlapped.max.y - bounds.min.y;
+			}
+
+			return delta;
 		}
 
 	}

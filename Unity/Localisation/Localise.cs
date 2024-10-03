@@ -171,6 +171,12 @@ namespace OpenGET
             return string.Format("{0}/{1}/{2}", day, month, year);
         }
 
+        public static string TimeSpan(TimeSpan span)
+        {
+            // TODO: map to desired language.
+            return string.Format("{0}d, {1}h, {2} m", span.Days, span.Hours, span.Minutes);
+        }
+
         /// TODO: add more methods for formatting stuff like quotes etc.
 
     }

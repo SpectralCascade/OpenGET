@@ -132,6 +132,25 @@ namespace OpenGET
         }
 
         /// <summary>
+        /// Remove a specific item from the queue.
+        /// </summary>
+        public bool RemoveItem(Item element)
+        {
+            bool result = items.Remove(element);
+            hasChanges = result;
+            return result;
+        }
+
+        /// <summary>
+        /// Find and remove an item from the queue given the data.
+        /// </summary>
+        public bool Remove(T data)
+        {
+            Item element = this.LastOrDefault(x => x.data.Equals(data));
+            return element != null && RemoveItem(element);
+        }
+
+        /// <summary>
         /// Peek at the top priority item.
         /// </summary>
         public Item PeekItem()

@@ -58,6 +58,7 @@ namespace OpenGET
         /// </summary>
         public static void Hookup<T>(T obj, bool includeInherited = false, bool useDerivedType = false) where T : Behaviour
         {
+#if UNITY_EDITOR
             if (obj == null)
             {
                 throw new System.NullReferenceException("Cannot autohookup a null instance.");
@@ -150,7 +151,7 @@ namespace OpenGET
                         object[] array = field.GetValue(obj) as object[];
                         if (array != null && array.Length > 0)
                         {
-                            Log.Debug(
+                            Log.Verbose(
                                 "Successfully auto-assigned {0} component(s) to field \"{1}\" of type \"{2}\" on GameObject \"{3}\".",
                                 array.Length,
                                 field.Name,
@@ -162,6 +163,7 @@ namespace OpenGET
                     }
                 }
             }
+#endif
         }
 
 
