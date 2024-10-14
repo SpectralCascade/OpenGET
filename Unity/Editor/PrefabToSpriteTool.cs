@@ -68,7 +68,7 @@ namespace OpenGET
             root.Add(addProp);
 
             Button button = new Button(() => {
-                if (config != null && config.prefabToSprite?.assetLoader != null && config.prefabToSprite?.renderScene != null)
+                if (config != null && config.prefabToSprite != null && config.prefabToSprite.assetLoader != null && config.prefabToSprite.renderScene != null)
                 {
                     // Load the render scene
                     string scenePath = AssetDatabase.GetAssetPath(config.prefabToSprite.renderScene);

@@ -104,7 +104,7 @@ namespace OpenGET.UI
             public ElementContainer Add<T, V>(T prefab, V value, OnAdded<T> onAdded = null, ElementContainer containerPrefab = null) where T : MonoBehaviour, IElement
             {
                 ElementContainer container = containerPrefab != null ? Instantiate(containerPrefab, root.transform) : null;
-                T loaded = GameObject.Instantiate(prefab, container?.content.transform ?? root.transform);
+                T loaded = GameObject.Instantiate(prefab, (container != null ? container.content.transform : null) ?? root.transform);
                 if (container != null)
                 {
                     container.element = loaded;

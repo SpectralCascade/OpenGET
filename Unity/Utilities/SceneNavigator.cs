@@ -11,13 +11,16 @@ namespace OpenGET
         public delegate void SceneProcess(Scene scene);
 
         /// <summary>
-        /// Get the first root GameObject instance in a scene that has a component of matching type.
+        /// Get the first GameObject instance in a scene that has a component of matching type.
+        /// Optionally specify that only the root objects should be checked.
+        /// By default only checks active objects, for inactive objects as well specify includeActive = true.
         /// </summary>
-        public static T FindRootObject<T>(Scene scene) where T : Behaviour {
+        public static T FindObject<T>(Scene scene, bool rootsOnly = false, bool includeInactive = false) where T : Behaviour
+        {
             GameObject[] roots = scene.GetRootGameObjects();
             T rootObj = null;
             for (int i = 0, counti = roots.Length; i < counti; i++) {
-                rootObj = roots[i].GetComponent<T>();
+                rootObj = roots[i].GetComponentInChildren<T>(includeInactive);
                 if (rootObj != null) {
                     break;
                 }
@@ -26,14 +29,86 @@ namespace OpenGET
         }
 
         /// <summary>
+        /// Find an object of a given type among all loaded scenes.
+        /// </summary>
+        public static T FindObject<T>(bool rootsOnly = false, bool includeInactive = false) where T : Behaviour
+        {
+            for (int i = 0, counti = SceneManager.loadedSceneCount; i < counti; i++)
+            {
+                T obj = FindObject<T>(SceneManager.GetSceneAt(i), rootsOnly, includeInactive);
+                if (obj != null)
+                {
+                    return obj;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Find a scene by name, or additively load it if not, and do some processing.
+        /// Optionally force reloading of a scene if it is found.
+        /// </summary>
+        public static void FindOrAddScene(string name, SceneProcess onFound, bool forceReload = false)
+        {
+            void onSceneLoaded(Scene scene, LoadSceneMode mode)
+            {
+                if (name == scene.name)
+                {
+                    SceneManager.sceneLoaded -= onSceneLoaded;
+                    onFound(scene);
+                }
+            }
+
+            void doLoadScene()
+            {
+                SceneManager.sceneLoaded += onSceneLoaded;
+                SceneManager.LoadSceneAsync(name, LoadSceneMode.Additive);
+            }
+
+            void onSceneUnloaded(Scene scene)
+            {
+                if (name == scene.name)
+                {
+                    Log.Debug("Scene \"{0}\" unloaded successfully, reloading...", scene.name);
+                    SceneManager.sceneUnloaded -= onSceneUnloaded;
+                    doLoadScene();
+                }
+            }
+
+            Log.Debug("Searching for scene \"{0}\" to add and/or process with custom callback.", name);
+            for (int i = 0, counti = SceneManager.sceneCount; i < counti; i++)
+            {
+                Scene scene = SceneManager.GetSceneAt(i);
+                if (scene.name == name)
+                {
+                    if (forceReload)
+                    {
+                        Log.Info("Force reloading scene \"{0}\"", scene.name);
+                        SceneManager.sceneUnloaded += onSceneUnloaded;
+                        SceneManager.UnloadSceneAsync(scene);
+                    }
+                    else
+                    {
+                        Log.Debug("Found scene \"{0}\", processing with custom callback...");
+                        onFound(scene);
+                    }
+                    return;
+                }
+            }
+
+            doLoadScene();
+
+        }
+
+        /// <summary>
         /// Get the hierarchy path to a GameObject instance as a string.
         /// </summary>
         public static string GetGameObjectPath(GameObject gameObject) {
             string path = gameObject.name;
-            gameObject = gameObject.transform.parent?.gameObject;
+            gameObject = gameObject.transform.parent != null ? gameObject.transform.parent.gameObject : null;
             while (gameObject != null) {
                 path = gameObject.name + "/" + path;
-                gameObject = gameObject.transform.parent?.gameObject;
+                gameObject = gameObject.transform.parent != null ? gameObject.transform.parent.gameObject : null;
             }
             return path;
         }

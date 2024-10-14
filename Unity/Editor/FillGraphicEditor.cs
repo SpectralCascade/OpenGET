@@ -73,7 +73,7 @@ namespace OpenGET.Editor.UI
                     oldSprite = fill.baseSprite;
                     fill.baseSprite = (Sprite)EditorGUILayout.ObjectField("Base Sprite:", fill.baseSprite, typeof(Sprite), allowSceneObjects: false);
                     if (fill.baseSprite != oldSprite && fill.material != null) {
-                        fill.material.SetTexture("_MainTex", fill.baseSprite?.texture);
+                        fill.material.SetTexture("_MainTex", fill.baseSprite != null ? fill.baseSprite.texture : null);
                     }
 
                     oldColor = fill.fillColor;

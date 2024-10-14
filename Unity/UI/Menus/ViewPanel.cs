@@ -304,8 +304,8 @@ namespace OpenGET.UI {
             {
                 if (above.backButton != null && above.backButton.onClick.GetPersistentTarget(0) != null)
                 {
-                    above.backButton?.onClick.RemoveListener(Pop);
-                    above.backButton?.onClick.AddListener(overlay.Pop);
+                    above.backButton.onClick.RemoveListener(Pop);
+                    above.backButton.onClick.AddListener(overlay.Pop);
                 }
                 overlay.above = above;
                 above.below = overlay;

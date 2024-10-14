@@ -137,7 +137,6 @@ namespace OpenGET.UI
             where T : Hint where ParamsType : Parameters, new()
         {
             T created = root != null ? Instantiate(prefab, root) : Instantiate(prefab);
-            //Log.Debug("Created {0} instance of prefab {1} at {2} (root = {3})", typeof(T).Name, prefab.name, SceneNavigator.GetGameObjectPath(created.gameObject), root?.gameObject?.name);
             if (screenTarget != null)
             {
                 created.SetHintTarget(screenTarget, args, origin);

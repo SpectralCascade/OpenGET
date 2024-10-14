@@ -193,7 +193,7 @@ namespace OpenGET
 
         public float GetValue()
         {
-            return renderer?.material != null ? renderer.material.color.a : 0;
+            return renderer != null && renderer.material != null ? renderer.material.color.a : 0;
         }
 
         public void SetValue(float v)

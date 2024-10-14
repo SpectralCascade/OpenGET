@@ -31,13 +31,18 @@ namespace OpenGET.UI
         public bool playOnStart = false;
 
         /// <summary>
+        /// The audio source the clip is played back on.
+        /// </summary>
+        private AudioSource source;
+
+        /// <summary>
         /// Play the audio clip.
         /// </summary>
         public void Play()
         {
             if (clip != null && mixerGroup != null)
             {
-                AudioController.Channel(mixerGroup).Play(clip, loop: mixerGroup == AudioController.Instance.music.group);
+                source = AudioController.Channel(mixerGroup).Play(clip, loop: mixerGroup == AudioController.Instance.music.group);
             }
         }
 
@@ -46,6 +51,14 @@ namespace OpenGET.UI
             if (playOnStart)
             {
                 Play();
+            }
+        }
+
+        protected virtual void OnDestroy()
+        {
+            if (source != null && source.loop)
+            {
+                source.Stop();
             }
         }
 

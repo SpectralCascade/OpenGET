@@ -28,7 +28,7 @@ public class Billboard : MonoBehaviour
     {
         if (target == null)
         {
-            target = Camera.main?.transform;
+            target = Camera.main != null ? Camera.main.transform : null;
         }
 
         if (target != null)

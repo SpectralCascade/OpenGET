@@ -145,6 +145,17 @@ namespace OpenGET {
                 return source;
             }
 
+            public void StopAll()
+            {
+                for (int i = 0, counti = pool.Length; i < counti; i++)
+                {
+                    if (pool[i] != null)
+                    {
+                        pool[i].Stop();
+                    }
+                }
+            }
+
         }
 
         /// <summary>
@@ -275,6 +286,17 @@ namespace OpenGET {
         public static Bus Channel(AudioMixerGroup group)
         {
             return Instance.GetBus(group);
+        }
+
+        /// <summary>
+        /// Stop all audio channels playing.
+        /// </summary>
+        public static void StopAll()
+        {
+            for (int i = 0, counti = Instance.buses.Count; i < counti; i++)
+            {
+                Instance.buses[i].StopAll();
+            }
         }
 
         /// <summary>

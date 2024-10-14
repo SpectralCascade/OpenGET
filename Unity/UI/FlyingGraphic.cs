@@ -72,7 +72,7 @@ namespace OpenGET.UI
         /// </summary>
         public void Init(string text = "", Color? colour = null, Transform target = null, Camera cam = null)
         {
-            Log.Debug("Setting target = {0}, cam = {1}", target?.gameObject.name, cam?.gameObject.name);
+            Log.Debug("Setting target = {0}, cam = {1}", target != null ? target.gameObject.name : null, cam != null ? cam.gameObject.name : null);
             this.target = target;
             this.cam = cam;
 

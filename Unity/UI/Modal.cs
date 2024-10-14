@@ -363,7 +363,10 @@ namespace OpenGET.UI
                     showCloseInput,
                     takeInputControl
                 ), ui);
-                modal.background?.gameObject?.SetActive(showBackground);
+                if (modal.background != null)
+                {
+                    modal.background.gameObject.SetActive(showBackground);
+                }
                 // TODO: Fade in modal
                 modal.canvasGroup.alpha = 1;
                 if (takeInputControl)
@@ -509,7 +512,10 @@ namespace OpenGET.UI
 
             // Primary button
             bool show = !string.IsNullOrEmpty(data.textPrimary);
-            inputPrimary?.gameObject.SetActive(show);
+            if (inputPrimary != null)
+            {
+                inputPrimary.gameObject.SetActive(show);
+            }
             if (textPrimaryGraphic != null)
             {
                 textPrimary = data.textPrimary;
@@ -523,7 +529,10 @@ namespace OpenGET.UI
 
             // Secondary button
             show = !string.IsNullOrEmpty(data.textSecondary);
-            inputSecondary?.gameObject.SetActive(show);
+            if (inputSecondary != null)
+            {
+                inputSecondary.gameObject.SetActive(show);
+            }
             if (textSecondaryGraphic != null)
             {
                 textSecondary = data.textSecondary;
