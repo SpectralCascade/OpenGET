@@ -1,0 +1,16 @@
+{
+    "name": "OpenGET.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:f31ddc2b606b223439a25cfc795af122"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

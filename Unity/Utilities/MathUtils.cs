@@ -122,6 +122,19 @@ namespace OpenGET
 		}
 
 		/// <summary>
+		/// Combine bounds together by encapsulation.
+		/// </summary>
+		public static Bounds CombineBounds(Bounds[] bounds)
+        {
+			Bounds combined = new Bounds(bounds[0].center, Vector3.zero);
+			for (int i = 0, counti = bounds.Length; i < counti; i++)
+			{
+				combined.Encapsulate(bounds[i]);
+			}
+			return combined;
+		}
+
+		/// <summary>
 		/// Tween functions, useful for animations among other things.
 		/// </summary>
 		public static class Tween
