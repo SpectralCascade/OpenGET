@@ -8,7 +8,8 @@
   "changelogUrl": "https://github.com/SpectralCascade/OpenGET/commits/master/",
   "licensesUrl": "https://github.com/SpectralCascade/OpenGET/blob/master/LICENSE",
   "dependencies": {
-    "com.unity.nuget.newtonsoft-json": "3.2.1"
+    "com.unity.nuget.newtonsoft-json": "3.2.1",
+	"com.unity.inputsystem": "1.7.0"
   },
   "keywords": [
     "JSON",
