@@ -229,8 +229,9 @@ namespace OpenGET
                     void HandleArray(JArray jArray, Type arrayType, ref object array)
                     {
                         // Create a brand new array and populate it
-                        array = Activator.CreateInstance(arrayType, 0);
+                        array = Activator.CreateInstance(arrayType, jArray.Count);
                         Type itemType = arrayType.GetElementType();
+                        int index = 0;
                         foreach (JToken child in jArray)
                         {
                             if (child.Type == JTokenType.Array)
@@ -242,14 +243,14 @@ namespace OpenGET
                                 }
                                 object nested = null;
                                 HandleArray((JArray)child, itemType, ref nested);
-                                ((IList)array).Add(nested);
+                                ((IList)array)[index] = nested;
                             }
                             else if (itemType.IsAssignableFrom(typeof(ISerialise)))
                             {
                                 JObject prev = json;
                                 json = (JObject)child;
                                 object created = Activator.CreateInstance(itemType);
-                                ((IList)array).Add(created);
+                                ((IList)array)[index] = created;
                                 ((ISerialise)created).Serialise((Derived)this);
                                 json = prev;
                             }
@@ -258,16 +259,15 @@ namespace OpenGET
                                 JObject prev = json;
                                 json = (JObject)child;
                                 object created = Activator.CreateInstance(itemType);
-                                WalkSerialiseMembers(itemType, (field) => {
-                                    Read(field.Name, ref created);
-                                });
-                                ((IList)array).Add(created);
+                                WalkReadMembers(itemType, ref created);
+                                ((IList)array)[index] = created;
                                 json = prev;
                             }
                             else
                             {
-                                ((IList)array).Add(child.ToObject(itemType));
+                                ((IList)array)[index] = child.ToObject(itemType);
                             }
+                            index++;
                         }
                     }
 
