@@ -104,7 +104,7 @@ namespace OpenGET
         }
 
         /// <summary>
-        /// Deserialise an object from the serialised format.
+        /// Deserialise an object from the serialised format. Returns false if there is no such id in the current JSON data.
         /// </summary>
         public abstract bool Read<DataType>(string id, ref DataType data);
 
