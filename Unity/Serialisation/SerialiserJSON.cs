@@ -272,7 +272,7 @@ namespace OpenGET
                     }
 
                     object dataObj = data;
-                    HandleArray((JArray)token, typeof(DataType), ref dataObj);
+                    HandleArray((JArray)token, data.GetType(), ref dataObj);
                     data = (DataType)dataObj;
                 }
                 else
@@ -334,11 +334,13 @@ namespace OpenGET
                     {
                         foreach (object child in array)
                         {
-                            JToken arrayToken = JToken.FromObject(child, serial);
                             if (child == null)
                             {
+                                continue;
                             }
-                            else if (arrayToken.Type == JTokenType.Array && child is IEnumerable)
+
+                            JToken arrayToken = JToken.FromObject(child, serial);
+                            if (arrayToken.Type == JTokenType.Array && child is IEnumerable)
                             {
                                 JArray nested = new JArray();
                                 jArray.Add(nested);
