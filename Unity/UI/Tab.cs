@@ -81,6 +81,11 @@ namespace OpenGET.UI
 
         protected override void Awake()
         {
+            if (group == null)
+            {
+                group = GetComponentInParent<TabGroup>();
+            }
+
             base.Awake();
 
             button.onClick.AddListener(SwitchTo);

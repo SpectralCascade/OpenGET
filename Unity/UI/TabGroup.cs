@@ -39,19 +39,21 @@ namespace OpenGET.UI
         }
 
         /// <summary>
-        /// Dynamically associate a tab.
+        /// Dynamically create a tab from a prefab.
         /// </summary>
-        public void Add(Tab tab)
+        public Tab Add(Tab prefab)
         {
             int len = tabs.Length;
             System.Array.Resize(ref tabs, len + 1);
+            Tab tab = Instantiate(prefab, transform);
             tabs[len] = tab;
+            return tab;
         }
 
         /// <summary>
         /// Dynamically disassociate a tab.
         /// </summary>
-        public void Remove(Tab tab)
+        public bool Remove(Tab tab)
         {
             int found = System.Array.IndexOf(tabs, tab);
             if (found >= 0)
@@ -59,7 +61,22 @@ namespace OpenGET.UI
                 int count = tabs.Length - 1;
                 tabs[found] = tabs[count];
                 System.Array.Resize(ref tabs, count);
+                Destroy(tab.gameObject);
+                return true;
             }
+            return false;
+        }
+
+        /// <summary>
+        /// Destroy all tabs.
+        /// </summary>
+        public void Clear()
+        {
+            for (int i = 0, counti = tabs.Length; i < counti; i++)
+            {
+                Destroy(tabs[i].gameObject);
+            }
+            tabs = new Tab[0];
         }
 
         /// <summary>
