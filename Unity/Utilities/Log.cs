@@ -23,12 +23,13 @@ namespace OpenGET {
         /// </summary>
         [System.Flags]
         public enum Level {
-            Error = 0,
-            Warning = 1,
-            Info = 2,
-            Debug = 4,
-            Verbose = 8,
-            All = 15
+            None = 0,
+            Error = 1,
+            Warning = 2,
+            Info = 4,
+            Debug = 8,
+            Verbose = 16,
+            All = 31
         }
 
         /// <summary>

@@ -28,7 +28,7 @@ namespace OpenGET
             /// Paths that should be considered during strings extraction, relative to project assets directory.
             /// </summary>
             public string[] scriptIncludePaths = new string[0];
-            
+
             /// <summary>
             /// Paths that should be considered during scenes extraction, relative to project assets directory.
             /// </summary>
@@ -73,6 +73,124 @@ namespace OpenGET
             public string outputFilenamePrefix = "";
 
         }
+
+        /// <summary>
+        /// Configure OpenGET logging in editor.
+        /// </summary>
+        [System.Serializable]
+        public class Logging
+        {
+            /// <summary>
+            /// Which logging levels are enabled in editor. Does not affect release builds.
+            /// </summary>
+            public Log.Level level = Log.Level.All;
+        }
+
+        /// <summary>
+        /// Find an EditorConfig instance.
+        /// </summary>
+        public static EditorConfig Instance {
+            get {
+                string[] found = AssetDatabase.FindAssets("t:" + typeof(EditorConfig).Name);
+                return found.Length > 0 ?
+                    AssetDatabase.LoadAssetAtPath<EditorConfig>(AssetDatabase.GUIDToAssetPath(found[0])) :
+                    CreateInstance<EditorConfig>();
+            }
+        }
+
+        private const string LogPrefix = "OpenGET/Log Level/";
+
+#if UNITY_EDITOR
+        private static void ToggleLog(Log.Level level)
+        {
+            EditorConfig config = Instance;
+            if (level == Log.Level.All)
+            {
+                config.logging.level = (config.logging.level ^ Log.Level.All) != 0 ? Log.Level.All : ~Log.Level.All;
+            }
+            else
+            {
+                config.logging.level ^= level;
+            }
+            EditorUtility.SetDirty(config);
+            AssetDatabase.SaveAssetIfDirty(config);
+        }
+
+        private static bool ValidateLog(Log.Level level)
+        {
+            EditorConfig config = Instance;
+            Menu.SetChecked(
+                LogPrefix + level.ToString(),
+                (level ^ (config.logging.level & level)) == 0
+            );
+            return true;
+        }
+
+        [MenuItem(LogPrefix + "All", true)]
+        public static bool ValidateLogAll()
+        {
+            return ValidateLog(Log.Level.All);
+        }
+
+        [MenuItem(LogPrefix + "All", priority = 1)]
+        public static void ToggleLogAll()
+        {
+            ToggleLog(Log.Level.All);
+        }
+
+        [MenuItem(LogPrefix + "Verbose", true)]
+        public static bool ValidateLogVerbose()
+        {
+            return ValidateLog(Log.Level.Verbose);
+        }
+
+        [MenuItem(LogPrefix + "Verbose", priority = 2)]
+        public static void ToggleLogVerbose()
+        {
+            ToggleLog(Log.Level.Verbose);
+        }
+
+        [MenuItem(LogPrefix + "Info", true)]
+        public static bool ValidateLogInfo()
+        {
+            return ValidateLog(Log.Level.Info);
+        }
+
+        [MenuItem(LogPrefix + "Info", priority = 3)]
+        public static void ToggleLogInfo()
+        {
+            ToggleLog(Log.Level.Info);
+        }
+
+        [MenuItem(LogPrefix + "Warning", true)]
+        public static bool ValidateLogWarning()
+        {
+            return ValidateLog(Log.Level.Warning);
+        }
+
+        [MenuItem(LogPrefix + "Warning", priority = 4)]
+        public static void ToggleLogWarning()
+        {
+            ToggleLog(Log.Level.Warning);
+        }
+
+        [MenuItem(LogPrefix + "Error", true)]
+        public static bool ValidateLogError()
+        {
+            return ValidateLog(Log.Level.Error);
+        }
+
+        [MenuItem(LogPrefix + "Error", priority = 5)]
+        public static void ToggleLogError()
+        {
+            ToggleLog(Log.Level.Error);
+        }
+#endif
+
+        /// <summary>
+        /// Log settings.
+        /// </summary>
+        public Logging logging;
 
         /// <summary>
         /// Editor localisation settings.
