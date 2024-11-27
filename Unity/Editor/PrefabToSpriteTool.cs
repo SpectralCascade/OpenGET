@@ -53,11 +53,7 @@ namespace OpenGET
             // Make sure we always have a valid configuration
             if (config == null || config.name == null || config.name.Length <= 0)
             {
-                string[] found = AssetDatabase.FindAssets("t:" + typeof(EditorConfig).Name);
-
-                config = found.Length > 0 ?
-                    AssetDatabase.LoadAssetAtPath<EditorConfig>(AssetDatabase.GUIDToAssetPath(found[0])) :
-                    CreateInstance<EditorConfig>();
+                config = EditorConfig.Instance;
             }
 
             // Display Prefab to Sprite settings

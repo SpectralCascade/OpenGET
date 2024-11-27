@@ -92,9 +92,11 @@ namespace OpenGET
         public static EditorConfig Instance {
             get {
                 string[] found = AssetDatabase.FindAssets("t:" + typeof(EditorConfig).Name);
-                return found.Length > 0 ?
+                EditorConfig config = found.Length > 0 ?
                     AssetDatabase.LoadAssetAtPath<EditorConfig>(AssetDatabase.GUIDToAssetPath(found[0])) :
                     CreateInstance<EditorConfig>();
+                EditorPrefs.SetInt("OpenGET/LogLevel", (int)config.logging.level);
+                return config;
             }
         }
 
@@ -112,6 +114,7 @@ namespace OpenGET
             {
                 config.logging.level ^= level;
             }
+            EditorPrefs.SetInt("OpenGET/LogLevel", (int)config.logging.level);
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssetIfDirty(config);
         }
@@ -150,13 +153,25 @@ namespace OpenGET
             ToggleLog(Log.Level.Verbose);
         }
 
+        [MenuItem(LogPrefix + "Debug", true)]
+        public static bool ValidateLogDebug()
+        {
+            return ValidateLog(Log.Level.Debug);
+        }
+
+        [MenuItem(LogPrefix + "Debug", priority = 3)]
+        public static void ToggleLogDebug()
+        {
+            ToggleLog(Log.Level.Debug);
+        }
+
         [MenuItem(LogPrefix + "Info", true)]
         public static bool ValidateLogInfo()
         {
             return ValidateLog(Log.Level.Info);
         }
 
-        [MenuItem(LogPrefix + "Info", priority = 3)]
+        [MenuItem(LogPrefix + "Info", priority = 4)]
         public static void ToggleLogInfo()
         {
             ToggleLog(Log.Level.Info);
@@ -168,7 +183,7 @@ namespace OpenGET
             return ValidateLog(Log.Level.Warning);
         }
 
-        [MenuItem(LogPrefix + "Warning", priority = 4)]
+        [MenuItem(LogPrefix + "Warning", priority = 5)]
         public static void ToggleLogWarning()
         {
             ToggleLog(Log.Level.Warning);
@@ -180,7 +195,7 @@ namespace OpenGET
             return ValidateLog(Log.Level.Error);
         }
 
-        [MenuItem(LogPrefix + "Error", priority = 5)]
+        [MenuItem(LogPrefix + "Error", priority = 6)]
         public static void ToggleLogError()
         {
             ToggleLog(Log.Level.Error);

@@ -19,6 +19,53 @@ namespace OpenGET {
         }
 
         /// <summary>
+        /// Unity debug logger implementation.
+        /// </summary>
+        protected class UnityLogger : ILogger
+        {
+            public void OnLog(Level level, string message, params object[] args)
+            {
+#if UNITY_EDITOR
+                if (!UnityEditor.EditorPrefs.HasKey("OpenGET/LogLevel"))
+                {
+                    UnityEditor.EditorPrefs.SetInt("OpenGET/LogLevel", (int)Level.All);
+                }
+                else if ((UnityEditor.EditorPrefs.GetInt("OpenGET/LogLevel") & (int)level) == 0)
+                {
+                    return;
+                }
+#endif
+                LogType type = level switch {
+                    _ => LogType.Log
+                };
+                string colour = level switch {
+                    Level.Verbose => "green",
+                    Level.Debug => "cyan",
+                    Level.Info => "white",
+                    Level.Warning => "yellow",
+                    Level.Error => "red",
+                    _ => null
+                };
+                if (level == Level.Error)
+                {
+                    // Log as error
+                    LogLine(PrefixStackInfo(Format(null, message, args)), LogType.Error);
+#if !UNITY_EDITOR
+                    // Early out of builds so we only log errors once
+                    return;
+#endif
+                }
+                // Log as standard
+                LogLine(PrefixStackInfo(Format(colour, message, args)), type);
+            }
+        }
+
+        /// <summary>
+        /// Static instance of the Unity logger.
+        /// </summary>
+        private static UnityLogger unity = new UnityLogger();
+
+        /// <summary>
         /// Log priority levels.
         /// </summary>
         [System.Flags]
@@ -67,11 +114,22 @@ namespace OpenGET {
         /// Calls the OnLog method of all ILogger instances registered as listeners.
         /// </summary>
         private static void UpdateLoggers(Level level, string message, params object[] args) {
-            foreach (KeyValuePair<ILogger, Level> logger in loggers) {
-                if ((logger.Value | level) != 0) {
-                    logger.Key.OnLog(level, message, args);
-                }
+#if UNITY_EDITOR
+            if (!UnityEditor.EditorPrefs.HasKey("OpenGET/LogLevel"))
+            {
+                UnityEditor.EditorPrefs.SetInt("OpenGET/LogLevel", (int)Level.All);
             }
+            if ((UnityEditor.EditorPrefs.GetInt("OpenGET/LogLevel") & (int)level) != 0)
+            {
+#endif
+                foreach (KeyValuePair<ILogger, Level> logger in loggers) {
+                    if ((logger.Value & level) != 0) {
+                        logger.Key.OnLog(level, message, args);
+                    }
+                }
+#if UNITY_EDITOR
+            }
+#endif
         }
 
         /// <summary>
@@ -150,7 +208,7 @@ namespace OpenGET {
         [System.Diagnostics.Conditional("UNITY_EDITOR"), System.Diagnostics.Conditional("OPENGET_DEBUG")]
         public static void Debug(string message, params object[] args) {
             message = "Debug: " + message;
-            LogLine(PrefixStackInfo(Format("cyan", message, args)));
+            unity.OnLog(Level.Debug, message, args);
             UpdateLoggers(Level.Debug, message, args);
         }
 
@@ -160,7 +218,7 @@ namespace OpenGET {
         /// </summary>
         public static void Info(string message, params object[] args) {
             message = "Info: " + message;
-            LogLine(PrefixStackInfo(Format("white", message, args)));
+            unity.OnLog(Level.Info, message, args);
             UpdateLoggers(Level.Info, message, args);
         }
 
@@ -171,7 +229,7 @@ namespace OpenGET {
         /// </summary>
         public static void Warning(string message, params object[] args) {
             message = "Warning: " + message;
-            LogLine(PrefixStackInfo(Format("yellow", message, args)));
+            unity.OnLog(Level.Warning, message, args);
             UpdateLoggers(Level.Warning, message, args);
         }
 
@@ -180,11 +238,7 @@ namespace OpenGET {
         /// </summary>
         public static void Error(string message, params object[] args) {
             message = "Error: " + message;
-#if UNITY_EDITOR
-            LogLine(PrefixStackInfo(Format("red", message, args)));
-#endif
-            // Also log to the regular error console
-            LogLine(PrefixStackInfo(Format(null, message, args)), LogType.Error);
+            unity.OnLog(Level.Error, message, args);
             UpdateLoggers(Level.Error, message, args);
         }
 
@@ -193,7 +247,7 @@ namespace OpenGET {
         /// </summary>
         public static void Verbose(string message, params object[] args) {
             message = "Verbose: " + message;
-            LogLine(PrefixStackInfo(Format("green", message, args)));
+            unity.OnLog(Level.Verbose, message, args);
             UpdateLoggers(Level.Verbose, message, args);
         }
 
@@ -202,11 +256,7 @@ namespace OpenGET {
         /// </summary>
         public static void Exception(System.Exception e) {
             string message = "Error: " + e.ToString();
-#if UNITY_EDITOR
-            LogLine(PrefixStackInfo(Format("red", message)));
-#endif
-            // Log with the exception log type
-            LogLine(PrefixStackInfo(Format(null, message)), LogType.Exception);
+            unity.OnLog(Level.Error, message);
             UpdateLoggers(Level.Error, message);
         }
 

@@ -363,7 +363,7 @@ namespace OpenGET
         {
             if (config == null)
             {
-                config = CreateInstance<EditorConfig>();
+                config = EditorConfig.Instance;
             }
         }
 
