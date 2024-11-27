@@ -26,6 +26,11 @@ namespace OpenGET.UI
         protected int index = 0;
 
         /// <summary>
+        /// Getter for current index.
+        /// </summary>
+        public int currentIndex => index;
+
+        /// <summary>
         /// Get the current active tab, if any.
         /// </summary>
         public Tab current => tabs.Length > 0 ? tabs[index] : null;
