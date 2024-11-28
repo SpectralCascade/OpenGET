@@ -67,6 +67,11 @@ namespace OpenGET
     /// </summary>
     public static class Localise {
 
+        [AttributeUsage(AttributeTargets.Field, Inherited = true)]
+        public class FieldAttribute : Attribute
+        {
+        }
+
         /// <summary>
         /// Current language everything is being localised to.
         /// </summary>
@@ -120,6 +125,10 @@ namespace OpenGET
             }
         }
 
+        /// <summary>
+        /// Mark text to be pulled for localisation, but don't actually localise it.
+        /// Required for certain scenarios e.g. default initialised text you want localised later.
+        /// </summary>
         public static string Runtime(string raw)
         {
             return raw;

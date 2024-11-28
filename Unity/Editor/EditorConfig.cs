@@ -87,7 +87,7 @@ namespace OpenGET
         }
 
         /// <summary>
-        /// Find an EditorConfig instance.
+        /// Find and load (or create) an EditorConfig instance.
         /// </summary>
         public static EditorConfig Instance {
             get {
