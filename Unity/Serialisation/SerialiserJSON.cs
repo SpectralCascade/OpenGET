@@ -104,7 +104,9 @@ namespace OpenGET
 
         public override Result Load(ISerialise game)
         {
+#if !UNITY_EDITOR
             try
+#endif
             {
                 Log.Info("Loading from \"{0}\"", path);
                 string raw = File.ReadAllText(path, System.Text.Encoding.UTF8);
@@ -112,11 +114,13 @@ namespace OpenGET
 
                 Deserialise(game);
             }
+#if !UNITY_EDITOR
             catch (Exception e)
             {
                 Log.Exception(e);
                 return new Result(Localise.Text("Failed to load: {0}", e.Message), e);
             }
+#endif
             return new Result();
         }
 
@@ -230,8 +234,25 @@ namespace OpenGET
                     {
                         // Create a brand new array and populate it
                         array = Activator.CreateInstance(arrayType, jArray.Count);
-                        Type itemType = arrayType.GetElementType();
+                        Type itemType = arrayType.IsArray ? arrayType.GetElementType() : arrayType.GetGenericArguments().FirstOrDefault();
+                        if (itemType == null)
+                        {
+                            Log.Error("Failed to determine element type of IList {0} (IList type: {1}) when reading data!", id, arrayType);
+                        }
                         int index = 0;
+                        IList casted = (IList)array;
+                        void AddToArray(ref object obj)
+                        {
+                            if (arrayType.IsArray)
+                            {
+                                casted[index] = obj;
+                            }
+                            else
+                            {
+                                casted.Add(obj);
+                            }
+                        }
+
                         foreach (JToken child in jArray)
                         {
                             if (child.Type == JTokenType.Array)
@@ -241,17 +262,17 @@ namespace OpenGET
                                     // Can't handle non-IList implementations
                                     continue;
                                 }
-                                object nested = null;
-                                HandleArray((JArray)child, itemType, ref nested);
-                                ((IList)array)[index] = nested;
+                                object loaded = null;
+                                HandleArray((JArray)child, itemType, ref loaded);
+                                AddToArray(ref loaded);
                             }
                             else if (itemType.IsAssignableFrom(typeof(ISerialise)))
                             {
                                 JObject prev = json;
                                 json = (JObject)child;
-                                object created = Activator.CreateInstance(itemType);
-                                ((IList)array)[index] = created;
-                                ((ISerialise)created).Serialise((Derived)this);
+                                object loaded = Activator.CreateInstance(itemType);
+                                AddToArray(ref loaded);
+                                ((ISerialise)loaded).Serialise((Derived)this);
                                 json = prev;
                             }
                             else if (child.Type == JTokenType.Object)
@@ -260,13 +281,15 @@ namespace OpenGET
                                 json = (JObject)child;
                                 object created = Activator.CreateInstance(itemType);
                                 WalkReadMembers(itemType, ref created);
-                                ((IList)array)[index] = created;
+                                AddToArray(ref created);
                                 json = prev;
                             }
                             else
                             {
-                                ((IList)array)[index] = child.ToObject(itemType);
+                                object loaded = child.ToObject(itemType);
+                                AddToArray(ref loaded);
                             }
+
                             index++;
                         }
                     }
