@@ -174,9 +174,11 @@ namespace OpenGET {
         /// </summary>
         public static string PrefixStackInfo(string message) {
 #if UNITY_EDITOR
-            System.Diagnostics.StackFrame caller = new System.Diagnostics.StackTrace(true).GetFrame(2);
+            System.Diagnostics.StackFrame caller = new System.Diagnostics.StackTrace(true).GetFrames().FirstOrDefault(
+                x => x != null && System.IO.Path.GetFileNameWithoutExtension(x.GetFileName()) != "Log"
+            );
             message = "<color=#AFA>[" + 
-                System.IO.Path.GetFileNameWithoutExtension(caller.GetFileName()) + ":" + caller.GetFileLineNumber() + "]</color> " + message;
+                System.IO.Path.GetFileNameWithoutExtension(caller?.GetFileName()) + ":" + caller?.GetFileLineNumber() + "]</color> " + message;
 #endif
             return message;
         }

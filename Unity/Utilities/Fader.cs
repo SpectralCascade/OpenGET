@@ -118,8 +118,8 @@ namespace OpenGET
         /// </summary>
         public IEnumerator Fade(float start, float end, float time = 1.0f) {
             float startTime = useUnscaledTime ? Time.unscaledTime : Time.time;
-            float elapsedTime = 0;
-            float lerpValue = 0;
+            float elapsedTime;
+            float lerpValue;
             time = Mathf.Max(float.Epsilon, time);
 
             while (true) {
@@ -133,22 +133,33 @@ namespace OpenGET
 
                 if (lerpValue >= 1) {
                     /// Fade is finished
-                    int fadeDir = end < start ? -1 : 1;
+                    int fadeDir = end <= start ? -1 : 1;
+
+                    // If fade direction doesn't match, this could be an old coroutine that hasn't finished.
                     if (fadeDirection == fadeDir) {
                         fadeDirection = 0;
+                        if (fadeDir < 0)
+                        {
+                            OnFadeComplete?.Invoke(this, -1);
+                        }
+                        else
+                        {
+                            OnFadeComplete?.Invoke(this, 1);
+                        }
+                        fadeCoroutine = null;
                     }
 
-                    if (fadeDir < 0) {
-                        OnFadeComplete?.Invoke(this, -1);
-                    } else {
-                        OnFadeComplete?.Invoke(this, 1);
+                    if (fadeCoroutine == null)
+                    {
+                        fadeDirection = 0;
                     }
-                    fadeCoroutine = null;
                     break;
                 }
+
                 yield return new WaitForEndOfFrame();
             }
 
+            yield return null;
         }
 
     }

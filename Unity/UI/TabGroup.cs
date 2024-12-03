@@ -35,9 +35,14 @@ namespace OpenGET.UI
         /// </summary>
         public Tab current => tabs.Length > 0 ? tabs[index] : null;
 
+        /// <summary>
+        /// Is this group currently switching tabs?
+        /// </summary>
+        public bool switching { get; private set; }
+
         protected void OnEnable()
         {
-            if (current != null)
+            if (!switching && current != null)
             {
                 SwitchTo(current);
             }
@@ -51,6 +56,7 @@ namespace OpenGET.UI
             int len = tabs.Length;
             System.Array.Resize(ref tabs, len + 1);
             Tab tab = Instantiate(prefab, transform);
+            tab.group = this;
             tabs[len] = tab;
             return tab;
         }
@@ -85,6 +91,14 @@ namespace OpenGET.UI
         }
 
         /// <summary>
+        /// Try and get a tab by index.
+        /// </summary>
+        public Tab TryGet(int index)
+        {
+            return index >= 0 && index < tabs.Length ? tabs[index] : null;
+        }
+
+        /// <summary>
         /// Switch to a different tab.
         /// </summary>
         public void SwitchTo(Tab tab)
@@ -92,9 +106,12 @@ namespace OpenGET.UI
             int found = System.Array.FindIndex(tabs, x => x == tab);
             if (found >= 0)
             {
-                current.OnSwitch(false);
+                Tab prev = current;
                 index = found;
+                switching = true;
+                prev.OnSwitch(false);
                 current.OnSwitch(true);
+                switching = false;
             }
         }
 

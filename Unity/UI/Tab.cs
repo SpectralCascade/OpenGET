@@ -114,14 +114,14 @@ namespace OpenGET.UI
                 onTabActivate?.Invoke();
                 if (associatedPanel != null)
                 {
-                    associatedPanel.Show();
+                    associatedPanel.Show(0);
                 }
             }
             else
             {
                 if (associatedPanel != null)
                 {
-                    associatedPanel.Hide();
+                    associatedPanel.Hide(0);
                 }
                 onTabDeactivate?.Invoke();
             }
