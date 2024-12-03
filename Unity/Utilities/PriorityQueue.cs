@@ -8,12 +8,21 @@ namespace OpenGET
 {
 
     /// <summary>
-    /// Queue of items sorted by custom priority.
+    /// Queue of items sorted by custom priority. Implements IList for sake of serialisation.
     /// </summary>
+    [System.Serializable]
     public class PriorityQueue<T> : IEnumerable<PriorityQueue<T>.Item>
     {
+        /// <summary>
+        /// TODO: Make actually serialisable (need to link queue to item).
+        /// </summary>
+        [System.Serializable]
         public class Item
         {
+            public Item()
+            {
+            }
+
             public Item(PriorityQueue<T> queue, T data, double priority)
             {
                 this.queue = queue;
@@ -24,7 +33,8 @@ namespace OpenGET
             /// <summary>
             /// Associated queue.
             /// </summary>
-            public readonly PriorityQueue<T> queue;
+            [System.NonSerialized]
+            public PriorityQueue<T> queue;
 
             /// <summary>
             /// Item data in the queue.
@@ -36,22 +46,24 @@ namespace OpenGET
             /// </summary>
             public double priority {
                 get {
-                    return _priority;
+                    return p;
                 }
                 set {
-                    if (_priority != value)
+                    if (p != value)
                     {
-                        _priority = value;
+                        p = value;
                         queue.hasChanges = true;
                     }
                 }
             }
-            private double _priority;
+            [SerializeField]
+            private double p;
         }
 
         /// <summary>
         /// Underlying array storing the items priorities.
         /// </summary>
+        [SerializeField]
         private List<Item> items = new List<Item>();
 
         /// <summary>
@@ -78,9 +90,11 @@ namespace OpenGET
                 }
             }
         }
+
+        [SerializeField]
         private bool _lowestFirst = false;
 
-        public PriorityQueue() { }
+        public PriorityQueue(int reserve = 0) { items = new List<Item>(reserve); }
 
         public PriorityQueue(IEnumerable<Item> data)
         {

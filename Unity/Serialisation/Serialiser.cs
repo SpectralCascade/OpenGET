@@ -15,7 +15,7 @@ namespace OpenGET
         /// Serialisation version. It is recommended that you implement this as an enum in your derived class,
         /// which you update with a new version for every release build.
         /// </summary>
-        public int version;
+        public Enum version;
 
         /// <summary>
         /// Former name this variable was serialised as. Used to handle the renaming of a variable so old saves still work.
@@ -27,7 +27,7 @@ namespace OpenGET
         /// </summary>
         public bool removed;
 
-        public SerialiseAttribute(int version, string formerName = null, bool removed = false)
+        public SerialiseAttribute(Enum version, string formerName = null, bool removed = false)
         {
             this.version = version;
             this.formerName = formerName;
@@ -35,12 +35,8 @@ namespace OpenGET
         }
     }
 
-    /// <summary>
-    /// Base class for implementing a custom serialisation system.
-    /// </summary>
-    public abstract class Serialiser<Derived, Version, VarAttribute> where VarAttribute : SerialiseAttribute where Derived : Serialiser<Derived, Version, VarAttribute>
+    public abstract class BaseSerialiser
     {
-
         /// <summary>
         /// Whether to serialise or deserialise data.
         /// </summary>
@@ -49,24 +45,6 @@ namespace OpenGET
             Serialise = 0,
             Deserialise = 1
         }
-
-        /// <summary>
-        /// Implement on classes you wish use custom serialisation logic for.
-        /// </summary>
-        public interface ISerialise
-        {
-            public void Serialise(Derived s);
-        }
-
-        /// <summary>
-        /// Path to the file to be serialised to/from.
-        /// </summary>
-        public virtual string path { get; protected set; }
-
-        /// <summary>
-        /// Current serialisation version.
-        /// </summary>
-        public virtual Version version { get; protected set; }
 
         /// <summary>
         /// Is this serialiser in serialising or deserialising mode?
@@ -79,14 +57,9 @@ namespace OpenGET
         public bool isWriting => mode == Mode.Serialise;
 
         /// <summary>
-        /// Write to the file at path.
+        /// Serialisation version.
         /// </summary>
-        public abstract Result Save(ISerialise game);
-
-        /// <summary>
-        /// Read from the file at path.
-        /// </summary>
-        public abstract Result Load(ISerialise game);
+        protected Enum version { get; set; }
 
         /// <summary>
         /// Serialise/deserialise a value (depending on serialiser mode).
@@ -113,6 +86,32 @@ namespace OpenGET
         /// </summary>
         public abstract void Write<DataType>(string id, DataType data);
 
+    }
+
+    /// <summary>
+    /// Base class for implementing a custom serialisation system.
+    /// </summary>
+    public abstract class Serialiser<Derived, Version, VarAttribute> : BaseSerialiser where VarAttribute : SerialiseAttribute where Derived : Serialiser<Derived, Version, VarAttribute> where Version : Enum
+    {
+
+        /// <summary>
+        /// Implement on classes you wish use custom serialisation logic for.
+        /// </summary>
+        public interface ISerialise
+        {
+            void Serialise(Derived s);
+        }
+
+        /// <summary>
+        /// Path to the file to be serialised to/from.
+        /// </summary>
+        public virtual string path { get; protected set; }
+
+        /// <summary>
+        /// Current serialisation version.
+        /// </summary>
+        public new Version version => (Version)base.version;
+
         /// <summary>
         /// Serialise an object using it's custom serialisation handler.
         /// </summary>
@@ -130,6 +129,16 @@ namespace OpenGET
             mode = Mode.Deserialise;
             data.Serialise((Derived)this);
         }
+
+        /// <summary>
+        /// Write to the file at path.
+        /// </summary>
+        public abstract Result Save(ISerialise obj);
+
+        /// <summary>
+        /// Read from the file at path.
+        /// </summary>
+        public abstract Result Load(ISerialise obj);
 
     }
 

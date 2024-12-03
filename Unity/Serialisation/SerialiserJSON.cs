@@ -14,7 +14,7 @@ namespace OpenGET
     /// <summary>
     /// JSON serialisation implementation.
     /// </summary>
-    public abstract class SerialiserJSON<Derived, VersionType, VarAttribute> : Serialiser<Derived, VersionType, VarAttribute> where VarAttribute : SerialiseAttribute where Derived : SerialiserJSON<Derived, VersionType, VarAttribute>
+    public abstract class SerialiserJSON<Derived, VersionType, VarAttribute> : Serialiser<Derived, VersionType, VarAttribute> where VarAttribute : SerialiseAttribute where Derived : SerialiserJSON<Derived, VersionType, VarAttribute> where VersionType : Enum
     {
         protected JObject json = new JObject();
 
@@ -351,9 +351,9 @@ namespace OpenGET
 
                     json = prev;
                 }
-                else if (token.Type == JTokenType.Array && data is IEnumerable)
+                else if (token.Type == JTokenType.Array && data is IList)
                 {
-                    void HandleArray(JArray jArray, IEnumerable array)
+                    void HandleArray(JArray jArray, IList array)
                     {
                         foreach (object child in array)
                         {
@@ -363,11 +363,11 @@ namespace OpenGET
                             }
 
                             JToken arrayToken = JToken.FromObject(child, serial);
-                            if (arrayToken.Type == JTokenType.Array && child is IEnumerable)
+                            if (arrayToken.Type == JTokenType.Array && child is IList)
                             {
                                 JArray nested = new JArray();
                                 jArray.Add(nested);
-                                HandleArray(nested, child as IEnumerable);
+                                HandleArray(nested, child as IList);
                             }
                             else if (child is ISerialise custom)
                             {
@@ -397,7 +397,7 @@ namespace OpenGET
 
                     JArray jArray = new JArray();
                     json.Add(id, jArray);
-                    HandleArray(jArray, data as IEnumerable);
+                    HandleArray(jArray, data as IList);
                 }
                 else
                 {
