@@ -13,13 +13,17 @@ public static class _TemplateRef_
     {
         public Wrapper(string path) { this.path = path; }
 
-        public string name => OpenGET.Localise.Text(Data?.ToString());
+        public string name => Data?.ToString();
 
         public readonly string path = "";
         
         public T Data => Resources.Load<T>(path);
 
         public override string ToString() { return name; }
+
+        public string Uppercase => ToString().ToUpper();
+
+        public string Lowercase => ToString().ToLower();
     }
 
     /// <summary>
