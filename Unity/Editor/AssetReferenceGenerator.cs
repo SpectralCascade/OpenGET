@@ -85,6 +85,11 @@ namespace OpenGET
                     continue;
                 }
                 path = path.Substring(path.ToLowerInvariant().IndexOf("resources/") + "resources/".Length);
+                int extensionIndex = path.LastIndexOf('.');
+                if (extensionIndex >= 0)
+                {
+                    path = path.Remove(extensionIndex);
+                }
                 Log.Debug("Found IReferrable at path \"{0}\"", path);
 
                 // Normalise a class or variable name
@@ -134,8 +139,9 @@ namespace OpenGET
 
                 // Generate leaf
                 string newline = "\n" + new string('\t', current.depth + 1);
-                current.generated_start = newline + newline + "/// <summary>" + newline + $"/// {obj.GetType()}" + newline + "/// </summary>" + newline + "public const string " + Normalise(parts[parts.Length - 1], true)
-                    + " = @\"" + path + "\";";
+                current.generated_start = newline + newline + "/// <summary>" + newline + $"/// {obj.GetType().FullName}." + newline + "/// </summary>" 
+                    + newline + $"public static Wrapper<{obj.GetType().FullName}> " + Normalise(parts[parts.Length - 1], true)
+                    + $" = new Wrapper<{obj.GetType().FullName}>() " + "{ path = \"" + path + "\" } ;";
                 current.generated_end = "";
 
                 refCount++;

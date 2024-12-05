@@ -10,7 +10,7 @@ namespace OpenGET
     /// </summary>
     public interface IReferrable
     {
-        public string Ref { get; }
+        public string AssetPath { get; }
     }
 
     /// <summary>
@@ -24,7 +24,15 @@ namespace OpenGET
         /// Asset reference identifier of the ScriptableObject.
         /// This should be the path to the asset.
         /// </summary>
-        public virtual string Ref => name;
+        public abstract string AssetPath { get; }
+
+        /// <summary>
+        /// If not overridden, this returns the AssetPath.
+        /// </summary>
+        public override string ToString()
+        {
+            return AssetPath;
+        }
 
         /// <summary>
         /// Load a Referrable of the given type, given a reference path.

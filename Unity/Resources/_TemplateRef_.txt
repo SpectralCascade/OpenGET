@@ -3,10 +3,27 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Asset reference class.
+/// Generated direct access to assets in Unity Resources.
 /// </summary>
 public static class _TemplateRef_
 {
+
+    public sealed class Wrapper<T> where T : Object
+    {
+        public string name => OpenGET.Localise.Text(Load()?.ToString());
+
+        public string path = "";
+        
+        public T Load()
+        {
+            return Resources.Load<T>(path);
+        }
+
+        public override string ToString()
+        {
+            return name;
+        }
+    }
 
     /// <summary>
     /// Dictionary of asset paths to loaded assets.
