@@ -1,0 +1,19 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+/// <summary>
+/// Asset reference class.
+/// </summary>
+public static class _TemplateRef_
+{
+
+    /// <summary>
+    /// Dictionary of asset paths to loaded assets.
+    /// </summary>
+    public static readonly Dictionary<string, OpenGET.Referrable> _loaded = new Dictionary<string, OpenGET.Referrable>();
+
+    #region __GENERATED_CLASSES__
+    #endregion
+
+}
