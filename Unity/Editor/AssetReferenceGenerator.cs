@@ -140,8 +140,8 @@ namespace OpenGET
                 // Generate leaf
                 string newline = "\n" + new string('\t', current.depth + 1);
                 current.generated_start = newline + newline + "/// <summary>" + newline + $"/// {obj.GetType().FullName}." + newline + "/// </summary>" 
-                    + newline + $"public static Wrapper<{obj.GetType().FullName}> " + Normalise(parts[parts.Length - 1], true)
-                    + $" = new Wrapper<{obj.GetType().FullName}>() " + "{ path = \"" + path + "\" } ;";
+                    + newline + $"public static readonly Wrapper<{obj.GetType().FullName}> " + Normalise(parts[parts.Length - 1], true)
+                    + $" = new Wrapper<{obj.GetType().FullName}>(@\"{path}\");";
                 current.generated_end = "";
 
                 refCount++;
