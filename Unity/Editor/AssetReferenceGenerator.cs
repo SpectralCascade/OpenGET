@@ -23,6 +23,7 @@ namespace OpenGET
             public string generated_start = "";
             public string generated_end = "";
             public int depth = 0;
+            public bool isLeaf = false;
             public List<Node> children = new List<Node>();
         }
 
@@ -74,6 +75,18 @@ namespace OpenGET
                 Enumerable.Range(97, 26)
             ).Select(x => (char)x).ToArray()));
 
+            // Normalise a class or variable name
+            string Normalise(string name, bool isAsset = false)
+            {
+                string normalised = "";
+                name = isAsset && name.Contains('.') ? name.Remove(name.LastIndexOf('.')) : name;
+                for (int k = 0, countk = name.Length; k < countk; k++)
+                {
+                    normalised += alphaNumeric.Contains(name[k]) ? name[k] : "_";
+                }
+                return normalised;
+            }
+
             int refCount = 0;
             found = AssetDatabase.FindAssets("t:Object a:all glob:\"**/Resources/**\"");
             for (int i = 0, counti = found.Length; i < counti; i++)
@@ -92,18 +105,6 @@ namespace OpenGET
                 }
                 Log.Debug("Found IReferrable at path \"{0}\"", path);
 
-                // Normalise a class or variable name
-                string Normalise(string name, bool isAsset = false)
-                {
-                    string normalised = "";
-                    name = isAsset && name.Contains('.') ? name.Remove(name.LastIndexOf('.')) : name;
-                    for (int k = 0, countk = name.Length; k < countk; k++)
-                    {
-                        normalised += alphaNumeric.Contains(name[k]) ? name[k] : "_";
-                    }
-                    return normalised;
-                }
-
                 // Generate a class node
                 Node GenerateClassNode(List<Node> target, int index, string[] parts)
                 {
@@ -111,9 +112,15 @@ namespace OpenGET
                     string baseTabs = (new string('\t', index + 1));
                     string innerTabs = baseTabs + "\t";
 
-                    string gen_start = "\n\n" + baseTabs + "public static class " + Normalise(parts[index]) + "\n" + baseTabs + "{\n";
+                    string className = Normalise(parts[index]);
+
+                    string gen_start = "\n\n" + baseTabs + "public static class " + className + "\n" + baseTabs + "{\n"
+                        + innerTabs + "private static readonly Dictionary<string, WrapperBase> mapped = new Dictionary<string, WrapperBase>();\n\n"
+                        + innerTabs + "public static Wrapper<T> Find<T>(string id) where T : UnityEngine.Object, OpenGET.IReferrable {\n"
+                        + innerTabs + '\t' + "return (mapped.TryGetValue(id, out WrapperBase wrapper) && wrapper is Wrapper<T> ? wrapper : null) as Wrapper<T>;\n"
+                        + innerTabs + "}\n";
                     string gen_end = "\n\n" + baseTabs + "}\n";
-                    return new Node { name = parts[index], depth = index, generated_start = gen_start, generated_end = gen_end };
+                    return new Node { name = parts[index], isLeaf = false, depth = index, generated_start = gen_start, generated_end = gen_end };
                 }
 
                 // Get or create the root node
@@ -143,6 +150,10 @@ namespace OpenGET
                     + newline + $"public static readonly Wrapper<{obj.GetType().FullName}> " + Normalise(parts[parts.Length - 1], true)
                     + $" = new Wrapper<{obj.GetType().FullName}>(@\"{path}\");";
                 current.generated_end = "";
+                current.isLeaf = true;
+
+                int rmExt = current.name.LastIndexOf('.');
+                current.name = (rmExt >= 0 ? current.name.Remove(rmExt) : current.name);
 
                 refCount++;
             }
@@ -153,10 +164,21 @@ namespace OpenGET
             string generated = "";
             void Generate(Node node) {
                 generated += node.generated_start;
+                string genMap = "";
                 for (int i = 0, counti = node.children.Count; i < counti; i++)
                 {
+                    string norm = Normalise(node.children[i].name);
+                    int foundIndex = node.children[i].name.LastIndexOf('.');
+                    string id = foundIndex < 0 ? node.children[i].name : node.children[i].name.Remove(foundIndex);
+                    genMap += node.children[i].isLeaf ? "{ \"" + id + "\", " + norm + " }" + (i >= counti - 1 ? "" : ", ") : "";
                     Generate(node.children[i]);
                 }
+
+                if (!string.IsNullOrEmpty(genMap))
+                {
+                    node.generated_end = "\n\n" + (new string('\t', node.depth + 2)) + "static " + Normalise(node.name) + "() { mapped = new() { " + genMap + " }; }\n" + node.generated_end;
+                }
+
                 generated += node.generated_end;
             }
 

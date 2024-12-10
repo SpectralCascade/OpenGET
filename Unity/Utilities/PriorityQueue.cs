@@ -11,7 +11,7 @@ namespace OpenGET
     /// Queue of items sorted by custom priority. Implements IList for sake of serialisation.
     /// </summary>
     [System.Serializable]
-    public class PriorityQueue<T> : IEnumerable<PriorityQueue<T>.Item>
+    public class PriorityQueue<T> : IEnumerable<PriorityQueue<T>.Item>, IEnumerable
     {
         /// <summary>
         /// TODO: Make actually serialisable (need to link queue to item).

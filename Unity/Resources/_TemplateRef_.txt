@@ -9,7 +9,10 @@ using UnityEngine;
 public static class _TemplateRef_
 {
 
-    public sealed class Wrapper<T> where T : Object
+    public abstract class WrapperBase {
+    }
+
+    public sealed class Wrapper<T> : WrapperBase where T : Object
     {
         public Wrapper(string path) { this.path = path; }
 
