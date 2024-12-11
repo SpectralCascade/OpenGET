@@ -1,13 +1,45 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 /// <summary>
 /// Generated direct access to assets in Unity Resources.
 /// DO NOT MODIFY THIS SCRIPT.
 /// </summary>
-public static class _TemplateRef_
+public class _TemplateRef_
 {
+
+    public abstract class Node
+    {
+        protected readonly Dictionary<string, WrapperBase> mapped = new Dictionary<string, WrapperBase>();
+        protected readonly Node[] children = new Node[0] { };
+
+		public Node(Dictionary<string, WrapperBase> map) { mapped = map; }
+
+		/// <summary>
+		/// Try and find an asset by id. Returns null on failure.
+		/// </summary>
+		/// <typeparam name="T">Asset type.</typeparam>
+		/// <param name="id">Identifier of the asset - this is the filename without extension.</param>
+		/// <param name="recursive">Search child folders recursively.</param>
+        public Wrapper<T> Find<T>(string id, bool recursive = true) where T : UnityEngine.Object, OpenGET.IReferrable
+        {
+            Wrapper<T> found = (mapped.TryGetValue(id, out WrapperBase wrapper) && wrapper is Wrapper<T> ? wrapper : null) as Wrapper<T>;
+            if (found == null && recursive)
+            {
+				for (int i = 0, counti = children.Length; i < counti; i++)
+				{
+					found = children[i].Find<T>(id, recursive);
+					if (found != null)
+					{
+						break;
+					}
+				}
+            }
+            return found;
+        }
+    }
 
     public abstract class WrapperBase {
     }

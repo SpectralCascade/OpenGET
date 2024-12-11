@@ -196,7 +196,7 @@ namespace OpenGET {
                     logType != LogType.Log ? LogOption.None : LogOption.NoStacktrace,
 #endif
                     context,
-                    formatted
+                    formatted.Replace("{", "{{").Replace("}", "}}")
                 );
             } catch (System.Exception e) {
                 Log.Warning("Bad string format for logging! Exception occurred: " + e.ToString());

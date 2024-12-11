@@ -7,6 +7,7 @@ using Newtonsoft.Json.Linq;
 using System.Reflection;
 using System;
 using System.Linq;
+using CSVFile;
 
 namespace OpenGET
 {
@@ -167,7 +168,12 @@ namespace OpenGET
                         || field.GetCustomAttribute<VarAttribute>() != null
                     )
                 ) {
+                    Log.Debug("Reading field {0}", field.Name);
                     object member = field.GetValue(data);
+                    if (member == null)
+                    {
+                        member = Activator.CreateInstance(field.FieldType);
+                    }
                     Read(field.Name, ref member);
                     field.SetValue(data, member);
                 }
@@ -210,18 +216,21 @@ namespace OpenGET
                     JObject prev = json;
                     json = (JObject)token;
 
-                    // Use reflection to selectively choose what we serialise
-                    WalkReadMembers(data.GetType(), ref data);
-
-                    if (data is IDictionary dict)
+                    if (data != null)
                     {
-                        Type[] types = dict.GetType().GetGenericArguments();
-                        if (types.Length > 0 && types[0].IsAssignableFrom(typeof(string)))
+                        // Use reflection to selectively choose what we serialise
+                        WalkReadMembers(data.GetType(), ref data);
+
+                        if (data is IDictionary dict)
                         {
-                            IEnumerable<string> keys = json.Properties().Select(x => x.Name);
-                            foreach (string key in keys)
+                            Type[] types = dict.GetType().GetGenericArguments();
+                            if (types.Length > 0 && types[0].IsAssignableFrom(typeof(string)))
                             {
-                                Read(key, ref data);
+                                IEnumerable<string> keys = json.Properties().Select(x => x.Name);
+                                foreach (string key in keys)
+                                {
+                                    Read(key, ref data);
+                                }
                             }
                         }
                     }
@@ -232,6 +241,8 @@ namespace OpenGET
                 {
                     void HandleArray(JArray jArray, Type arrayType, ref object array)
                     {
+                        Log.Debug($"Handling JArray with {jArray.Count} elements: {jArray}");
+
                         // Create a brand new array and populate it
                         array = Activator.CreateInstance(arrayType, jArray.Count);
                         Type itemType = arrayType.IsArray ? arrayType.GetElementType() : arrayType.GetGenericArguments().FirstOrDefault();
@@ -253,9 +264,9 @@ namespace OpenGET
                             }
                         }
 
-                        foreach (JToken child in jArray)
+                        foreach (JToken element in jArray)
                         {
-                            if (child.Type == JTokenType.Array)
+                            if (element.Type == JTokenType.Array)
                             {
                                 if (itemType.GetInterface("IList") == null)
                                 {
@@ -263,22 +274,23 @@ namespace OpenGET
                                     continue;
                                 }
                                 object loaded = null;
-                                HandleArray((JArray)child, itemType, ref loaded);
+                                HandleArray((JArray)element, itemType, ref loaded);
                                 AddToArray(ref loaded);
                             }
                             else if (itemType.IsAssignableFrom(typeof(ISerialise)))
                             {
                                 JObject prev = json;
-                                json = (JObject)child;
+                                json = (JObject)element;
                                 object loaded = Activator.CreateInstance(itemType);
                                 AddToArray(ref loaded);
                                 ((ISerialise)loaded).Serialise((Derived)this);
                                 json = prev;
                             }
-                            else if (child.Type == JTokenType.Object)
+                            else if (element.Type == JTokenType.Object)
                             {
                                 JObject prev = json;
-                                json = (JObject)child;
+                                json = (JObject)element;
+                                Log.Debug("Reading element of type {0}", itemType);
                                 object created = Activator.CreateInstance(itemType);
                                 WalkReadMembers(itemType, ref created);
                                 AddToArray(ref created);
@@ -286,7 +298,7 @@ namespace OpenGET
                             }
                             else
                             {
-                                object loaded = child.ToObject(itemType);
+                                object loaded = element.ToObject(itemType);
                                 AddToArray(ref loaded);
                             }
 

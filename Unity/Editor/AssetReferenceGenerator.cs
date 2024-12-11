@@ -54,7 +54,7 @@ namespace OpenGET
 
             // Read the .cs template file and get the insertion point
             string content = File.ReadAllText(path);
-            content = content.Replace("public static class _TemplateRef_", "public static class Ref");
+            content = content.Replace("class _TemplateRef_", "class Ref");
             string marker = "#region __GENERATED_CLASSES__";
 
             int insert = content.IndexOf(marker);
@@ -114,10 +114,10 @@ namespace OpenGET
 
                     string className = Normalise(parts[index]);
 
-                    string gen_start = "\n\n" + baseTabs + "public static class " + className + "\n" + baseTabs + "{\n"
-                        + innerTabs + "private static readonly Dictionary<string, WrapperBase> mapped = new Dictionary<string, WrapperBase>();\n\n"
-                        + innerTabs + "public static Wrapper<T> Find<T>(string id) where T : UnityEngine.Object, OpenGET.IReferrable {\n"
-                        + innerTabs + '\t' + "return (mapped.TryGetValue(id, out WrapperBase wrapper) && wrapper is Wrapper<T> ? wrapper : null) as Wrapper<T>;\n"
+                    string gen_start = "\n\n" + baseTabs + "public class " + className + " : Node\n" + baseTabs + "{\n"
+                        + innerTabs + "private static " + className + " _shared_instance_ = new " + className + "();\n\n"
+                        + innerTabs + "public new static Wrapper<T> Find<T>(string id, bool recursive = true) where T : UnityEngine.Object, OpenGET.IReferrable {\n"
+                        + innerTabs + '\t' + "return ((Node)_shared_instance_).Find<T>(id, recursive);\n"
                         + innerTabs + "}\n";
                     string gen_end = "\n\n" + baseTabs + "}\n";
                     return new Node { name = parts[index], isLeaf = false, depth = index, generated_start = gen_start, generated_end = gen_end };
@@ -128,7 +128,7 @@ namespace OpenGET
                 Node current = map.FirstOrDefault(x => x.name == parts[0]);
                 if (current == null)
                 {
-                    current = parts.Length > 1 ? new Node { name = parts[0] } : GenerateClassNode(map, 0, parts);
+                    current = parts.Length > 1 ? GenerateClassNode(map, 0, parts) : new Node { name = parts[0] };
                     map.Add(current);
                 }
 
@@ -174,9 +174,9 @@ namespace OpenGET
                     Generate(node.children[i]);
                 }
 
-                if (!string.IsNullOrEmpty(genMap))
+                if (!node.isLeaf)
                 {
-                    node.generated_end = "\n\n" + (new string('\t', node.depth + 2)) + "static " + Normalise(node.name) + "() { mapped = new() { " + genMap + " }; }\n" + node.generated_end;
+                    node.generated_end = "\n\n" + (new string('\t', node.depth + 2)) + "public " + Normalise(node.name) + "() : base(new Dictionary<string, WrapperBase> { " + genMap + " }) { }\n" + node.generated_end;
                 }
 
                 generated += node.generated_end;
