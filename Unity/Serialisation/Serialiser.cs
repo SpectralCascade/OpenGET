@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using UnityEngine.Events;
 
 namespace OpenGET
 {
@@ -95,13 +96,51 @@ namespace OpenGET
     {
 
         /// <summary>
+        /// Provides a unique identifier for referencing an object.
+        /// </summary>
+        public sealed class Reference
+        {
+            public delegate string Generator();
+
+            public Reference(Generator generator) {
+                this.generator = generator;
+            }
+
+            private readonly Generator generator;
+
+            public string id {
+                get { return _id = (_id ?? generator.Invoke()); }
+                set { _id = value; }
+            }
+            private string _id;
+        }
+
+        /// <summary>
+        /// Implement this interface to convert references to and from objects for serialisation.
+        /// </summary>
+        public interface IReferenceSerialise
+        {
+
+            /// <summary>
+            /// Reference identifier.
+            /// </summary>
+            public Reference reference { get; }
+
+            /// <summary>
+            /// Generate a unique reference identifier.
+            /// </summary>
+            public string GenerateReference();
+
+        }
+        
+        /// <summary>
         /// Implement on classes you wish use custom serialisation logic for.
         /// </summary>
         public interface ISerialise
         {
             void Serialise(Derived s);
         }
-
+        
         /// <summary>
         /// Path to the file to be serialised to/from.
         /// </summary>
@@ -111,6 +150,50 @@ namespace OpenGET
         /// Current serialisation version.
         /// </summary>
         public new Version version => (Version)base.version;
+
+        /// <summary>
+        /// Total number of deserialisation phases.
+        /// </summary>
+        protected virtual int loadPhases => 1;
+
+        /// <summary>
+        /// Which phase of deserialisation is occurring.
+        /// </summary>
+        public int phase { get; protected set; }
+
+        /// <summary>
+        /// All registered objects that can be referenced from serialised data.
+        /// </summary>
+        protected readonly Dictionary<string, IReferenceSerialise> registeredObjects = new Dictionary<string, IReferenceSerialise>();
+
+        /// <summary>
+        /// Register an object that can be referenced from serialised data.
+        /// </summary>
+        public void RegisterObject<T>(T obj) where T : class, IReferenceSerialise
+        {
+            if (!registeredObjects.TryAdd(obj.reference.id, obj))
+            {
+                Log.Warning("Registered objects already contains reference with id \"{0}\"", obj.reference.id);
+            }
+        }
+
+        /// <summary>
+        /// Locate an object by reference id. Returns null on failure and throws an exception if the object was found but there is a type mismatch.
+        /// </summary>
+        public T FindReference<T>(string id) where T : class, IReferenceSerialise
+        {
+            T found = registeredObjects.TryGetValue(id, out IReferenceSerialise v) ? v as T : null;
+            if (found == null)
+            {
+                Log.Warning("Unable to locate object with reference id \"{0}\"", id);
+            }
+            return found;
+        }
+
+        public void Clear()
+        {
+            registeredObjects.Clear();
+        }
 
         /// <summary>
         /// Serialise an object using it's custom serialisation handler.

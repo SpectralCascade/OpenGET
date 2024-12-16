@@ -113,7 +113,12 @@ namespace OpenGET
                 string raw = File.ReadAllText(path, System.Text.Encoding.UTF8);
                 json = JObject.Parse(raw);
 
-                Deserialise(game);
+                registeredObjects.Clear();
+                for (phase = 0; phase < loadPhases; phase++)
+                {
+                    Deserialise(game);
+                }
+                phase = 0;
             }
 #if !UNITY_EDITOR
             catch (Exception e)
@@ -241,7 +246,7 @@ namespace OpenGET
                 {
                     void HandleArray(JArray jArray, Type arrayType, ref object array)
                     {
-                        Log.Debug($"Handling JArray with {jArray.Count} elements: {jArray}");
+                        //Log.Debug($"Handling JArray with {jArray.Count} elements: {jArray}");
 
                         // Create a brand new array and populate it
                         array = Activator.CreateInstance(arrayType, jArray.Count);
@@ -290,7 +295,7 @@ namespace OpenGET
                             {
                                 JObject prev = json;
                                 json = (JObject)element;
-                                Log.Debug("Reading element of type {0}", itemType);
+                                //Log.Debug("Reading element of type {0}", itemType);
                                 object created = Activator.CreateInstance(itemType);
                                 WalkReadMembers(itemType, ref created);
                                 AddToArray(ref created);
