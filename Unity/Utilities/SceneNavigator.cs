@@ -48,14 +48,14 @@ namespace OpenGET
         /// Find a scene by name, or additively load it if not, and do some processing.
         /// Optionally force reloading of a scene if it is found.
         /// </summary>
-        public static void FindOrAddScene(string name, SceneProcess onFound, bool forceReload = false)
+        public static void FindOrAddScene(string name, SceneProcess onSceneReady, bool forceReload = false)
         {
             void onSceneLoaded(Scene scene, LoadSceneMode mode)
             {
                 if (name == scene.name)
                 {
                     SceneManager.sceneLoaded -= onSceneLoaded;
-                    onFound(scene);
+                    onSceneReady(scene);
                 }
             }
 
@@ -90,7 +90,7 @@ namespace OpenGET
                     else
                     {
                         Log.Debug("Found scene \"{0}\", processing with custom callback...");
-                        onFound(scene);
+                        onSceneReady(scene);
                     }
                     return;
                 }

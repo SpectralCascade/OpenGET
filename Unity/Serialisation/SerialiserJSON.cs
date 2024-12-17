@@ -193,7 +193,6 @@ namespace OpenGET
                 return false;
             }
 
-            //Log.Debug($"Reading JSON entry \"{id}\"");
             if (data is ISerialise custom)
             {
                 JToken token = json[id];
@@ -320,6 +319,8 @@ namespace OpenGET
                     data = (DataType)token.ToObject(data.GetType());
                 }
             }
+
+            //Log.Debug($"Reading JSON entry \"{id}\"");
             return true;
         }
 
