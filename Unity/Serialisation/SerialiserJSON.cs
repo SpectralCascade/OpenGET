@@ -173,11 +173,11 @@ namespace OpenGET
                         || field.GetCustomAttribute<VarAttribute>() != null
                     )
                 ) {
-                    Log.Debug("Reading field {0}", field.Name);
+                    //Log.Debug("Reading field {0}", field.Name);
                     object member = field.GetValue(data);
                     if (member == null)
                     {
-                        Log.Debug("Field is null, instantiating new {0}...", field.FieldType.Name);
+                        //Log.Debug("Field is null, instantiating new {0}...", field.FieldType.Name);
                         member = Activator.CreateInstance(field.FieldType);
                     }
                     Read(field.Name, ref member);
@@ -287,15 +287,14 @@ namespace OpenGET
                                 JObject prev = json;
                                 json = (JObject)element;
                                 object loaded = Activator.CreateInstance(itemType);
-                                AddToArray(ref loaded);
                                 ((ISerialise)loaded).Serialise((Derived)this);
+                                AddToArray(ref loaded);
                                 json = prev;
                             }
                             else if (element.Type == JTokenType.Object)
                             {
                                 JObject prev = json;
                                 json = (JObject)element;
-                                //Log.Debug("Reading element of type {0}", itemType);
                                 object created = Activator.CreateInstance(itemType);
                                 WalkReadMembers(itemType, ref created);
                                 AddToArray(ref created);
