@@ -282,7 +282,7 @@ namespace OpenGET
                                 HandleArray((JArray)element, itemType, ref loaded);
                                 AddToArray(ref loaded);
                             }
-                            else if (itemType.IsAssignableFrom(typeof(ISerialise)))
+                            else if (typeof(ISerialise).IsAssignableFrom(itemType))
                             {
                                 JObject prev = json;
                                 json = (JObject)element;

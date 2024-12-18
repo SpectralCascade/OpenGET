@@ -21,6 +21,12 @@ namespace OpenGET
         private static AssetRegistry _instance;
 
         /// <summary>
+        /// Fast-access map of objects to ids.
+        /// </summary>
+        private Dictionary<Object, int> map => _map ??= new Dictionary<Object, int>(assets.Select((asset, i) => new KeyValuePair<Object, int>(asset, i)));
+        private Dictionary<Object, int> _map = null;
+
+        /// <summary>
         /// List of assets, with ids generated from their index. The order never changes, and if an asset is removed, the entry is made null instead of being removed.
         /// </summary>
         [OpenGET.ReadonlyField]
@@ -31,7 +37,7 @@ namespace OpenGET
         /// </summary>
         public static int GetId(Object asset)
         {
-            return System.Array.IndexOf(Instance.assets, asset);
+            return Instance.map.TryGetValue(asset, out int id) ? id : -1;
         }
 
         /// <summary>
@@ -59,7 +65,7 @@ namespace OpenGET
         }
 
 #if UNITY_EDITOR
-        [MenuItem("OpenGET/Assets/Build Registry")]
+        [MenuItem("OpenGET/Build Asset Registry")]
         public static void BuildAssetList()
         {
             AssetRegistry registry = null;
@@ -129,6 +135,8 @@ namespace OpenGET
 
             registry.assets = updated.ToArray();
             EditorUtility.SetDirty(registry);
+
+            AssetDatabase.SaveAssets();
         }
 #endif
 
