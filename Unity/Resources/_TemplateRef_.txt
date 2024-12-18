@@ -13,9 +13,9 @@ public class _TemplateRef_
     public abstract class Node
     {
         protected readonly Dictionary<string, WrapperBase> mapped = new Dictionary<string, WrapperBase>();
-        protected readonly Node[] children = new Node[0] { };
+        protected readonly Node[] children = new Node[0];
 
-		public Node(Dictionary<string, WrapperBase> map) { mapped = map; }
+		public Node(Dictionary<string, WrapperBase> map, Node[] children) { mapped = map; this.children = children; }
 
 		/// <summary>
 		/// Try and find an asset by id. Returns null on failure.
@@ -25,7 +25,7 @@ public class _TemplateRef_
 		/// <param name="recursive">Search child folders recursively.</param>
         public Wrapper<T> Find<T>(string id, bool recursive = true) where T : UnityEngine.Object, OpenGET.IReferrable
         {
-            Wrapper<T> found = (mapped.TryGetValue(id, out WrapperBase wrapper) && wrapper is Wrapper<T> ? wrapper : null) as Wrapper<T>;
+            Wrapper<T> found = mapped.TryGetValue(id, out WrapperBase wrapper) ? wrapper as Wrapper<T> : null;
             if (found == null && recursive)
             {
 				for (int i = 0, counti = children.Length; i < counti; i++)

@@ -115,7 +115,7 @@ namespace OpenGET
                     string className = Normalise(parts[index]);
 
                     string gen_start = "\n\n" + baseTabs + "public class " + className + " : Node\n" + baseTabs + "{\n"
-                        + innerTabs + "private static " + className + " _shared_instance_ = new " + className + "();\n\n"
+                        + innerTabs + "internal static " + className + " _shared_instance_ = new " + className + "();\n\n"
                         + innerTabs + "public new static Wrapper<T> Find<T>(string id, bool recursive = true) where T : UnityEngine.Object, OpenGET.IReferrable {\n"
                         + innerTabs + '\t' + "return ((Node)_shared_instance_).Find<T>(id, recursive);\n"
                         + innerTabs + "}\n";
@@ -177,7 +177,9 @@ namespace OpenGET
 
                 if (!node.isLeaf)
                 {
-                    node.generated_end = "\n\n" + (new string('\t', node.depth + 2)) + "public " + Normalise(node.name) + "() : base(new Dictionary<string, WrapperBase> { " + genMap + " }) { }\n" + node.generated_end;
+                    node.generated_end = "\n\n" + (new string('\t', node.depth + 2)) + "public " + Normalise(node.name) +
+                        "() : base(new Dictionary<string, WrapperBase> { " + genMap + " }, " + 
+                        "new Node[] {" + string.Join(", ", node.children.Where(x => !x.isLeaf).Select(x => Normalise(x.name) + "._shared_instance_")) + "}) { }\n" + node.generated_end;
                 }
 
                 generated += node.generated_end;
