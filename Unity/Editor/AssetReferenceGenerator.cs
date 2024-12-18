@@ -103,7 +103,7 @@ namespace OpenGET
                 {
                     path = path.Remove(extensionIndex);
                 }
-                Log.Debug("Found IReferrable at path \"{0}\"", path);
+                Log.Debug("Found IReferrable at path \"{0}\" of type {1}", path, obj.GetType().Name);
 
                 // Generate a class node
                 Node GenerateClassNode(List<Node> target, int index, string[] parts)
@@ -146,9 +146,10 @@ namespace OpenGET
 
                 // Generate leaf
                 string newline = "\n" + new string('\t', current.depth + 1);
+                string fieldname = Normalise(parts[parts.Length - 1], true);
                 current.generated_start = newline + newline + "/// <summary>" + newline + $"/// {obj.GetType().FullName}." + newline + "/// </summary>" 
-                    + newline + $"public static readonly Wrapper<{obj.GetType().FullName}> " + Normalise(parts[parts.Length - 1], true)
-                    + $" = new Wrapper<{obj.GetType().FullName}>(@\"{path}\");";
+                    + newline + $"public static Wrapper<{obj.GetType().FullName}> {fieldname} => _{fieldname} ??= new Wrapper<{obj.GetType().FullName}>(@\"{path}\");"
+                    + newline + $"private static Wrapper<{obj.GetType().FullName}> _{fieldname} = null;";
                 current.generated_end = "";
                 current.isLeaf = true;
 

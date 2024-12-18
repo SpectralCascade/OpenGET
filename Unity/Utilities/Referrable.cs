@@ -16,7 +16,7 @@ namespace OpenGET
     /// Implement this for ScriptableObjects you want to have serialisation support for. Prioritises assets in Resources.
     /// In future this may be extended to support Addressables.
     /// </summary>
-    public abstract class Referrable : ScriptableObject, IReferrable
+    public abstract class Referrable : RegistryData, IReferrable
     {
         /// <summary>
         /// If not overridden, this returns the AssetPath.

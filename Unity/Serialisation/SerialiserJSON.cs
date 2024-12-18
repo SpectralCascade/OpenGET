@@ -177,6 +177,7 @@ namespace OpenGET
                     object member = field.GetValue(data);
                     if (member == null)
                     {
+                        Log.Debug("Field is null, instantiating new {0}...", field.FieldType.Name);
                         member = Activator.CreateInstance(field.FieldType);
                     }
                     Read(field.Name, ref member);
