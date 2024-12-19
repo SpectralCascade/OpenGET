@@ -39,6 +39,45 @@ namespace OpenGET
     public abstract class BaseSerialiser
     {
         /// <summary>
+        /// Provides a unique identifier for referencing a temporary instance for serialisation (unlike persistent ids, which are used for assets).
+        /// </summary>
+        public sealed class Reference
+        {
+            public delegate string Generator();
+
+            public Reference(Generator generator)
+            {
+                this.generator = generator;
+            }
+
+            private readonly Generator generator;
+
+            public string id {
+                get { return _id = (_id ?? generator.Invoke()); }
+                set { _id = value; }
+            }
+            private string _id;
+        }
+
+        /// <summary>
+        /// Implement this interface to convert references to and from objects for serialisation.
+        /// </summary>
+        public interface IReferenceSerialise
+        {
+
+            /// <summary>
+            /// Reference identifier.
+            /// </summary>
+            public Reference reference { get; }
+
+            /// <summary>
+            /// Generate a unique reference identifier.
+            /// </summary>
+            public string GenerateReference();
+
+        }
+
+        /// <summary>
         /// Whether to serialise or deserialise data.
         /// </summary>
         public enum Mode
@@ -94,45 +133,6 @@ namespace OpenGET
     /// </summary>
     public abstract class Serialiser<Derived, Version, VarAttribute> : BaseSerialiser where VarAttribute : SerialiseAttribute where Derived : Serialiser<Derived, Version, VarAttribute> where Version : Enum
     {
-
-        /// <summary>
-        /// Provides a unique identifier for referencing an object.
-        /// </summary>
-        public sealed class Reference
-        {
-            public delegate string Generator();
-
-            public Reference(Generator generator) {
-                this.generator = generator;
-            }
-
-            private readonly Generator generator;
-
-            public string id {
-                get { return _id = (_id ?? generator.Invoke()); }
-                set { _id = value; }
-            }
-            private string _id;
-        }
-
-        /// <summary>
-        /// Implement this interface to convert references to and from objects for serialisation.
-        /// </summary>
-        public interface IReferenceSerialise
-        {
-
-            /// <summary>
-            /// Reference identifier.
-            /// </summary>
-            public Reference reference { get; }
-
-            /// <summary>
-            /// Generate a unique reference identifier.
-            /// </summary>
-            public string GenerateReference();
-
-        }
-        
         /// <summary>
         /// Implement on classes you wish use custom serialisation logic for.
         /// </summary>

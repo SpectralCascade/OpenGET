@@ -90,7 +90,7 @@ namespace OpenGET
                 x => AssetDatabase.LoadAssetAtPath<RegistryData>(AssetDatabase.GUIDToAssetPath(x))
             ).ToArray();
             
-            RegisterPrefab[] prefabs = AssetDatabase.FindAssets("t:Prefab").Select(
+            PersistentIdentity[] prefabs = AssetDatabase.FindAssets("t:Prefab").Select(
                 x => AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(x)).GetComponent<RegisterPrefab>()
             ).Where(x => x != null).ToArray();
 
@@ -101,7 +101,7 @@ namespace OpenGET
             List<Object> updated = new List<Object>(registry.assets);
             for (int i = 0, counti = found.Count; i < counti; i++)
             {
-                if (found[i].RegistryId < 0 || found[i].RegistryId >= registry.assets.Length)
+                if (found[i].PersistentId < 0 || found[i].PersistentId >= registry.assets.Length)
                 {
                     int index = System.Array.IndexOf(registry.assets, found[i]);
                     if (index < 0)
@@ -123,13 +123,16 @@ namespace OpenGET
                         // Already exists! For some reason not setup with an id
                         Log.Warning("Found asset \"{0}\" in registry but with an invalid id. Updating id to match registry index {1}.", (found[i] as Object).name, index);
                     }
-                    found[i].RegistryId = index;
+                    found[i].PersistentId = index;
+                    if (found[i] is RegisterPrefab) {
+                        (found[i] as RegisterPrefab).RegisterIds();
+                    }
                     EditorUtility.SetDirty(found[i] as Object);
                 }
-                else if (registry.assets[found[i].RegistryId] == null)
+                else if (registry.assets[found[i].PersistentId] == null)
                 {
                     // In case an asset gets unhooked accidentally, the id should be backed up in the asset itself so re-registration is simple
-                    updated[found[i].RegistryId] = found[i] as Object;
+                    updated[found[i].PersistentId] = found[i] as Object;
                 }
             }
 
@@ -144,7 +147,7 @@ namespace OpenGET
 
     internal interface IRegistrate
     {
-        public int RegistryId {
+        public int PersistentId {
             get;
 #if UNITY_EDITOR
             set;
@@ -160,7 +163,7 @@ namespace OpenGET
         /// <summary>
         /// Get the registry identifier.
         /// </summary>
-        public int RegistryId {
+        public int PersistentId {
             get { return _registry_id; }
 #if UNITY_EDITOR
             set { _registry_id = value; }

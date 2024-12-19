@@ -61,7 +61,7 @@ namespace OpenGET
 #if UNITY_EDITOR
             if (obj == null)
             {
-                throw new System.NullReferenceException("Cannot autohookup a null instance.");
+                throw new System.NullReferenceException("Cannot Auto Hookup a null instance!");
             }
 
             System.Type objType = useDerivedType ? obj.GetType() : typeof(T);

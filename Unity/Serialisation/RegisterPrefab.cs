@@ -1,27 +1,16 @@
-using OpenGET;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace OpenGET
 {
 
-    /// <summary>
-    /// Add this component to your prefabs to register it.
-    /// </summary>
-    public sealed class RegisterPrefab : MonoBehaviour, IRegistrate
+    [DisallowMultipleComponent]
+    public class RegisterPrefab : PersistentIdentity
     {
-        /// <summary>
-        /// Get the registry identifier.
-        /// </summary>
-        public int RegistryId {
-            get { return _RegistryId; }
-#if UNITY_EDITOR
-            set { _RegistryId = value; }
-#endif
-        }
 
-        [OpenGET.ReadonlyField]
-        [SerializeField]
-        private int _RegistryId = -1;
+        public override bool isPrefab => true;
+
     }
 
 }
