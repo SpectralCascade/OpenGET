@@ -124,15 +124,17 @@ namespace OpenGET
                         Log.Warning("Found asset \"{0}\" in registry but with an invalid id. Updating id to match registry index {1}.", (found[i] as Object).name, index);
                     }
                     found[i].PersistentId = index;
-                    if (found[i] is RegisterPrefab) {
-                        (found[i] as RegisterPrefab).RegisterIds();
-                    }
                     EditorUtility.SetDirty(found[i] as Object);
                 }
                 else if (registry.assets[found[i].PersistentId] == null)
                 {
                     // In case an asset gets unhooked accidentally, the id should be backed up in the asset itself so re-registration is simple
                     updated[found[i].PersistentId] = found[i] as Object;
+                }
+
+                if (found[i] is RegisterPrefab)
+                {
+                    (found[i] as RegisterPrefab).RegisterIds();
                 }
             }
 
