@@ -8,6 +8,7 @@ using System.Reflection;
 using System;
 using System.Linq;
 using CSVFile;
+using Codice.Client.BaseCommands.Merge.Xml;
 
 namespace OpenGET
 {
@@ -158,7 +159,7 @@ namespace OpenGET
         /// <summary>
         /// Walk over members and selectively serialise them via reflection.
         /// </summary>
-        protected void WalkReadMembers<DataType>(Type type, ref DataType data)
+        protected void WalkReadMembers<DataType>(Type type, ref DataType data, bool autoReference = true)
         {
             // Use reflection to selectively choose what we serialise
             FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
@@ -173,20 +174,41 @@ namespace OpenGET
                         || field.GetCustomAttribute<VarAttribute>() != null
                     )
                 ) {
-                    //Log.Debug("Reading field {0}", field.Name);
-                    object member = field.GetValue(data);
-                    if (member == null)
+                    if (autoReference && field.FieldType.IsSubclassOf(typeof(PersistentIdentity)))
                     {
-                        //Log.Debug("Field is null, instantiating new {0}...", field.FieldType.Name);
-                        member = Activator.CreateInstance(field.FieldType);
+                        // Phase 0 is reserved for instantiating objects with persistent identity; during that phase reference serialisation is not possible.
+                        if (phase > 0)
+                        {
+                            string pid = "";
+                            Read(field.Name, ref pid);
+
+                            if (string.IsNullOrEmpty(pid))
+                            {
+                                field.SetValue(data, null);
+                            }
+                            else {
+                                PersistentIdentity found = FindReference<PersistentIdentity>(pid.Split('.').Last());
+                                field.SetValue(data, found);
+                            }
+                        }
                     }
-                    Read(field.Name, ref member);
-                    field.SetValue(data, member);
+                    else
+                    {
+                        //Log.Debug("Reading field {0}", field.Name);
+                        object member = field.GetValue(data);
+                        if (member == null)
+                        {
+                            //Log.Debug("Field is null, instantiating new {0}...", field.FieldType.Name);
+                            member = Activator.CreateInstance(field.FieldType);
+                        }
+                        Read(field.Name, ref member);
+                        field.SetValue(data, member);
+                    }
                 }
             }
         }
 
-        public override bool Read<DataType>(string id, ref DataType data)
+        public override bool Read<DataType>(string id, ref DataType data, bool autoReference = false)
         {
             // Make sure custom serialisation runs
             if (!json.ContainsKey(id))
@@ -194,7 +216,15 @@ namespace OpenGET
                 return false;
             }
 
-            if (data is ISerialise custom)
+            if (autoReference && data.GetType().IsSubclassOf(typeof(PersistentIdentity)))
+            {
+                if (phase > 0)
+                {
+                    string pid = json[id].ToString();
+                    data = (DataType)((object)FindReference<PersistentIdentity>(pid.Split('.').Last()));
+                }
+            }
+            else if (data is ISerialise custom)
             {
                 JToken token = json[id];
                 if (token is not JObject)
@@ -282,17 +312,116 @@ namespace OpenGET
                                 HandleArray((JArray)element, itemType, ref loaded);
                                 AddToArray(ref loaded);
                             }
+                            else if (itemType.IsSubclassOf(typeof(PersistentIdentity)) && element.Type == JTokenType.String)
+                            {
+                                if (autoReference && phase > 0)
+                                {
+                                    string pid = element.ToString();
+                                    object found = FindReference<PersistentIdentity>(pid.Split('.').Last());
+                                    AddToArray(ref found);
+                                }
+                            }
                             else if (typeof(ISerialise).IsAssignableFrom(itemType))
                             {
                                 JObject prev = json;
                                 json = (JObject)element;
-                                object loaded = Activator.CreateInstance(itemType);
-                                ((ISerialise)loaded).Serialise((Derived)this);
+                                object loaded;
+                                if (itemType.IsSubclassOf(typeof(PersistentIdentity))) {
+                                    // Find existing reference, or spawn prefab
+                                    string pid = element.Children<JProperty>().FirstOrDefault(x => x.Name == "#id")?.Value?.ToString();
+
+                                    string[] ids = pid.Split(".");
+                                    // First check whether the instance already exists or not
+                                    PersistentIdentity found = pid != null ? FindReference<PersistentIdentity>(ids[3]) : null;
+                                    if (phase == 0 && !string.IsNullOrEmpty(pid))
+                                    {
+                                        // Check if the parent exists
+                                        RegisterPrefab existingParent = FindReference<RegisterPrefab>(ids[1]);
+                                        if (existingParent != null)
+                                        {
+                                            found = existingParent.FindChildPID(int.Parse(ids[2]));
+                                            if (found != null)
+                                            {
+                                                found.reference.id = ids[3];
+                                                RegisterObject(found);
+                                                loaded = found;
+                                            }
+                                            else
+                                            {
+                                                Log.Error("Existing parent instance found {0} but failed to locate child by index id {1}", ids[2]);
+                                                found = null;
+                                                break;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            // Spawn prefab(s) as the instance and it's parent instance don't exist
+                                            Log.Debug("Spawning & registering prefab instance(s) for persistent id: {0}", pid);
+
+                                            UnityEngine.Object parent = AssetRegistry.GetObject(int.Parse(ids[0]));
+                                            if (parent == null || parent is not RegisterPrefab)
+                                            {
+                                                Log.Error("Parent prefab id {0} is not valid!", ids[0]);
+                                                found = null;
+                                                break;
+                                            }
+                                            else
+                                            {
+                                                // Spawn prefab and register it
+                                                // TODO: Set scene hierarchy parent (probably just dump in dynamic objects and let it be serialisd?)
+                                                RegisterPrefab created = UnityEngine.Object.Instantiate((parent as RegisterPrefab));
+                                                created.reference.id = ids[1];
+                                                RegisterObject(created);
+
+                                                found = created.FindChildPID(int.Parse(ids[2]));
+                                                loaded = found;
+                                                if (found != null)
+                                                {
+                                                    found.reference.id = ids[3];
+                                                    RegisterObject(found);
+                                                }
+                                                else
+                                                {
+                                                    Log.Error("Spawned parent prefab with instance id {0} but could not find child at index id {1}", ids[2]);
+                                                }
+                                            }
+
+                                            if (found == null)
+                                            {
+                                                Log.Error("Could not find matching prefab(s) to spawn object with persistent id: \"{0}\"", pid);
+                                            }
+                                            loaded = found;
+                                        }
+                                    }
+                                    else if (found == null)
+                                    {
+                                        Log.Error("Could not find PersistentIdentity instance with PID \"{0}\"", pid);
+                                        loaded = null;
+                                    }
+
+                                    if (found != null)
+                                    {
+                                        loaded = found.FindChildPID(int.Parse(ids[2]));
+                                    }
+                                    else
+                                    {
+                                        loaded = null;
+                                    }
+                                }
+                                else
+                                {
+                                    loaded = Activator.CreateInstance(itemType);
+                                }
+                                if (loaded is ISerialise)
+                                {
+                                    ((ISerialise)loaded).Serialise((Derived)this);
+                                }
                                 AddToArray(ref loaded);
                                 json = prev;
                             }
                             else if (element.Type == JTokenType.Object)
                             {
+                                Log.Debug("Attempting to load obj {0}", element.ToString());
                                 JObject prev = json;
                                 json = (JObject)element;
                                 object created = Activator.CreateInstance(itemType);
@@ -324,12 +453,16 @@ namespace OpenGET
             return true;
         }
 
-        public override void Write<DataType>(string id, DataType data)
+        public override void Write<DataType>(string id, DataType data, bool autoReference = true)
         {
             // Make sure custom serialisation runs
             if (data == null)
             {
                 return;
+            }
+            else if (autoReference && data.GetType().IsSubclassOf(typeof(PersistentIdentity)))
+            {
+                json.Add(id, (data as PersistentIdentity)?.InstanceId);
             }
             else if (data is ISerialise custom)
             {
@@ -352,7 +485,19 @@ namespace OpenGET
                     // Use reflection to selectively choose what we serialise
                     WalkSerialiseMembers(data.GetType(), (field) => {
                         DataType scoped = data;
-                        Write(field.Name, field.GetValue(scoped));
+                        bool toRef = autoReference;
+                        if (toRef && scoped.GetType().IsSubclassOf(typeof(PersistentIdentity)))
+                        {
+                            string pid = (field.GetValue(scoped) as PersistentIdentity)?.InstanceId;
+                            if (!string.IsNullOrEmpty(pid))
+                            {
+                                Write(field.Name, pid);
+                            }
+                        }
+                        else
+                        {
+                            Write(field.Name, field.GetValue(scoped));
+                        }
                     });
 
                     if (data is IDictionary dict)
@@ -387,6 +532,11 @@ namespace OpenGET
                                 jArray.Add(nested);
                                 HandleArray(nested, child as IList);
                             }
+                            else if (autoReference && child is PersistentIdentity)
+                            {
+                                string pid = (child as PersistentIdentity)?.InstanceId;
+                                jArray.Add(pid);
+                            }
                             else if (child is ISerialise custom)
                             {
                                 JObject prev = json;
@@ -402,7 +552,19 @@ namespace OpenGET
                                 jArray.Add(json);
                                 WalkSerialiseMembers(child.GetType(), (field) => {
                                     object scoped = child;
-                                    Write(field.Name, field.GetValue(scoped));
+                                    bool toRef = autoReference;
+                                    if (toRef && scoped.GetType().IsSubclassOf(typeof(PersistentIdentity)))
+                                    {
+                                        string pid = (field.GetValue(scoped) as PersistentIdentity)?.InstanceId;
+                                        if (!string.IsNullOrEmpty(pid))
+                                        {
+                                            Write(field.Name, pid);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Write(field.Name, field.GetValue(scoped));
+                                    }
                                 });
                                 json = prev;
                             }

@@ -97,6 +97,19 @@ namespace OpenGET
             List<IRegistrate> found = new List<IRegistrate>(dataAssets);
             found.AddRange(prefabs);
 
+            int GetPrefabVariantDepth(Object prefab)
+            {
+                int depth = 0;
+                if (prefab == null)
+                {
+                    return depth;
+                }
+                return PrefabUtility.IsPartOfVariantPrefab(prefab) ? GetPrefabVariantDepth(PrefabUtility.GetCorrespondingObjectFromSource(prefab)) + 1 : 0;
+            }
+
+            // Sort such that prefab variants are processed last. This prevents accidental overwrites.
+            found = found.OrderBy(prefab => GetPrefabVariantDepth(prefab as Object)).ToList();
+
             Log.Debug("Checking {0} assets for registration...", found.Count);
             List<Object> updated = new List<Object>(registry.assets);
             for (int i = 0, counti = found.Count; i < counti; i++)
@@ -135,7 +148,9 @@ namespace OpenGET
                 if (found[i] is RegisterPrefab)
                 {
                     (found[i] as RegisterPrefab).RegisterIds();
+                    Log.Debug("Found registered prefab {0} that is {1}a variant.", i, PrefabUtility.IsPartOfVariantPrefab(found[i] as RegisterPrefab) ? "" : "NOT ");
                 }
+
             }
 
             registry.assets = updated.ToArray();

@@ -97,6 +97,11 @@ namespace OpenGET
         public bool isWriting => mode == Mode.Serialise;
 
         /// <summary>
+        /// Whether to deserialise or serialise data.
+        /// </summary>
+        public bool isReading => !isWriting;
+
+        /// <summary>
         /// Serialisation version.
         /// </summary>
         protected Enum version { get; set; }
@@ -104,27 +109,27 @@ namespace OpenGET
         /// <summary>
         /// Serialise/deserialise a value (depending on serialiser mode).
         /// </summary>
-        public void Serialise<DataType>(string id, ref DataType data)
+        public void Serialise<DataType>(string id, ref DataType data, bool autoReference = true)
         {
             if (isWriting)
             {
-                Write(id, data);
+                Write(id, data, autoReference && data is PersistentIdentity);
             }
             else
             {
-                Read(id, ref data);
+                Read(id, ref data, autoReference && data is PersistentIdentity);
             }
         }
 
         /// <summary>
         /// Deserialise an object from the serialised format. Returns false if there is no such id in the current JSON data.
         /// </summary>
-        public abstract bool Read<DataType>(string id, ref DataType data);
+        public abstract bool Read<DataType>(string id, ref DataType data, bool asReference = false);
 
         /// <summary>
         /// Serialise the given data into a valid format for saving.
         /// </summary>
-        public abstract void Write<DataType>(string id, DataType data);
+        public abstract void Write<DataType>(string id, DataType data, bool asReference = false);
 
     }
 
@@ -183,13 +188,12 @@ namespace OpenGET
         public T FindReference<T>(string id) where T : class, IReferenceSerialise
         {
             T found = registeredObjects.TryGetValue(id, out IReferenceSerialise v) ? v as T : null;
-            if (found == null)
-            {
-                Log.Warning("Unable to locate object with reference id \"{0}\"", id);
-            }
             return found;
         }
 
+        /// <summary>
+        /// Clear all registered id references.
+        /// </summary>
         public void Clear()
         {
             registeredObjects.Clear();
