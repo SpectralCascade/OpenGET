@@ -11,6 +11,7 @@ using CSVFile;
 using Codice.Client.BaseCommands.Merge.Xml;
 using Codice.Client.BaseCommands;
 using System.Runtime.CompilerServices;
+using UnityEditor.VersionControl;
 
 namespace OpenGET
 {
@@ -171,7 +172,27 @@ namespace OpenGET
                         }
                         else
                         {
-                            Log.Verbose("Skipping field \"{0}\" of type \"{1}\" as it is null.", field.Name, field.FieldType);
+                            Log.Verbose("Skipping persistent field \"{0}\" of type \"{1}\" as it is null.", field.Name, field.FieldType);
+                        }
+                    }
+                    else if (autoReference && field.FieldType.IsSubclassOf(typeof(RegistryData)))
+                    {
+                        RegistryData asset = (field.GetValue(data) as RegistryData);
+                        if (asset != null)
+                        {
+                            int assetid = AssetRegistry.GetId(asset);
+                            if (assetid >= 0)
+                            {
+                                Write(field.Name, assetid);
+                            }
+                            else
+                            {
+                                Log.Warning("Failed to find asset in asset registry for field \"{0}\" of type \"{1}\".", field.Name, field.FieldType.Name);
+                            }
+                        }
+                        else
+                        {
+                            Log.Verbose("Skipping asset field \"{0}\" of type \"{1}\" as it is null.", field.Name, field.FieldType);
                         }
                     }
                     else
@@ -219,6 +240,31 @@ namespace OpenGET
                                 PersistentIdentity found = FindReference<PersistentIdentity>(pid.Split('.').Last());
                                 field.SetValue(data, found);
                             }
+                        }
+                    }
+                    else if (autoReference && field.FieldType.IsSubclassOf(typeof(RegistryData)))
+                    {
+                        int assetid = -1;
+                        Read(field.Name, ref assetid);
+
+                        if (assetid >= 0)
+                        {
+                            RegistryData asset = AssetRegistry.GetObject<RegistryData>(assetid);
+                            if (asset != null)
+                            {
+                                field.SetValue(data, asset);
+                            }
+                            else
+                            {
+                                Log.Warning(
+                                    "Failed to locate asset with id \"{0}\" for field {1} of type {2} on object of type {3}",
+                                    assetid, field.Name, field.FieldType, type.Name
+                                );
+                            }
+                        }
+                        else
+                        {
+                            Log.Debug("No asset referenced for field \"{0}\" of type \"{1}\" on object of type \"{2}\".", field.Name, field.FieldType, type.Name);
                         }
                     }
                     else
