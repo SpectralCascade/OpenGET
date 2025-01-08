@@ -9,6 +9,8 @@ using System;
 using System.Linq;
 using CSVFile;
 using Codice.Client.BaseCommands.Merge.Xml;
+using Codice.Client.BaseCommands;
+using System.Runtime.CompilerServices;
 
 namespace OpenGET
 {
@@ -21,6 +23,11 @@ namespace OpenGET
         protected JObject json = new JObject();
 
         protected delegate void HandleToken(JToken token);
+
+        /// <summary>
+        /// At least two load phases (0 and 1) for loading prefabs, then deserialising.
+        /// </summary>
+        protected override int loadPhases => 2;
 
         /// <summary>
         /// Ensures that properties are not serialised, a la Unity.
@@ -84,6 +91,8 @@ namespace OpenGET
             serial.ContractResolver = new UnityContractResolver();
         }
 
+        public abstract override Transform GetSpawnTransform(RegisterPrefab prefab);
+
         public override Result Save(ISerialise game)
         {
             json = new JObject();
@@ -117,6 +126,7 @@ namespace OpenGET
                 registeredObjects.Clear();
                 for (phase = 0; phase < loadPhases; phase++)
                 {
+                    Log.Debug("Loading phase {0} ({1}/{2})", phase, phase + 1, loadPhases);
                     Deserialise(game);
                 }
                 phase = 0;
@@ -136,7 +146,7 @@ namespace OpenGET
         /// <summary>
         /// Walk over members and selectively serialise them via reflection.
         /// </summary>
-        protected void WalkSerialiseMembers(Type type, HandleMember handler)
+        protected void WalkWriteMembers<DataType>(Type type, ref DataType data, bool autoReference = true, bool strip = false)
         {
             // Use reflection to selectively choose what we serialise
             FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
@@ -146,21 +156,40 @@ namespace OpenGET
                 VarAttribute[] info = field.GetCustomAttributes<VarAttribute>().ToArray();
                 if (!(info.Length > 0 && info.Last().removed) &&
                     (
-                        (field.IsPublic && field.GetCustomAttribute<NonSerializedAttribute>() == null)
-                        || field.GetCustomAttribute<SerializeField>() != null
+                        (!strip && ((field.IsPublic && field.GetCustomAttribute<NonSerializedAttribute>() == null)
+                        || field.GetCustomAttribute<SerializeField>() != null))
                         || field.GetCustomAttribute<VarAttribute>() != null
                     )
-                ) {
-                    handler(field);
+                )
+                {
+                    if (autoReference && field.FieldType.IsSubclassOf(typeof(PersistentIdentity)))
+                    {
+                        string pid = (field.GetValue(data) as PersistentIdentity)?.InstanceId;
+                        if (!string.IsNullOrEmpty(pid))
+                        {
+                            Write(field.Name, pid);
+                        }
+                        else
+                        {
+                            Log.Verbose("Skipping field \"{0}\" of type \"{1}\" as it is null.", field.Name, field.FieldType);
+                        }
+                    }
+                    else
+                    {
+                        Write(field.Name, field.GetValue(data));
+                    }
                 }
             }
         }
         
         /// <summary>
-        /// Walk over members and selectively serialise them via reflection.
+        /// Walk over members and selectively deserialise them via reflection.
+        /// Set strict to true to ensure only fields using VarAttribute are serialised; all other fields are stripped/ignored.
         /// </summary>
-        protected void WalkReadMembers<DataType>(Type type, ref DataType data, bool autoReference = true)
+        protected void WalkReadMembers<DataType>(Type type, ref DataType data, bool autoReference = true, bool strict = false)
         {
+            // "Box" struct
+            object boxed = data;
             // Use reflection to selectively choose what we serialise
             FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
             for (int i = 0, counti = fields.Length; i < counti; i++)
@@ -169,8 +198,8 @@ namespace OpenGET
                 VarAttribute[] info = field.GetCustomAttributes<VarAttribute>().ToArray();
                 if (!(info.Length > 0 && info.Last().removed) &&
                     (
-                        (field.IsPublic && field.GetCustomAttribute<NonSerializedAttribute>() == null)
-                        || field.GetCustomAttribute<SerializeField>() != null
+                        (!strict && ((field.IsPublic && field.GetCustomAttribute<NonSerializedAttribute>() == null)
+                        || field.GetCustomAttribute<SerializeField>() != null))
                         || field.GetCustomAttribute<VarAttribute>() != null
                     )
                 ) {
@@ -194,18 +223,21 @@ namespace OpenGET
                     }
                     else
                     {
-                        //Log.Debug("Reading field {0}", field.Name);
-                        object member = field.GetValue(data);
+                        object member = field.GetValue(boxed);
                         if (member == null)
                         {
                             //Log.Debug("Field is null, instantiating new {0}...", field.FieldType.Name);
                             member = Activator.CreateInstance(field.FieldType);
                         }
+                        //Log.Debug("Reading member \"{0}\"", field.Name);
                         Read(field.Name, ref member);
-                        field.SetValue(data, member);
+                        field.SetValue(boxed, Convert.ChangeType(member, field.FieldType));
+                        //Log.Debug("Read member (\"{0}\" = {1})", field.Name, member);
                     }
                 }
             }
+            // "Unbox" struct
+            data = (DataType)boxed;
         }
 
         public override bool Read<DataType>(string id, ref DataType data, bool autoReference = false)
@@ -235,9 +267,13 @@ namespace OpenGET
                 JObject prev = json;
                 json = (JObject)token;
                 custom.Serialise((Derived)this);
+                if (data is ISerialiseAuto)
+                {
+                    WalkReadMembers(data.GetType(), ref data, strict: true);
+                }
                 json = prev;
             }
-            else // TODO: Provide class attribute that ensures we ADDITIONALLY do this step for ISerialise implementations
+            else
             {
                 JToken token = json[id];
                 if (token.Type == JTokenType.Object)
@@ -258,13 +294,18 @@ namespace OpenGET
 
                         if (data is IDictionary dict)
                         {
-                            Type[] types = dict.GetType().GetGenericArguments();
+                            Type[] types = data.GetType().GetGenericArguments();
                             if (types.Length > 0 && types[0].IsAssignableFrom(typeof(string)))
                             {
-                                IEnumerable<string> keys = json.Properties().Select(x => x.Name);
-                                foreach (string key in keys)
+                                IEnumerable<JProperty> props = json.Properties();
+                                foreach (JProperty prop in props)
                                 {
-                                    Read(key, ref data);
+                                    object boxed = !types[1].IsValueType ? dict[prop.Name] : (dict[prop.Name] ?? Activator.CreateInstance(types[1]));
+                                    if (boxed != null)
+                                    {
+                                        Read(prop.Name, ref boxed);
+                                    }
+                                    dict[prop.Name] = boxed;
                                 }
                             }
                         }
@@ -333,7 +374,7 @@ namespace OpenGET
                                     string[] ids = pid.Split(".");
                                     // First check whether the instance already exists or not
                                     PersistentIdentity found = pid != null ? FindReference<PersistentIdentity>(ids[3]) : null;
-                                    if (phase == 0 && !string.IsNullOrEmpty(pid))
+                                    if (found == null && phase == 0 && !string.IsNullOrEmpty(pid))
                                     {
                                         // Check if the parent exists
                                         RegisterPrefab existingParent = FindReference<RegisterPrefab>(ids[1]);
@@ -356,7 +397,7 @@ namespace OpenGET
                                         else
                                         {
                                             // Spawn prefab(s) as the instance and it's parent instance don't exist
-                                            Log.Debug("Spawning & registering prefab instance(s) for persistent id: {0}", pid);
+                                            Log.Info("Spawning & registering prefab instance(s) for persistent id: {0}", pid);
 
                                             UnityEngine.Object parent = AssetRegistry.GetObject(int.Parse(ids[0]));
                                             if (parent == null || parent is not RegisterPrefab)
@@ -369,7 +410,8 @@ namespace OpenGET
                                             {
                                                 // Spawn prefab and register it
                                                 // TODO: Set scene hierarchy parent (probably just dump in dynamic objects and let it be serialisd?)
-                                                RegisterPrefab created = UnityEngine.Object.Instantiate((parent as RegisterPrefab));
+                                                RegisterPrefab prefab = (parent as RegisterPrefab);
+                                                RegisterPrefab created = UnityEngine.Object.Instantiate(prefab, GetSpawnTransform(prefab));
                                                 created.reference.id = ids[1];
                                                 RegisterObject(created);
 
@@ -398,10 +440,9 @@ namespace OpenGET
                                         Log.Error("Could not find PersistentIdentity instance with PID \"{0}\"", pid);
                                         loaded = null;
                                     }
-
-                                    if (found != null)
+                                    else if (found != null)
                                     {
-                                        loaded = found.FindChildPID(int.Parse(ids[2]));
+                                        loaded = found;
                                     }
                                     else
                                     {
@@ -412,6 +453,12 @@ namespace OpenGET
                                 {
                                     loaded = Activator.CreateInstance(itemType);
                                 }
+
+                                if (loaded is ISerialiseAuto)
+                                {
+                                    //Log.Debug("Loading auto-serialised type \"{0}\"", loaded?.GetType());
+                                    WalkReadMembers(loaded?.GetType() ?? itemType, ref loaded, strict: true);
+                                }
                                 if (loaded is ISerialise)
                                 {
                                     ((ISerialise)loaded).Serialise((Derived)this);
@@ -421,7 +468,7 @@ namespace OpenGET
                             }
                             else if (element.Type == JTokenType.Object)
                             {
-                                Log.Debug("Attempting to load obj {0}", element.ToString());
+                                //Log.Debug("Attempting to load obj {0}", element.ToString());
                                 JObject prev = json;
                                 json = (JObject)element;
                                 object created = Activator.CreateInstance(itemType);
@@ -445,7 +492,7 @@ namespace OpenGET
                 }
                 else
                 {
-                    data = (DataType)token.ToObject(data.GetType());
+                    data = (DataType)token.ToObject(data?.GetType() ?? typeof(object));
                 }
             }
 
@@ -469,10 +516,14 @@ namespace OpenGET
                 JObject prev = json;
                 json = new JObject();
                 prev.Add(id, json);
+                if (custom is ISerialiseAuto)
+                {
+                    WalkWriteMembers(custom.GetType(), ref custom, strip: true);
+                }
                 custom.Serialise((Derived)this);
                 json = prev;
             }
-            else // TODO: Provide class attribute that ensures we ADDITIONALLY do this step for ISerialise implementations
+            else
             {
                 JToken token = JToken.FromObject(data, serial);
                 if (token.Type == JTokenType.Object)
@@ -482,23 +533,7 @@ namespace OpenGET
                     json = new JObject();
                     prev.Add(id, json);
 
-                    // Use reflection to selectively choose what we serialise
-                    WalkSerialiseMembers(data.GetType(), (field) => {
-                        DataType scoped = data;
-                        bool toRef = autoReference;
-                        if (toRef && scoped.GetType().IsSubclassOf(typeof(PersistentIdentity)))
-                        {
-                            string pid = (field.GetValue(scoped) as PersistentIdentity)?.InstanceId;
-                            if (!string.IsNullOrEmpty(pid))
-                            {
-                                Write(field.Name, pid);
-                            }
-                        }
-                        else
-                        {
-                            Write(field.Name, field.GetValue(scoped));
-                        }
-                    });
+                    WalkWriteMembers(data.GetType(), ref data);
 
                     if (data is IDictionary dict)
                     {
@@ -542,6 +577,10 @@ namespace OpenGET
                                 JObject prev = json;
                                 json = new JObject();
                                 jArray.Add(json);
+                                if (custom is ISerialiseAuto)
+                                {
+                                    WalkWriteMembers(custom.GetType(), ref custom, strip: true);
+                                }
                                 custom.Serialise((Derived)this);
                                 json = prev;
                             }
@@ -550,22 +589,10 @@ namespace OpenGET
                                 JObject prev = json;
                                 json = new JObject();
                                 jArray.Add(json);
-                                WalkSerialiseMembers(child.GetType(), (field) => {
-                                    object scoped = child;
-                                    bool toRef = autoReference;
-                                    if (toRef && scoped.GetType().IsSubclassOf(typeof(PersistentIdentity)))
-                                    {
-                                        string pid = (field.GetValue(scoped) as PersistentIdentity)?.InstanceId;
-                                        if (!string.IsNullOrEmpty(pid))
-                                        {
-                                            Write(field.Name, pid);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        Write(field.Name, field.GetValue(scoped));
-                                    }
-                                });
+
+                                object scoped = child;
+                                WalkWriteMembers(scoped.GetType(), ref scoped);
+
                                 json = prev;
                             }
                             else

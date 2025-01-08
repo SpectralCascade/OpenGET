@@ -311,16 +311,16 @@ namespace OpenGET.UI {
                 above.below = overlay;
                 Log.Debug(
                     "Inserting ViewPanel into stack between \"{0}\" and \"{1}\"",
-                    SceneNavigator.GetGameObjectPath(gameObject),
-                    SceneNavigator.GetGameObjectPath(overlay.above.gameObject)
+                    SceneNavigator.GetPath(gameObject),
+                    SceneNavigator.GetPath(overlay.above.gameObject)
                 );
             }
             else
             {
                 Log.Debug(
                     "Pushing ViewPanel \"{0}\" onto \"{1}\"",
-                    SceneNavigator.GetGameObjectPath(overlay.gameObject),
-                    SceneNavigator.GetGameObjectPath(gameObject)
+                    SceneNavigator.GetPath(overlay.gameObject),
+                    SceneNavigator.GetPath(gameObject)
                 );
             }
 

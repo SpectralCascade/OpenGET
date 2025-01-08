@@ -108,7 +108,7 @@ namespace OpenGET
                                 "Successfully auto-assigned component to field \"{0}\" of type \"{1}\" on GameObject \"{2}\".",
                                 field.Name,
                                 field.FieldType,
-                                SceneNavigator.GetGameObjectPath(obj.gameObject)
+                                SceneNavigator.GetPath(obj.gameObject)
                             );
                             UnityEditor.EditorUtility.SetDirty(obj);
                         }
@@ -156,7 +156,7 @@ namespace OpenGET
                                 array.Length,
                                 field.Name,
                                 field.FieldType,
-                                SceneNavigator.GetGameObjectPath(obj.gameObject)
+                                SceneNavigator.GetPath(obj.gameObject)
                             );
                             UnityEditor.EditorUtility.SetDirty(obj);
                         }
@@ -207,7 +207,7 @@ namespace OpenGET
                     GameObject target = isGameObject ? obj as GameObject : (isComponent ? (obj as MonoBehaviour).gameObject : null);
                     if (target != null)
                     {
-                        message += string.Format(" at hierarchy path '{0}'", SceneNavigator.GetGameObjectPath(target));
+                        message += string.Format(" at hierarchy path '{0}'", SceneNavigator.GetPath(target));
                     }
                     else
                     {

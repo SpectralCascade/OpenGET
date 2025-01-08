@@ -103,7 +103,7 @@ namespace OpenGET
         /// <summary>
         /// Get the hierarchy path to a GameObject instance as a string.
         /// </summary>
-        public static string GetGameObjectPath(GameObject gameObject) {
+        public static string GetPath(GameObject gameObject) {
             string path = gameObject.name;
             gameObject = gameObject.transform.parent != null ? gameObject.transform.parent.gameObject : null;
             while (gameObject != null) {
@@ -111,6 +111,15 @@ namespace OpenGET
                 gameObject = gameObject.transform.parent != null ? gameObject.transform.parent.gameObject : null;
             }
             return path;
+        }
+
+        /// <summary>
+        /// Get the hierarchy path to a component instance as a string.
+        /// Convenience overload.
+        /// </summary>
+        public static string GetPath(Component component)
+        {
+            return GetPath(component.gameObject);
         }
 
 #if UNITY_EDITOR

@@ -131,6 +131,11 @@ namespace OpenGET
         /// </summary>
         public abstract void Write<DataType>(string id, DataType data, bool asReference = false);
 
+        /// <summary>
+        /// Get the transform under which a given instance should be spawned.
+        /// </summary>
+        public abstract Transform GetSpawnTransform(RegisterPrefab prefab);
+
     }
 
     /// <summary>
@@ -145,7 +150,15 @@ namespace OpenGET
         {
             void Serialise(Derived s);
         }
-        
+
+        /// <summary>
+        /// Implement on classes that already implement ISerialise but have some members that can be more readily serialised.
+        /// Note that this requires explicit attribute usage; non-attributed members are ignored.
+        /// </summary>
+        public interface ISerialiseAuto
+        {
+        }
+
         /// <summary>
         /// Path to the file to be serialised to/from.
         /// </summary>

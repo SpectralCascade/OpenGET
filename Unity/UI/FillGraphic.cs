@@ -144,7 +144,7 @@ namespace OpenGET.UI
             get {
                 if (_material == null)
                 {
-                    Log.Debug("Setup new FillImage material on FillGraphic at \"{0}\"", SceneNavigator.GetGameObjectPath(gameObject));
+                    Log.Debug("Setup new FillImage material on FillGraphic at \"{0}\"", SceneNavigator.GetPath(gameObject));
                     Shader shader = Shader.Find("OpenGET/FillImage");
                     _material = new Material(shader);
                     if (target != null)
