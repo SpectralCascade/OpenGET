@@ -19,19 +19,30 @@ namespace OpenGET
         public Enum version;
 
         /// <summary>
+        /// Integer version id.
+        /// </summary>
+        public int versionId => Convert.ToInt32(version);
+
+        /// <summary>
         /// Former name this variable was serialised as. Used to handle the renaming of a variable so old saves still work.
         /// </summary>
         public string formerName;
+
+        /// <summary>
+        /// An override name to use for serialisation.
+        /// </summary>
+        public string nameOverride;
 
         /// <summary>
         /// Whether this variable has been removed from serialisation for this version.
         /// </summary>
         public bool removed;
 
-        public SerialiseAttribute(Enum version, string formerName = null, bool removed = false)
+        public SerialiseAttribute(Enum version, string formerName = null, string nameOverride = null, bool removed = false)
         {
             this.version = version;
             this.formerName = formerName;
+            this.nameOverride = nameOverride;
             this.removed = removed;
         }
     }
@@ -165,9 +176,15 @@ namespace OpenGET
         public virtual string path { get; protected set; }
 
         /// <summary>
-        /// Current serialisation version.
+        /// Build version.
         /// </summary>
-        public new Version version => (Version)base.version;
+        public abstract Version BuildVersion { get; }
+
+        /// <summary>
+        /// Current serialisation version (i.e. version of the data file being deserialised when reading).
+        /// Matches build version at all other times, including writing serialisation.
+        /// </summary>
+        public new virtual Version version { get => (Version)base.version; protected set => base.version = value; }
 
         /// <summary>
         /// Total number of deserialisation phases.
@@ -218,6 +235,7 @@ namespace OpenGET
         public virtual void Serialise(ISerialise data)
         {
             mode = Mode.Serialise;
+            Write("version", Convert.ToInt32(BuildVersion));
             data.Serialise((Derived)this);
         }
 
@@ -227,7 +245,22 @@ namespace OpenGET
         public virtual void Deserialise(ISerialise data)
         {
             mode = Mode.Deserialise;
-            data.Serialise((Derived)this);
+            int original = Convert.ToInt32(version);
+            int v = original;
+            try
+            {
+                Read("version", ref v);
+                if (!Enum.IsDefined(version.GetType(), v))
+                {
+                    throw new Exception($"Serialisation version \"{v}\" is not defined, cannot read data.");
+                }
+                version = (Version)Enum.ToObject(version.GetType(), v);
+                data.Serialise((Derived)this);
+            }
+            finally
+            {
+                version = (Version)Enum.ToObject(version.GetType(), original);
+            }
         }
 
         /// <summary>

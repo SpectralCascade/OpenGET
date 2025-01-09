@@ -7,11 +7,6 @@ using Newtonsoft.Json.Linq;
 using System.Reflection;
 using System;
 using System.Linq;
-using CSVFile;
-using Codice.Client.BaseCommands.Merge.Xml;
-using Codice.Client.BaseCommands;
-using System.Runtime.CompilerServices;
-using UnityEditor.VersionControl;
 
 namespace OpenGET
 {
@@ -29,6 +24,8 @@ namespace OpenGET
         /// At least two load phases (0 and 1) for loading prefabs, then deserialising.
         /// </summary>
         protected override int loadPhases => 2;
+
+        public abstract override VersionType BuildVersion { get; }
 
         /// <summary>
         /// Ensures that properties are not serialised, a la Unity.
@@ -53,7 +50,7 @@ namespace OpenGET
                             || (
                                 !field.IsPublic
                                 && field.GetCustomAttribute<SerializeField>() == null
-                                && field.GetCustomAttribute<VarAttribute>() == null
+                                && field.GetCustomAttributes<VarAttribute>().Count() == 0
                             )
                         )
                         {
@@ -159,16 +156,42 @@ namespace OpenGET
                     (
                         (!strip && ((field.IsPublic && field.GetCustomAttribute<NonSerializedAttribute>() == null)
                         || field.GetCustomAttribute<SerializeField>() != null))
-                        || field.GetCustomAttribute<VarAttribute>() != null
+                        || field.GetCustomAttributes<VarAttribute>().Count() > 0
                     )
                 )
                 {
+                    // Sort attributes by version
+                    VarAttribute[] attributes = field.GetCustomAttributes<VarAttribute>().ToArray();
+                    Array.Sort(attributes, (a, b) => (Convert.ToInt32(a.version)).CompareTo(Convert.ToInt32(b.version)));
+
+                    // Determine most recent attribute that should be applied
+                    VarAttribute latest = attributes.LastOrDefault();
+                    VarAttribute serialised = null;
+                    string formerly = null;
+                    int buildVersion = Convert.ToInt32(BuildVersion);
+                    int serialisedVersion = Convert.ToInt32(version);
+                    int serialisedIndex = attributes.Length - 1;
+                    for (int j = serialisedIndex; j >= 0; j--)
+                    {
+                        if (attributes[j].versionId <= serialisedVersion)
+                        {
+                            serialised = attributes[j];
+                            break;
+                        }
+                        // Get former name from the oldest version after the serialised version (that specifies a former name)
+                        formerly = attributes[j].formerName ?? formerly;
+                    }
+
+                    // Use the override name if specified, otherwise use the closest "formerly" name of the next versions,
+                    // or else default to using the actual field name.
+                    string serialname = serialised?.nameOverride ?? (formerly ?? field.Name);
+
                     if (autoReference && field.FieldType.IsSubclassOf(typeof(PersistentIdentity)))
                     {
                         string pid = (field.GetValue(data) as PersistentIdentity)?.InstanceId;
                         if (!string.IsNullOrEmpty(pid))
                         {
-                            Write(field.Name, pid);
+                            Write(serialname, pid);
                         }
                         else
                         {
@@ -183,7 +206,7 @@ namespace OpenGET
                             int assetid = AssetRegistry.GetId(asset);
                             if (assetid >= 0)
                             {
-                                Write(field.Name, assetid);
+                                Write(serialname, assetid);
                             }
                             else
                             {
@@ -197,7 +220,7 @@ namespace OpenGET
                     }
                     else
                     {
-                        Write(field.Name, field.GetValue(data));
+                        Write(serialname, field.GetValue(data));
                     }
                 }
             }
@@ -221,16 +244,42 @@ namespace OpenGET
                     (
                         (!strict && ((field.IsPublic && field.GetCustomAttribute<NonSerializedAttribute>() == null)
                         || field.GetCustomAttribute<SerializeField>() != null))
-                        || field.GetCustomAttribute<VarAttribute>() != null
+                        || field.GetCustomAttributes<VarAttribute>().Count() > 0
                     )
                 ) {
+                    // Sort attributes by version
+                    VarAttribute[] attributes = field.GetCustomAttributes<VarAttribute>().ToArray();
+                    Array.Sort(attributes, (a, b) => (Convert.ToInt32(a.version)).CompareTo(Convert.ToInt32(b.version)));
+
+                    // Determine most recent attribute that should be applied
+                    VarAttribute latest = attributes.LastOrDefault();
+                    VarAttribute serialised = null;
+                    string formerly = null;
+                    int buildVersion = Convert.ToInt32(BuildVersion);
+                    int serialisedVersion = Convert.ToInt32(version);
+                    int serialisedIndex = attributes.Length - 1;
+                    for (int j = serialisedIndex; j >= 0; j--)
+                    {
+                        if (attributes[j].versionId <= serialisedVersion)
+                        {
+                            serialised = attributes[j];
+                            break;
+                        }
+                        // Get former name from the oldest version after the serialised version (that specifies a former name)
+                        formerly = attributes[j].formerName ?? formerly;
+                    }
+
+                    // Use the override name if specified, otherwise use the closest "formerly" name of the next versions,
+                    // or else default to using the actual field name.
+                    string serialname = serialised?.nameOverride ?? (formerly ?? field.Name);
+
                     if (autoReference && field.FieldType.IsSubclassOf(typeof(PersistentIdentity)))
                     {
                         // Phase 0 is reserved for instantiating objects with persistent identity; during that phase reference serialisation is not possible.
                         if (phase > 0)
                         {
                             string pid = "";
-                            Read(field.Name, ref pid);
+                            Read(serialname, ref pid);
 
                             if (string.IsNullOrEmpty(pid))
                             {
@@ -245,7 +294,7 @@ namespace OpenGET
                     else if (autoReference && field.FieldType.IsSubclassOf(typeof(RegistryData)))
                     {
                         int assetid = -1;
-                        Read(field.Name, ref assetid);
+                        Read(serialname, ref assetid);
 
                         if (assetid >= 0)
                         {
@@ -276,7 +325,7 @@ namespace OpenGET
                             member = Activator.CreateInstance(field.FieldType);
                         }
                         //Log.Debug("Reading member \"{0}\"", field.Name);
-                        Read(field.Name, ref member);
+                        Read(serialname, ref member);
                         field.SetValue(boxed, Convert.ChangeType(member, field.FieldType));
                         //Log.Debug("Read member (\"{0}\" = {1})", field.Name, member);
                     }
@@ -407,6 +456,12 @@ namespace OpenGET
                                     object found = FindReference<PersistentIdentity>(pid.Split('.').Last());
                                     AddToArray(ref found);
                                 }
+                            }
+                            else if (itemType.IsSubclassOf(typeof(RegistryData)) && element.Type == JTokenType.Integer)
+                            {
+                                int assetid = element.Value<int>();
+                                object found = AssetRegistry.GetObject(assetid);
+                                AddToArray(ref found);
                             }
                             else if (typeof(ISerialise).IsAssignableFrom(itemType))
                             {
@@ -618,6 +673,11 @@ namespace OpenGET
                                 string pid = (child as PersistentIdentity)?.InstanceId;
                                 jArray.Add(pid);
                             }
+                            else if (autoReference && child is RegistryData)
+                            {
+                                int assetid = (child as RegistryData).PersistentId;
+                                jArray.Add(assetid);
+                            }
                             else if (child is ISerialise custom)
                             {
                                 JObject prev = json;
@@ -637,7 +697,7 @@ namespace OpenGET
                                 jArray.Add(json);
 
                                 object scoped = child;
-                                WalkWriteMembers(scoped.GetType(), ref scoped);
+                                WalkWriteMembers(scoped.GetType(), ref scoped, strip: scoped is ISerialiseAuto);
 
                                 json = prev;
                             }
