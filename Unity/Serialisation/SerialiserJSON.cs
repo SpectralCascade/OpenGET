@@ -634,7 +634,7 @@ namespace OpenGET
                     json = new JObject();
                     prev.Add(id, json);
 
-                    WalkWriteMembers(data.GetType(), ref data);
+                    WalkWriteMembers(data.GetType(), ref data, strip: data is ISerialiseAuto);
 
                     if (data is IDictionary dict)
                     {
