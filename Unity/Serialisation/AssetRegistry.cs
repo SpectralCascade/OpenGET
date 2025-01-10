@@ -162,6 +162,9 @@ namespace OpenGET
 
     }
 
+    /// <summary>
+    /// Interface for asset types accessed via an AssetRegistry.
+    /// </summary>
     internal interface IRegistrate
     {
         public int PersistentId {
