@@ -70,9 +70,9 @@ namespace OpenGET.UI
         /// <summary>
         /// Initialise to follow a target. Provide a camera if it's a worldspace target.
         /// </summary>
-        public void Init(string text = "", Color? colour = null, Transform target = null, Camera cam = null)
+        public void Init(string text = "", Color? colour = null, Transform target = null, Camera cam = null, float speed = -1, float fadeTime = -1)
         {
-            Log.Debug("Setting target = {0}, cam = {1}", target != null ? target.gameObject.name : null, cam != null ? cam.gameObject.name : null);
+            //Log.Debug("Setting target = {0}, cam = \"{1}\"", target != null ? target.gameObject.name : null, cam != null ? cam.gameObject.name : null);
             this.target = target;
             this.cam = cam;
 
@@ -91,6 +91,16 @@ namespace OpenGET.UI
                 {
                     textGraphic.color = colour.Value;
                 }
+            }
+
+            if (speed >= 0)
+            {
+                this.speed = speed;
+            }
+
+            if (fadeTime >= 0)
+            {
+                this.fadeTime = fadeTime;
             }
         }
 

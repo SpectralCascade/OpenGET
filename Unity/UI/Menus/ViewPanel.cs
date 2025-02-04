@@ -259,11 +259,11 @@ namespace OpenGET.UI {
                 backButton.onClick.AddListener(OnBack);
             }
 
-            if (startShown)
+            if (startShown && !IsFullyShown())
             {
                 Show();
             }
-            else
+            else if (!fader.isFullyHidden)
             {
                 Hide(0);
             }

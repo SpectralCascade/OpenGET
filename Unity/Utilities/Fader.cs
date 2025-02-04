@@ -91,27 +91,32 @@ namespace OpenGET
         /// <summary>
         /// Is the faded object fully visible (i.e. finished fading and visible)?
         /// </summary>
-        public bool isFullyVisible { get { return isVisible && !isFading; } }
+        public bool isFullyVisible => isVisible && !isFading;
 
         /// <summary>
         /// Is the faded object invisible?
         /// </summary>
-        public bool isFullyHidden { get { return !isVisible; } }
+        public bool isFullyHidden => !isVisible;
 
         /// <summary>
         /// Is this fader currently fading at all?
         /// </summary>
-        public bool isFading { get { return fadeDirection != 0; } }
+        public bool isFading => fadeDirection != 0;
 
         /// <summary>
         /// Is the fader currently fading in?
         /// </summary>
-        public bool isFadingIn { get { return fadeDirection > 0; } }
+        public bool isFadingIn => fadeDirection > 0;
 
         /// <summary>
         /// Is the fader currently fading out?
         /// </summary>
-        public bool isFadingOut { get { return fadeDirection < 0; } }
+        public bool isFadingOut => fadeDirection < 0;
+
+        /// <summary>
+        /// Get the current fader value.
+        /// </summary>
+        public float value => implementation.GetValue();
 
         /// <summary>
         /// Coroutine that performs the actual fading.

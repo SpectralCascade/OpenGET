@@ -450,7 +450,7 @@ namespace OpenGET
                             }
                             else if (itemType.IsSubclassOf(typeof(PersistentIdentity)) && element.Type == JTokenType.String)
                             {
-                                if (autoReference && phase > 0)
+                                if (phase > 0)
                                 {
                                     string pid = element.ToString();
                                     object found = FindReference<PersistentIdentity>(pid.Split('.').Last());
