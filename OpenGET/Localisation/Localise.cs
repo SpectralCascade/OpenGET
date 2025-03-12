@@ -75,7 +75,7 @@ namespace OpenGET
         /// <summary>
         /// Current language everything is being localised to.
         /// </summary>
-        public static Language language { get; private set; }
+        public static Language? language { get; private set; }
 
         /// <summary>
         /// Load an array of localisation strings from a CSV file.
