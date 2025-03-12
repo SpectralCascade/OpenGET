@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 using UnityEngine.Events;
+using System.Linq;
 
 namespace OpenGET
 {
@@ -192,7 +193,7 @@ namespace OpenGET
         protected virtual int loadPhases => 1;
 
         /// <summary>
-        /// Which phase of deserialisation is occurring.
+        /// Which phase of serialisation is occurring. If -1, no serialisation is actively taking place.
         /// </summary>
         public int phase { get; protected set; }
 
@@ -218,6 +219,15 @@ namespace OpenGET
         public T FindReference<T>(string id) where T : class, IReferenceSerialise
         {
             T found = registeredObjects.TryGetValue(id, out IReferenceSerialise v) ? v as T : null;
+            return found;
+        }
+
+        /// <summary>
+        /// Locate an object by instance id.
+        /// </summary>
+        public T FindInstance<T>(string instanceId) where T : PersistentIdentity
+        {
+            T found = FindReference<T>(instanceId.Split('.').Last());
             return found;
         }
 

@@ -76,7 +76,7 @@ namespace OpenGET.UI
         public Sprite baseSprite;
 
         /// <summary>
-        /// Colour tint applie to the unfilled base sprite.
+        /// Colour tint applied to the unfilled base sprite.
         /// </summary>
         [SerializeField]
         [HideInInspector]

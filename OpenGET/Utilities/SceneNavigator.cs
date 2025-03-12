@@ -104,6 +104,10 @@ namespace OpenGET
         /// Get the hierarchy path to a GameObject instance as a string.
         /// </summary>
         public static string GetPath(GameObject gameObject) {
+            if (gameObject == null)
+            {
+                return null;
+            }
             string path = gameObject.name;
             gameObject = gameObject.transform.parent != null ? gameObject.transform.parent.gameObject : null;
             while (gameObject != null) {

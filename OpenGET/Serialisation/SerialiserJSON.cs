@@ -94,7 +94,9 @@ namespace OpenGET
         public override Result Save(ISerialise game)
         {
             json = new JObject();
+            phase = 0;
             Serialise(game);
+            phase = -1;
 
             // Attempt to convert the dictionaries to JSON
             string raw = json.ToString();
@@ -127,7 +129,7 @@ namespace OpenGET
                     Log.Debug("Loading phase {0} ({1}/{2})", phase, phase + 1, loadPhases);
                     Deserialise(game);
                 }
-                phase = 0;
+                phase = -1;
             }
 #if !UNITY_EDITOR
             catch (Exception e)
@@ -226,6 +228,35 @@ namespace OpenGET
             }
         }
         
+        public string GetSerialName(SerialiserJSON<Derived, VersionType, VarAttribute> s, FieldInfo field)
+        {
+            // Sort attributes by version
+            VarAttribute[] attributes = field.GetCustomAttributes<VarAttribute>().ToArray();
+            Array.Sort(attributes, (a, b) => (Convert.ToInt32(a.version)).CompareTo(Convert.ToInt32(b.version)));
+
+            // Determine most recent attribute that should be applied
+            VarAttribute latest = attributes.LastOrDefault();
+            VarAttribute serialised = null;
+            string formerly = null;
+            int serialisedIndex = attributes.Length - 1;
+            int serialisedVersion = s.isWriting && serialisedIndex >= 0 ? Convert.ToInt32(BuildVersion) : Convert.ToInt32(version);
+            for (int j = serialisedIndex; j >= 0; j--)
+            {
+                if (attributes[j].versionId <= serialisedVersion)
+                {
+                    serialised = attributes[j];
+                    break;
+                }
+                // Get former name from the oldest version after the serialised version (that specifies a former name)
+                formerly = attributes[j].formerName ?? formerly;
+            }
+
+            // Use the override name if specified, otherwise use the closest "formerly" name of the next versions,
+            // or else default to using the actual field name.
+            string serialname = serialised?.nameOverride ?? (formerly ?? field.Name);
+            return serialname;
+        }
+
         /// <summary>
         /// Walk over members and selectively deserialise them via reflection.
         /// Set strict to true to ensure only fields using VarAttribute are serialised; all other fields are stripped/ignored.
@@ -247,39 +278,14 @@ namespace OpenGET
                         || field.GetCustomAttributes<VarAttribute>().Count() > 0
                     )
                 ) {
-                    // Sort attributes by version
-                    VarAttribute[] attributes = field.GetCustomAttributes<VarAttribute>().ToArray();
-                    Array.Sort(attributes, (a, b) => (Convert.ToInt32(a.version)).CompareTo(Convert.ToInt32(b.version)));
-
-                    // Determine most recent attribute that should be applied
-                    VarAttribute latest = attributes.LastOrDefault();
-                    VarAttribute serialised = null;
-                    string formerly = null;
-                    int buildVersion = Convert.ToInt32(BuildVersion);
-                    int serialisedVersion = Convert.ToInt32(version);
-                    int serialisedIndex = attributes.Length - 1;
-                    for (int j = serialisedIndex; j >= 0; j--)
-                    {
-                        if (attributes[j].versionId <= serialisedVersion)
-                        {
-                            serialised = attributes[j];
-                            break;
-                        }
-                        // Get former name from the oldest version after the serialised version (that specifies a former name)
-                        formerly = attributes[j].formerName ?? formerly;
-                    }
-
-                    // Use the override name if specified, otherwise use the closest "formerly" name of the next versions,
-                    // or else default to using the actual field name.
-                    string serialname = serialised?.nameOverride ?? (formerly ?? field.Name);
-
+                    string serialName = GetSerialName(this, field);
                     if (autoReference && field.FieldType.IsSubclassOf(typeof(PersistentIdentity)))
                     {
                         // Phase 0 is reserved for instantiating objects with persistent identity; during that phase reference serialisation is not possible.
                         if (phase > 0)
                         {
                             string pid = "";
-                            Read(serialname, ref pid);
+                            Read(serialName, ref pid);
 
                             if (string.IsNullOrEmpty(pid))
                             {
@@ -294,7 +300,7 @@ namespace OpenGET
                     else if (autoReference && field.FieldType.IsSubclassOf(typeof(RegistryData)))
                     {
                         int assetid = -1;
-                        Read(serialname, ref assetid);
+                        Read(serialName, ref assetid);
 
                         if (assetid >= 0)
                         {
@@ -319,13 +325,12 @@ namespace OpenGET
                     else
                     {
                         object member = field.GetValue(boxed);
-                        if (member == null)
+                        if (member == null && field.FieldType != typeof(string))
                         {
-                            //Log.Debug("Field is null, instantiating new {0}...", field.FieldType.Name);
                             member = Activator.CreateInstance(field.FieldType);
                         }
                         //Log.Debug("Reading member \"{0}\"", field.Name);
-                        Read(serialname, ref member);
+                        Read(serialName, ref member);
                         field.SetValue(boxed, Convert.ChangeType(member, field.FieldType));
                         //Log.Debug("Read member (\"{0}\" = {1})", field.Name, member);
                     }

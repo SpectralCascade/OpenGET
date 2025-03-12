@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using OpenGET.UI;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -57,10 +58,26 @@ namespace OpenGET
         }
 
         /// <summary>
+        /// Custom color fading implementation.
+        /// </summary>
+        public Fader(IColorFadeable colorFader, bool useUnscaledTime = true) {
+            implementation = new ColorFader(colorFader);
+            this.useUnscaledTime = useUnscaledTime;
+        }
+
+        /// <summary>
         /// Starts fading in, if we aren't fading in already.
         /// </summary>
         public void FadeIn(float time = 1.0f) {
-            if (fadeDirection <= 0 && implementation != null) {
+            if (fadeDirection <= 0 && time <= 0 && implementation != null && implementation.GetValue() < 1f)
+            {
+                fadeDirection = 1;
+                implementation.SetValue(1);
+                fadeDirection = 0;
+                OnFadeComplete?.Invoke(this, 1);
+                fadeCoroutine = null;
+            }
+            else if (fadeDirection <= 0 && implementation != null) {
                 fadeDirection = 1;
                 DoFade(implementation.GetValue(), 1, time);
             }
@@ -70,7 +87,15 @@ namespace OpenGET
         /// Starts fading out, if we aren't fading out already.
         /// </summary>
         public void FadeOut(float time = 1.0f) {
-            if (fadeDirection >= 0 && implementation != null) {
+            if (fadeDirection >= 0 && time <= 0 && implementation != null && implementation.GetValue() > 0)
+            {
+                fadeDirection = -1;
+                implementation.SetValue(0);
+                fadeDirection = 0;
+                OnFadeComplete?.Invoke(this, -1);
+                fadeCoroutine = null;
+            }
+            else if (fadeDirection >= 0 && implementation != null) {
                 fadeDirection = -1;
                 DoFade(implementation.GetValue(), 0, time);
             }
@@ -223,6 +248,57 @@ namespace OpenGET
             }
         }
 
+    }
+
+    /// <summary>
+    /// Fade between two different colours.
+    /// </summary>
+    public interface IColorFadeable
+    {
+        /// <summary>
+        /// Target fade colour.
+        /// </summary>
+        public Color fadeColorMax { get; }
+
+        /// <summary>
+        /// Original fade colour.
+        /// </summary>
+        public Color fadeColorMin { get; }
+        
+        /// <summary>
+        /// Current fade colour.
+        /// </summary>
+        public Color fadeColorActive { get; set; }
+    }
+
+    /// <summary>
+    /// Fade between 2 colours.
+    /// </summary>
+    public class ColorFader : IPercentValue
+    {
+        private readonly IColorFadeable fadeable;
+
+        /// <summary>
+        /// Current fade value.
+        /// </summary>
+        private float fadeValue;
+
+        public ColorFader(IColorFadeable fadeable, float fadeValue = 0)
+        {
+            this.fadeable = fadeable;
+            this.fadeValue = fadeValue;
+        }
+
+        public float GetValue()
+        {
+            return fadeValue;
+        }
+
+        public void SetValue(float v)
+        {
+            fadeValue = v;
+            fadeable.fadeColorActive = Color.Lerp(fadeable.fadeColorMin, fadeable.fadeColorMax, v);
+        }
     }
 
 }
