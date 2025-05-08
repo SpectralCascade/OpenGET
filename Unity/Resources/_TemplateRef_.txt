@@ -53,6 +53,10 @@ public class _TemplateRef_
         public readonly string path = "";
         
         public T Data => Resources.Load<T>(path);
+        
+		public static implicit operator T(Wrapper<T> wrapper) => wrapper.Data;
+		
+		public static implicit operator CharacterSimulant(Wrapper<T> wrapper) => (wrapper.Data as CharacterData)?.Sim;
 
         public override string ToString() { return name; }
 

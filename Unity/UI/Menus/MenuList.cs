@@ -184,12 +184,12 @@ namespace OpenGET.UI
                             // TODO map slider value according to any field attributes if available.
                             if (hasApplyInterface)
                             {
-                                (applyField as IApplySetting).SetValue(slider.sliderValue);
+                                (applyField as IApplySetting).SetValue(slider.normValue);
                                 field.SetValue(group, applyField);
                             }
                             else
                             {
-                                field.SetValue(group, slider.sliderValue);
+                                field.SetValue(group, slider.normValue);
                             }
                         });
                         if (tooltipText != null)

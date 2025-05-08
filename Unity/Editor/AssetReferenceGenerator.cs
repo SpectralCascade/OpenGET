@@ -93,8 +93,11 @@ namespace OpenGET
             {
                 path = AssetDatabase.GUIDToAssetPath(found[i]);
                 UnityEngine.Object obj = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
-                if (obj is not IReferrable || (obj is GameObject && (obj = AssetDatabase.LoadAssetAtPath<Behaviour>(path)) is not IReferrable))
+                if ((obj is GameObject && (obj = AssetDatabase.LoadAssetAtPath<Behaviour>(path)) is not IReferrable) || (obj is not Texture2D && obj is not IReferrable))
                 {
+                    continue;
+                }
+                if (obj is Texture2D && (obj = AssetDatabase.LoadAssetAtPath<Sprite>(path)) == null) {
                     continue;
                 }
                 path = path.Substring(path.ToLowerInvariant().IndexOf("resources/") + "resources/".Length);

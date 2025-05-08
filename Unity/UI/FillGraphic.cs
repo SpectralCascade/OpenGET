@@ -211,11 +211,11 @@ namespace OpenGET.UI
 
         public virtual void UpdateMaterial()
         {
-            if (image != null && image.sprite == null)
+            if (image != null)
             {
                 image.sprite = fillSprite;
             }
-            if (target != null && target.sprite == null)
+            if (target != null)
             {
                 target.sprite = fillSprite;
             }

@@ -22,7 +22,12 @@ namespace OpenGET.UI
         /// <summary>
         /// Get the normalised slider value.
         /// </summary>
-        public float sliderValue => slider.normalizedValue;
+        public float normValue => slider.normalizedValue;
+
+        /// <summary>
+        /// Get the sider value.
+        /// </summary>
+        public float value => slider.value;
 
 
         protected override void Awake()

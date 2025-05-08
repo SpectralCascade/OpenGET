@@ -62,9 +62,9 @@ namespace OpenGET
         }
 
         /// <summary>
-        /// Randomly shuffle an array.
+        /// Randomly shuffle an array. Note: Modifies in place.
         /// </summary>
-        public static void Shuffle<T>(this IList<T> array)
+        public static IList<T> Shuffle<T>(this IList<T> array)
         {
             int n = array.Count;
             while (n > 1)
@@ -75,6 +75,7 @@ namespace OpenGET
                 array[k] = array[n];
                 array[n] = value;
             }
+            return array;
         }
 
     }

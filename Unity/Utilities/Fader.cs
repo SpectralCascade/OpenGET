@@ -29,7 +29,7 @@ namespace OpenGET
         /// <summary>
         /// Whether the fader is fading in (1), out (-1), or not fading (0).
         /// </summary>
-        private int fadeDirection;
+        private int fadeDirection = 0;
 
         /// <summary>
         /// Is the fader implementation visible?
@@ -69,15 +69,18 @@ namespace OpenGET
         /// Starts fading in, if we aren't fading in already.
         /// </summary>
         public void FadeIn(float time = 1.0f) {
-            if (fadeDirection <= 0 && time <= 0 && implementation != null && implementation.GetValue() < 1f)
+            if (time <= 0 && implementation != null)
             {
-                fadeDirection = 1;
-                implementation.SetValue(1);
-                fadeDirection = 0;
-                OnFadeComplete?.Invoke(this, 1);
-                fadeCoroutine = null;
+                if (implementation.GetValue() < 1f)
+                {
+                    fadeDirection = 1;
+                    implementation.SetValue(1);
+                    fadeDirection = 0;
+                    OnFadeComplete?.Invoke(this, 1);
+                    fadeCoroutine = null;
+                }
             }
-            else if (fadeDirection <= 0 && implementation != null) {
+            else if (implementation != null) {
                 fadeDirection = 1;
                 DoFade(implementation.GetValue(), 1, time);
             }
@@ -87,15 +90,18 @@ namespace OpenGET
         /// Starts fading out, if we aren't fading out already.
         /// </summary>
         public void FadeOut(float time = 1.0f) {
-            if (fadeDirection >= 0 && time <= 0 && implementation != null && implementation.GetValue() > 0)
+            if (time <= 0 && implementation != null)
             {
-                fadeDirection = -1;
-                implementation.SetValue(0);
-                fadeDirection = 0;
-                OnFadeComplete?.Invoke(this, -1);
-                fadeCoroutine = null;
+                if (implementation.GetValue() > 0)
+                {
+                    fadeDirection = -1;
+                    implementation.SetValue(0);
+                    fadeDirection = 0;
+                    OnFadeComplete?.Invoke(this, -1);
+                    fadeCoroutine = null;
+                }
             }
-            else if (fadeDirection >= 0 && implementation != null) {
+            else if (implementation != null) {
                 fadeDirection = -1;
                 DoFade(implementation.GetValue(), 0, time);
             }
@@ -163,21 +169,11 @@ namespace OpenGET
 
                 if (lerpValue >= 1) {
                     /// Fade is finished
-                    int fadeDir = end <= start ? -1 : 1;
+                    int fadeDir = fadeDirection;
 
-                    // If fade direction doesn't match, this could be an old coroutine that hasn't finished.
-                    if (fadeDirection == fadeDir) {
-                        fadeDirection = 0;
-                        if (fadeDir < 0)
-                        {
-                            OnFadeComplete?.Invoke(this, -1);
-                        }
-                        else
-                        {
-                            OnFadeComplete?.Invoke(this, 1);
-                        }
-                        fadeCoroutine = null;
-                    }
+                    fadeDirection = 0;
+                    OnFadeComplete?.Invoke(this, fadeDir);
+                    fadeCoroutine = null;
 
                     if (fadeCoroutine == null)
                     {

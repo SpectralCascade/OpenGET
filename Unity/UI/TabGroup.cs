@@ -40,7 +40,7 @@ namespace OpenGET.UI
         /// </summary>
         public bool switching { get; private set; }
 
-        protected void OnEnable()
+        protected void Start()
         {
             if (!switching && current != null)
             {

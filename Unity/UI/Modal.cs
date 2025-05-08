@@ -13,7 +13,7 @@ namespace OpenGET.UI
     /// A modal popup; static methods provide an API to show one anywhere with a custom prefab.
     /// </summary>
     [DisallowMultipleComponent]
-    public class Modal : AutoBehaviour
+    public class Modal : AutoBehaviour, IReferrable
     {
 
         /// <summary>
@@ -210,6 +210,11 @@ namespace OpenGET.UI
         /// Reference to the root UI controller.
         /// </summary>
         private UIController ui;
+
+        /// <summary>
+        /// Public accessor for convenience.
+        /// </summary>
+        public UIController UI => ui;
 
         /// <summary>
         /// Modal popup parameters.
@@ -546,14 +551,8 @@ namespace OpenGET.UI
 
             // Setup all text
             // TODO: Localise text with IDs
-            if (title != null && !string.IsNullOrEmpty(data.title))
-            {
-                title = data.title;
-            }
-            if (!string.IsNullOrEmpty(data.description))
-            {
-                description = data.description;
-            }
+            title = data.title == null ? "" : data.title;
+            description = data.description == null ? "" : data.description;
 
             // TODO: Support images loaded from resources
         }

@@ -7,12 +7,34 @@
 		_FillTex("Fill Texture", 2D) = "white" {}
 		_FillColor("FillColor", Color) = (1, 1, 1, 1)
 		_FillAmount("Fill Amount", Range(0.0, 1.0)) = 0.75
+
+        _StencilComp ("Stencil Comparison", Float) = 8
+        _Stencil ("Stencil ID", Float) = 0
+        _StencilOp ("Stencil Operation", Float) = 0
+        _StencilWriteMask ("Stencil Write Mask", Float) = 255
+        _StencilReadMask ("Stencil Read Mask", Float) = 255
+
+		_ColorMask("Color Mask", Float) = 15
+
+		[Toggle(UNITY_UI_ALPHACLIP)] _UseUIAlphaClip("Use Alpha Clip", Float) = 0
     }
     SubShader
     {
+		Stencil
+        {
+            Ref [_Stencil]
+            Comp [_StencilComp]
+            Pass [_StencilOp]
+            ReadMask [_StencilReadMask]
+            WriteMask [_StencilWriteMask]
+        }
+
         // No culling or depth
-        Cull Off ZWrite Off ZTest Always
+        Cull Off
+		ZWrite Off
+		ZTest[unity_GUIZTestMode]
 		Blend SrcAlpha OneMinusSrcAlpha
+		ColorMask[_ColorMask]
 		
 		Tags { "Queue"="Transparent" }
 		
@@ -24,8 +46,11 @@
 			#pragma multi_compile VERTICAL_FILL_ON VERTICAL_FILL_OFF
 			#pragma multi_compile FLIP_FILL_OFF FLIP_FILL_ON
 			#pragma multi_compile GRAYSCALE_OFF GRAYSCALE_ON
+			#pragma multi_compile_local _ UNITY_UI_CLIP_RECT
+            #pragma multi_compile_local _ UNITY_UI_ALPHACLIP
 
             #include "UnityCG.cginc"
+            #include "UnityUI.cginc"
 			
             struct appdata
             {
@@ -37,12 +62,14 @@
             {
                 float2 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
+				float4 worldPosition : TEXCOORD1;
             };
 
             v2f vert (appdata v)
             {
                 v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
+				o.worldPosition = v.vertex;
+                o.vertex = UnityObjectToClipPos(o.worldPosition);
 				o.uv = v.uv;
                 return o;
             }
@@ -61,6 +88,9 @@
 
 			// Percentage filled
 			float _FillAmount;
+
+			// UI clipping rect
+			float4 _ClipRect;
 
 			fixed4 frag(v2f i) : SV_Target
 			{
@@ -83,6 +113,16 @@
 				else {
 					col = tex2D(_MainTex, i.uv) * _BaseColor;
 				}
+
+				
+               #ifdef UNITY_UI_CLIP_RECT
+                   col.a *= UnityGet2DClipping(i.worldPosition.xy, _ClipRect);
+               #endif
+
+               #ifdef UNITY_UI_ALPHACLIP
+                   clip(col.a - 0.001);
+               #endif
+
                 return col;
             }
             ENDCG
