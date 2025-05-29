@@ -115,6 +115,17 @@ namespace OpenGET.UI
             }
         }
 
+        public void UpdateState()
+        {
+            for (int i = 0, counti = tabs.Length; i < counti; i++)
+            {
+                if (tabs[i] != null)
+                {
+                    tabs[i].OnSwitch(index == i);
+                }
+            }
+        }
+
     }
 
 }

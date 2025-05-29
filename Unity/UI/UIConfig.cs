@@ -27,6 +27,11 @@ namespace OpenGET.UI
         /// </summary>
         public float MoveFocusCooldown = 0.2f;
 
+        /// <summary>
+        /// Fallback tooltip prefab to use if no custom tooltip is specified for use.
+        /// </summary>
+        public TooltipPanel fallbackTooltip;
+
     }
 
 }

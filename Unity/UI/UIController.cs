@@ -36,6 +36,12 @@ namespace OpenGET.UI
         [Tooltip("Recommended - This is the parent transform used for modal popups.")]
         public Transform modalsRoot;
 
+        [Tooltip("Recommended - This is the parent transform used for tooltips.")]
+        public Transform tooltipsRoot;
+
+        [Tooltip("Recommended - Shared tooltip used when no custom tooltip is specified.")]
+        public TooltipPanel tooltipShared;
+
         /// <summary>
         /// Current player input index.
         /// </summary>
@@ -53,6 +59,27 @@ namespace OpenGET.UI
             }
         }
         private int _currentPlayer = 0;
+
+        protected override void Awake()
+        {
+            base.Awake();
+
+            if (tooltipShared != null)
+            {
+                RectTransform root = (RectTransform)(tooltipsRoot != null ? tooltipsRoot : transform);
+                tooltipShared = Instantiate(tooltipShared, root);
+                tooltipShared.Init(this, root);
+            }
+        }
+
+        protected void OnDestroy()
+        {
+            if (tooltipShared != null)
+            {
+                Destroy(tooltipShared.gameObject);
+                tooltipShared = null;
+            }
+        }
 
         /// <summary>
         /// Cached reference to the current player input for this UI.

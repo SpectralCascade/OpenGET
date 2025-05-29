@@ -23,7 +23,7 @@ namespace OpenGET.UI
             public Sprite sprite;
 
             [Tooltip("For button animation transition.")]
-            public string anim;
+            public string animTrigger;
         }
 
         /// <summary>
@@ -32,6 +32,12 @@ namespace OpenGET.UI
         [Auto.NullCheck]
         [Auto.Hookup]
         public Button button;
+
+        /// <summary>
+        /// Animator associated with this tab, if any.
+        /// </summary>
+        [Auto.Hookup]
+        public Animator animator;
 
         /// <summary>
         /// Optional associated text.
@@ -149,8 +155,10 @@ namespace OpenGET.UI
                     };
                     break;
                 case Selectable.Transition.Animation:
-                    button.animationTriggers.normalTrigger = activated ? activatedState.anim : deactivatedState.anim;
-                    button.animationTriggers.selectedTrigger = activated ? activatedState.anim : deactivatedState.anim;
+                    if (animator != null)
+                    {
+                        animator.SetTrigger(activated ? activatedState.animTrigger : deactivatedState.animTrigger);
+                    }
                     break;
                 default:
                     break;
