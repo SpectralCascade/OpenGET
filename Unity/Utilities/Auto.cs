@@ -45,7 +45,7 @@ namespace OpenGET
         /// </summary>
         public static void Hookup(GameObject gameObject)
         {
-            MonoBehaviour[] all = gameObject.GetComponents<MonoBehaviour>();
+            Component[] all = gameObject.GetComponents<Component>();
             for (int i = 0, counti = all.Length; i < counti; i++)
             {
                 Hookup(all[i], true, true);
@@ -56,7 +56,7 @@ namespace OpenGET
         /// Automatically assign all component references to fields with AutoHook attributes.
         /// By default only checks non-inherited members but you can optionally include those.
         /// </summary>
-        public static void Hookup<T>(T obj, bool includeInherited = false, bool useDerivedType = false) where T : Behaviour
+        public static void Hookup<T>(T obj, bool includeInherited = false, bool useDerivedType = false) where T : Component
         {
 #if UNITY_EDITOR
             if (obj == null)
@@ -76,8 +76,9 @@ namespace OpenGET
             for (int i = 0, counti = fields.Length; i < counti; i++)
             {
                 System.Reflection.FieldInfo field = fields[i];
-                if (field.GetValue(obj) == null &&
-                    field.FieldType.IsSubclassOf(typeof(Behaviour)) &&
+
+                if ((field.GetValue(obj) as Component == null) &&
+                    field.FieldType.IsSubclassOf(typeof(Component)) &&
                     !field.IsNotSerialized
                 )
                 {
@@ -202,9 +203,9 @@ namespace OpenGET
                 )
                 {
                     bool isGameObject = objType == typeof(GameObject);
-                    bool isComponent = !isGameObject && objType.IsSubclassOf(typeof(MonoBehaviour));
+                    bool isComponent = !isGameObject && objType.IsSubclassOf(typeof(Component));
                     string message = "Missing " + field.FieldType.ToString() + " reference '" + field.Name + "' on instance of type " + field.DeclaringType.Name;
-                    GameObject target = isGameObject ? obj as GameObject : (isComponent ? (obj as MonoBehaviour).gameObject : null);
+                    GameObject target = isGameObject ? obj as GameObject : (isComponent ? (obj as Component).gameObject : null);
                     if (target != null)
                     {
                         message += string.Format(" at hierarchy path '{0}'", SceneNavigator.GetPath(target));
@@ -215,7 +216,7 @@ namespace OpenGET
                         message += " in instance of " + info.GetMethod()?.DeclaringType.FullName;
                     }
 
-                    Debug.Assert(field.GetValue(obj) != null, Log.PrefixStackInfo(Log.Format("red", message)), isComponent ? (Object)((obj as MonoBehaviour).gameObject) : obj);
+                    Debug.Assert(field.GetValue(obj) != null, Log.PrefixStackInfo(Log.Format("red", message)), isComponent ? (Object)((obj as Component).gameObject) : obj);
                 }
             }
         }

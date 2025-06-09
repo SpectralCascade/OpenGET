@@ -93,7 +93,7 @@ namespace OpenGET
             {
                 path = AssetDatabase.GUIDToAssetPath(found[i]);
                 UnityEngine.Object obj = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
-                if ((obj is GameObject && (obj = AssetDatabase.LoadAssetAtPath<Behaviour>(path)) is not IReferrable) || (obj is not Texture2D && obj is not IReferrable))
+                if (obj is not Texture2D && obj is not IReferrable && (obj is not GameObject || !((obj = AssetDatabase.LoadAssetAtPath<Behaviour>(path)) is IReferrable || (obj = AssetDatabase.LoadAssetAtPath<ParticleSystem>(path)) != null)))
                 {
                     continue;
                 }

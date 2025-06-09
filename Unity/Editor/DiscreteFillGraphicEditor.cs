@@ -12,8 +12,22 @@ namespace OpenGET.Editor.UI
     public class DiscreteFillGraphicEditor : UnityEditor.Editor
     {
 
-        public override void OnInspectorGUI() {            
+        SerializedObject obj = null;
+
+        public void OnEnable()
+        {
             DiscreteFillGraphic fill = (DiscreteFillGraphic)target;
+
+            obj = new SerializedObject(fill);
+        }
+
+        public override void OnInspectorGUI() {
+            DiscreteFillGraphic fill = (DiscreteFillGraphic)target;
+
+            if (obj == null || fill == null)
+            {
+                return;
+            }
 
             DiscreteFillGraphic.Type oldFillType = fill.type;
             fill.type = (DiscreteFillGraphic.Type)EditorGUILayout.EnumPopup("Fill Type:", fill.type);
@@ -26,7 +40,6 @@ namespace OpenGET.Editor.UI
             if (fill.type == DiscreteFillGraphic.Type.Image) {
                 // Unity doesn't provide the full inspector GUI API so work around with a serialised property instead
                 // for arrays.
-                SerializedObject obj = new SerializedObject(fill);
                 SerializedProperty propArray = obj.FindProperty("discreteImages");
                 if (propArray != null)
                 {

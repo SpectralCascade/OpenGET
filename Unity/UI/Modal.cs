@@ -209,12 +209,12 @@ namespace OpenGET.UI
         /// <summary>
         /// Reference to the root UI controller.
         /// </summary>
-        private UIController ui;
+        protected UIController _UI;
 
         /// <summary>
         /// Public accessor for convenience.
         /// </summary>
-        public UIController UI => ui;
+        public UIController UI => _UI;
 
         /// <summary>
         /// Modal popup parameters.
@@ -447,7 +447,7 @@ namespace OpenGET.UI
         /// </summary>
         private void Update()
         {
-            InputHelper.Player input = ui.input;
+            InputHelper.Player input = _UI.input;
             if (input.HasControl(gameObject))
             {
                 if (!string.IsNullOrEmpty(data.textPrimary) && input.HasControl(gameObject) && promptActionPrimary != null && promptActionPrimary.action.WasPressedThisFrame())
@@ -459,7 +459,7 @@ namespace OpenGET.UI
                     if (input.usingGamepad && promptFillSecondary != null)
                     {
                         holdSecondaryTime -= Time.unscaledDeltaTime;
-                        promptFillSecondary.fillAmount = holdSecondaryTime / ui.settings.ButtonHoldTime;
+                        promptFillSecondary.fillAmount = holdSecondaryTime / _UI.settings.ButtonHoldTime;
                     }
                     else
                     {
@@ -469,13 +469,13 @@ namespace OpenGET.UI
                     if (holdSecondaryTime <= 0)
                     {
                         OnSecondary();
-                        holdSecondaryTime = ui.settings.ButtonHoldTime;
+                        holdSecondaryTime = _UI.settings.ButtonHoldTime;
                     }
                 }
                 else
                 {
                     // Reset time to hold the secondary input
-                    holdSecondaryTime = ui.settings.ButtonHoldTime;
+                    holdSecondaryTime = _UI.settings.ButtonHoldTime;
                     if (promptFillSecondary != null)
                     {
                         promptFillSecondary.fillAmount = 1;
@@ -504,10 +504,10 @@ namespace OpenGET.UI
         /// <summary>
         /// Initialise the popup based on data parameters.
         /// </summary>
-        public void Init(Parameters data, UIController ui)
+        public virtual void Init(Parameters data, UIController ui)
         {
             this.data = data;
-            this.ui = ui;
+            this._UI = ui;
 
             // Setup buttons
             if (buttonClose != null)
@@ -583,7 +583,7 @@ namespace OpenGET.UI
         {
             if (data.takeInputControl)
             {
-                ui.input.FreeInputControl(gameObject);
+                _UI.input.FreeInputControl(gameObject);
             }
 
             for (int i = 0, counti = hints.Length; i < counti; i++)

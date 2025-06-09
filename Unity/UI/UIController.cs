@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using OpenGET.Input;
+using UnityEngine.UI;
 
 namespace OpenGET.UI
 {
@@ -42,6 +43,12 @@ namespace OpenGET.UI
         [Tooltip("Recommended - Shared tooltip used when no custom tooltip is specified.")]
         public TooltipPanel tooltipShared;
 
+        [Tooltip("Recommended - Required for setting scroll rect sensitivity via settings.")]
+        [SerializeField]
+        [Auto.NullCheck]
+        [Auto.Hookup]
+        protected List<ScrollRect> scrollRects = new List<ScrollRect>();
+
         /// <summary>
         /// Current player input index.
         /// </summary>
@@ -79,6 +86,13 @@ namespace OpenGET.UI
                 Destroy(tooltipShared.gameObject);
                 tooltipShared = null;
             }
+        }
+
+        /// <summary>
+        /// Update scrolling sensitivity on all UI.
+        /// </summary>
+        public virtual void UpdateScrollSensitivity()
+        {
         }
 
         /// <summary>

@@ -15,6 +15,7 @@ namespace OpenGET.UI {
         /// <summary>
         /// Discrete set of images to fill.
         /// </summary>
+        [Auto.NullCheck]
         public Image[] discreteImages = new Image[0];
 
         /// <summary>
@@ -40,17 +41,20 @@ namespace OpenGET.UI {
             set { _fill = count > 0 ? (float)Mathf.Clamp(value, 0, count) / count : 0; }
         }
 
+        /// <summary>
+        /// Shorthand for setting discrete value.
+        /// </summary>
+        public void SetValueDiscrete(int v)
+        {
+            discreteFill = v;
+            SetValue(_fill);
+        }
+
         public override void SetValue(float v)
         {
             _fill = Mathf.Clamp01(v);
             bool flip = isFlipped;
-            int fillValue = 0;
-            for (
-                int i = flip ? count - 1 : 0, counti = flip ? 0 : count;
-                flip ? i >= 0 : i < counti;
-                i = flip ? i - 1 : i + 1
-            )
-            
+            for (int i = flip ? count - 1 : 0, counti = flip ? 0 : count; flip ? i >= 0 : i < counti; i = flip ? i - 1 : i + 1)
             {
                 if (discreteImages[i] != null)
                 {
@@ -61,8 +65,8 @@ namespace OpenGET.UI {
                     }
                     else
                     {
-                        discreteImages[i].sprite = discreteFill > fillValue ? fillSprite : baseSprite;
-                        discreteImages[i].color = discreteFill > fillValue ? fillColor : baseColor;
+                        discreteImages[i].sprite = discreteFill > i ? fillSprite : baseSprite;
+                        discreteImages[i].color = discreteFill > i ? fillColor : baseColor;
                     }
                 }
             }

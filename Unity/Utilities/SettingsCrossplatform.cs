@@ -173,6 +173,13 @@ namespace OpenGET.Bootstrap
                 name: () => "Mouse Sensitivity",
                 desc: () => "Multiplies the distance travelled by mouse inputs."
             );
+
+            [Slider]
+            public Setting<float> scrollSensitivity = new Setting<float>(
+                0.5f,
+                name: () => "Scoll Sensitivity",
+                desc: () => "How much content moves when scrolling."
+            );
 #endif
 
         }
