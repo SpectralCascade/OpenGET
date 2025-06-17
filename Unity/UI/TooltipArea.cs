@@ -79,6 +79,11 @@ namespace OpenGET.UI
 
         public void OnPointerMove(PointerEventData eventData)
         {
+            UpdatePosition();
+        }
+
+        public void UpdatePosition()
+        {
             tooltip.SetPosition(Pointer.current.position.ReadValue() + new Vector2(32, -32));
         }
 
@@ -92,8 +97,11 @@ namespace OpenGET.UI
 
         public void ShowTooltip()
         {
-            tooltip.SetText(Localise.Text(text));
-            tooltip.SetPosition(Pointer.current.position.ReadValue() + new Vector2(32, 32));
+            if (!string.IsNullOrEmpty(text))
+            {
+                tooltip.SetText(Localise.Text(text));
+            }
+            UpdatePosition();
             tooltip.Show(0);
         }
 

@@ -92,12 +92,35 @@ namespace OpenGET
             for (int i = 0, counti = found.Length; i < counti; i++)
             {
                 path = AssetDatabase.GUIDToAssetPath(found[i]);
-                UnityEngine.Object obj = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
-                if (obj is not Texture2D && obj is not IReferrable && (obj is not GameObject || !((obj = AssetDatabase.LoadAssetAtPath<Behaviour>(path)) is IReferrable || (obj = AssetDatabase.LoadAssetAtPath<ParticleSystem>(path)) != null)))
+                UnityEngine.Object original = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
+                UnityEngine.Object obj = original;
+
+                // Additional asset types that should be referrable
+                Type[] extraAssetTypes = new Type[] { typeof(Texture2D), typeof(AudioClip) };
+
+                Type objType = obj.GetType();
+                Type assetType = extraAssetTypes.FirstOrDefault(x => objType == x || objType.IsSubclassOf(x));
+
+                // Insert prefab types you want here; make sure the given component is the first in the list in the prefab inspector
+                Type[] prefabTypes = new Type[] { typeof(ParticleSystem) };
+
+                Type prefabType = obj is GameObject && (
+                    prefabTypes.FirstOrDefault(
+                        x => (obj = AssetDatabase.LoadAssetAtPath(path, x)) != null
+                    ) != null
+                ) ? obj.GetType() : (obj = ((AssetDatabase.LoadAssetAtPath<Behaviour>(path) as IReferrable) as Behaviour))?.GetType();
+
+                if (obj == null)
+                {
+                    obj = original;
+                }
+
+                if (prefabType == null && assetType == null && obj is not IReferrable)
                 {
                     continue;
                 }
-                if (obj is Texture2D && (obj = AssetDatabase.LoadAssetAtPath<Sprite>(path)) == null) {
+                if (assetType != null && (obj = AssetDatabase.LoadAssetAtPath(path, assetType == typeof(Texture2D) ? typeof(Sprite) : assetType)) == null)
+                {
                     continue;
                 }
                 path = path.Substring(path.ToLowerInvariant().IndexOf("resources/") + "resources/".Length);
