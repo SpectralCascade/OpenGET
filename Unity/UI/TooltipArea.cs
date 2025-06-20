@@ -1,6 +1,8 @@
+using Codice.Client.BaseCommands.CheckIn;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
@@ -13,6 +15,14 @@ namespace OpenGET.UI
     [RequireComponent(typeof(EventTrigger))]
     public class TooltipArea : AccessUI, IPointerEnterHandler, IPointerExitHandler, IPointerMoveHandler
     {
+        /// <summary>
+        /// Implement this interface to set dynamic text on a tooltip.
+        /// </summary>
+        public interface ITooltip
+        {
+            public string GetTooltip();
+        }
+
         [Tooltip("Optional custom tooltip prefab to use. If null, a default tooltip is used from UI settings.")]
         public TooltipPanel prefab = null;
 
@@ -35,6 +45,12 @@ namespace OpenGET.UI
         [Tooltip("Unlocalised (raw english) text string to show in the tooltip")]
         [TextArea]
         public string text = "";
+
+        /// <summary>
+        /// Hook up a dynamic tooltip.
+        /// </summary>
+        [System.NonSerialized]
+        public ITooltip custom = null;
 
         protected override void Awake()
         {
@@ -79,12 +95,21 @@ namespace OpenGET.UI
 
         public void OnPointerMove(PointerEventData eventData)
         {
-            UpdatePosition();
+            UpdateTooltip();
         }
 
-        public void UpdatePosition()
+        public void UpdateTooltip()
         {
             tooltip.SetPosition(Pointer.current.position.ReadValue() + new Vector2(32, -32));
+
+            if (custom != null)
+            {
+                string customText = custom.GetTooltip();
+                if (!string.IsNullOrEmpty(customText))
+                {
+                    SetTooltipText(customText);
+                }
+            }
         }
 
         public void OnPointerExit(PointerEventData eventData)
@@ -101,7 +126,7 @@ namespace OpenGET.UI
             {
                 tooltip.SetText(Localise.Text(text));
             }
-            UpdatePosition();
+            UpdateTooltip();
             tooltip.Show(0);
         }
 

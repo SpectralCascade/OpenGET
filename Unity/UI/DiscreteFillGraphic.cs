@@ -60,13 +60,15 @@ namespace OpenGET.UI {
                 {
                     if (type == Type.Sprite)
                     {
-                        discreteSpriteRenderers[i].sprite = discreteFill >= i ? fillSprite : baseSprite;
-                        discreteSpriteRenderers[i].color = discreteFill >= i ? fillColor : baseColor;
+                        bool showFill = flip ? count - discreteFill < i : discreteFill >= i;
+                        discreteSpriteRenderers[i].sprite = showFill ? fillSprite : baseSprite;
+                        discreteSpriteRenderers[i].color = showFill ? fillColor : baseColor;
                     }
                     else
                     {
-                        discreteImages[i].sprite = discreteFill > i ? fillSprite : baseSprite;
-                        discreteImages[i].color = discreteFill > i ? fillColor : baseColor;
+                        bool showFill = flip ? count - discreteFill <= i : discreteFill > i;
+                        discreteImages[i].sprite = showFill ? fillSprite : baseSprite;
+                        discreteImages[i].color = showFill ? fillColor : baseColor;
                     }
                 }
             }
