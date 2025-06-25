@@ -15,13 +15,13 @@ namespace OpenGET.UI
         /// Bounding rect transform.
         /// </summary>
         [Auto.NullCheck]
-        [Auto.Hookup(Auto.Mode.Self)]
         public RectTransform rect;
 
         /// <summary>
         /// RectTransform containing the panel contents.
         /// </summary>
         [Auto.NullCheck]
+        [Auto.Hookup(Auto.Mode.Self)]
         public RectTransform content;
 
         /// <summary>

@@ -89,7 +89,7 @@ namespace OpenGET.UI
 
                     Vector3 direction = new Vector3(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad), 0);
 
-                    float t = i / (counti - 1f);
+                    float t = counti <= 1 ? 0 : i / (counti - 1f);
                     float radius = Mathf.Lerp(radiusMin, radiusMax, t);
                     // TODO: Pad should affect width/height of rect transform
                     child.localPosition = (direction * radius) + new Vector3(m_Padding.left - m_Padding.right, m_Padding.bottom - m_Padding.top, 0);
