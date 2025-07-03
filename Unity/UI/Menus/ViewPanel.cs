@@ -69,7 +69,7 @@ namespace OpenGET.UI {
         /// </summary>
         [SerializeField]
         [Auto.Hookup(Auto.Mode.Self)]
-        protected Animator animator;
+        protected Animator faderAnimator;
 
         /// <summary>
         /// Animator show state id.
@@ -118,11 +118,11 @@ namespace OpenGET.UI {
                     if (Application.isPlaying)
                     {
                         // Set initialisation state
-                        if (animator != null)
+                        if (faderAnimator != null)
                         {
                             // Use the animator by default
-                            animator.speed = 0;
-                            animator.Play(animHashShow, animLayer, startShown ? 1 : 0);
+                            faderAnimator.speed = 0;
+                            faderAnimator.Play(animHashShow, animLayer, startShown ? 1 : 0);
                         }
                         else if (canvasGroup != null)
                         {
@@ -130,7 +130,7 @@ namespace OpenGET.UI {
                             canvasGroup.alpha = startShown ? 1 : 0;
                         }
                     }
-                    _fader = animator != null ? new Fader(animator, animHashShow, animLayer) : new Fader(canvasGroup);
+                    _fader = faderAnimator != null ? new Fader(faderAnimator, animHashShow, animLayer) : new Fader(canvasGroup);
                     _fader.OnFadeComplete += OnFaded;
                 }
                 return _fader;
