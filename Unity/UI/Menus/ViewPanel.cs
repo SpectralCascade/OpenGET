@@ -68,7 +68,6 @@ namespace OpenGET.UI {
         /// Optional animator to use instead of the canvas group for fading.
         /// </summary>
         [SerializeField]
-        [Auto.Hookup(Auto.Mode.Self)]
         protected Animator faderAnimator;
 
         /// <summary>
