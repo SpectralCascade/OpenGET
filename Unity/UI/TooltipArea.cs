@@ -1,4 +1,3 @@
-using Codice.Client.BaseCommands.CheckIn;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -108,6 +107,11 @@ namespace OpenGET.UI
                 if (!string.IsNullOrEmpty(customText))
                 {
                     SetTooltipText(customText);
+                }
+                else
+                {
+                    // Hide
+                    HideTooltip();
                 }
             }
         }

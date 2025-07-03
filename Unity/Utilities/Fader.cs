@@ -19,7 +19,7 @@ namespace OpenGET
         /// <summary>
         /// Reference to the fader implementation.
         /// </summary>
-        private IPercentValue implementation;
+        public IPercentValue implementation { get; private set; }
 
         /// <summary>
         /// Current fade coroutine.
@@ -62,6 +62,15 @@ namespace OpenGET
         /// </summary>
         public Fader(IColorFadeable colorFader, bool useUnscaledTime = true) {
             implementation = new ColorFader(colorFader);
+            this.useUnscaledTime = useUnscaledTime;
+        }
+
+        /// <summary>
+        /// Use custom Animator implementation.
+        /// </summary>
+        public Fader(Animator animator, int startHash, int layer = 0, bool useUnscaledTime = true)
+        {
+            implementation = new AnimatorFader(animator, startHash, layer);
             this.useUnscaledTime = useUnscaledTime;
         }
 
@@ -297,4 +306,52 @@ namespace OpenGET
         }
     }
 
+    /// <summary>
+    /// Fader implementation for animators.
+    /// </summary>
+    public class AnimatorFader : IPercentValue
+    {
+
+        private readonly Animator animator;
+
+        /// <summary>
+        /// Hash of the animation state id.
+        /// </summary>
+        private int animHash;
+
+        /// <summary>
+        /// Custom layer, if any.
+        /// </summary>
+        private int layer = 0;
+
+        public AnimatorFader(Animator animator, int startAnimHash, int layer = 0)
+        {
+            // Setup animator with a speed of zero, so that we can manually step through frames
+            this.animator = animator;
+            animator.speed = 0;
+
+            animHash = startAnimHash;
+            this.layer = layer;
+        }
+
+        public void SetAnim(int hash, int layer = 0)
+        {
+            this.animHash = hash;
+            this.layer = layer;
+        }
+
+        public float GetValue()
+        {
+            return animator != null ? animator.GetCurrentAnimatorStateInfo(0).normalizedTime : 0;
+        }
+
+        public void SetValue(float v)
+        {
+            if (animator != null)
+            {
+                animator.Play(animHash, layer, v);
+            }
+        }
+
+    }
 }

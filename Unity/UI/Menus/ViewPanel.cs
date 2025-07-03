@@ -57,12 +57,40 @@ namespace OpenGET.UI {
             }
         }
         /// <summary>
-        /// Canvas group used for fading.
+        /// Canvas group, used as a fader fallback when no animator is present.
+        /// </summary>
+        [SerializeField]
+        [Auto.NullCheck]
+        [Auto.Hookup(Auto.Mode.Self)]
+        protected CanvasGroup canvasGroup;
+
+        /// <summary>
+        /// Optional animator to use instead of the canvas group for fading.
         /// </summary>
         [SerializeField]
         [Auto.Hookup(Auto.Mode.Self)]
-        [Auto.NullCheck]
-        protected CanvasGroup canvasGroup;
+        protected Animator animator;
+
+        /// <summary>
+        /// Animator show state id.
+        /// </summary>
+        [SerializeField]
+        protected string animShowState = "Show";
+
+        /// <summary>
+        /// Animator hide state id.
+        /// </summary>
+        [SerializeField]
+        protected string animHideState = "Hide";
+
+        /// <summary>
+        /// Animator layer for show/hide states.
+        /// </summary>
+        [SerializeField]
+        protected int animLayer = 0;
+
+        private int animHashShow => Animator.StringToHash(animShowState);
+        private int animHashHide => Animator.StringToHash(animHideState);
 
         /// <summary>
         /// The button used to go back to the previous screen, if relevant. May be null.
@@ -89,10 +117,20 @@ namespace OpenGET.UI {
                 {
                     if (Application.isPlaying)
                     {
-                        // Make sure panel is in correct state to begin
-                        canvasGroup.alpha = startShown ? 1 : 0;
+                        // Set initialisation state
+                        if (animator != null)
+                        {
+                            // Use the animator by default
+                            animator.speed = 0;
+                            animator.Play(animHashShow, animLayer, startShown ? 1 : 0);
+                        }
+                        else if (canvasGroup != null)
+                        {
+                            // If no animator, use the canvas group as a fallback
+                            canvasGroup.alpha = startShown ? 1 : 0;
+                        }
                     }
-                    _fader = new Fader(canvasGroup);
+                    _fader = animator != null ? new Fader(animator, animHashShow, animLayer) : new Fader(canvasGroup);
                     _fader.OnFadeComplete += OnFaded;
                 }
                 return _fader;
@@ -181,6 +219,10 @@ namespace OpenGET.UI {
                     // Also worth considering effects on Update() methods in children
                     gameObject.SetActive(true);
                     OnWillShow();
+                    if (fader.implementation is AnimatorFader animFader)
+                    {
+                        animFader.SetAnim(animHashShow);
+                    }
                     fader.FadeIn(fadeTime);
                 }
             }
@@ -189,6 +231,10 @@ namespace OpenGET.UI {
                 if (!fader.isFadingOut)
                 {
                     OnWillHide();
+                    if (fader.implementation is AnimatorFader animFader)
+                    {
+                        animFader.SetAnim(animHashShow);
+                    }
                     fader.FadeOut(fadeTime);
                 }
             }

@@ -31,6 +31,9 @@ namespace OpenGET.UI
         [Range(0f, 360f)]
         public float angleMax = 0f;
 
+        [Tooltip("Centre the layout on the start angle.")]
+        public bool centerOnStartAngle = false;
+
         protected override void OnEnable() {
             base.OnEnable();
             CalculateRadial();
@@ -72,8 +75,10 @@ namespace OpenGET.UI
             }
 
             float angleOffset = ((angleMax - angleMin)) / (transform.childCount - 1);
+            float angleChange = angleOffset < 0 ? Mathf.Max(angleOffset, -spreadAngleMax) : Mathf.Min(angleOffset, spreadAngleMax);
+            float angleEnd = angleChange * (transform.childCount - 1);
 
-            float angle = angleStart;
+            float angle = centerOnStartAngle ? angleStart - (angleEnd * 0.5f) : angleStart;
             for (int i = 0, counti = transform.childCount; i < counti; i++)
             {
                 RectTransform child = (RectTransform)transform.GetChild(i);
@@ -96,7 +101,7 @@ namespace OpenGET.UI
 
                     // Force objects to be center aligned, this can be changed however I'd suggest you keep all of the objects with the same anchor points.
                     child.anchorMin = child.anchorMax = child.pivot = new Vector2(0.5f, 0.5f);
-                    angle += angleOffset < 0 ? Mathf.Max(angleOffset, -spreadAngleMax) : Mathf.Min(angleOffset, spreadAngleMax);
+                    angle += angleChange;
                 }
             }
 
