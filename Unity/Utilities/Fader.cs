@@ -347,7 +347,7 @@ namespace OpenGET
 
         public void SetValue(float v)
         {
-            if (animator != null)
+            if (animator != null && animator.gameObject.activeInHierarchy)
             {
                 animator.Play(animHash, layer, v);
             }

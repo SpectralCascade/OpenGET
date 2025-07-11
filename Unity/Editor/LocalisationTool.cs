@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 using System.Linq;
 using System.Text.RegularExpressions;
+using OpenGET.UI;
 
 namespace OpenGET
 {
@@ -288,23 +289,23 @@ namespace OpenGET
 
             root.Add(button);
 
-            if (false)
-            {
-                button = new Button(() => ScrapeCode());
-                button.name = "ScrapeCode";
-                button.text = "Extract strings from scripts";
-                root.Add(button);
+            //if (false)
+            //{
+            //    button = new Button(() => ScrapeCode());
+            //    button.name = "ScrapeCode";
+            //    button.text = "Extract strings from scripts";
+            //    root.Add(button);
 
-                button = new Button(() => ScrapeScenes());
-                button.name = "ScrapeScenes";
-                button.text = "Extract strings from scenes";
-                root.Add(button);
+            //    button = new Button(() => ScrapeScenes());
+            //    button.name = "ScrapeScenes";
+            //    button.text = "Extract strings from scenes";
+            //    root.Add(button);
 
-                button = new Button(() => ScrapePrefabs());
-                button.name = "ScrapePrefabs";
-                button.text = "Extract strings from prefabs";
-                root.Add(button);
-            }
+            //    button = new Button(() => ScrapePrefabs());
+            //    button.name = "ScrapePrefabs";
+            //    button.text = "Extract strings from prefabs";
+            //    root.Add(button);
+            //}
 
             button = new Button(() => {
                 ScrapeCode();
@@ -589,7 +590,7 @@ namespace OpenGET
         /// </summary>
         public List<ExportData> ScrapeHierarchy(GameObject root, ExportData.SourceType type)
         {
-            LocalisedText[] allText = root.GetComponentsInChildren<LocalisedText>(true);
+            TextFormatter[] allText = root.GetComponentsInChildren<LocalisedText>(true).Select(x => x.GetComponent<TextFormatter>()).ToArray();
             List<ExportData> exported = new List<ExportData>();
             for (int i = 0, counti = allText.Length; i < counti; i++)
             {

@@ -1,7 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 
 namespace OpenGET.Input
 {
@@ -30,6 +33,16 @@ namespace OpenGET.Input
         /// </summary>
         public class Player
         {
+            /// <summary>
+            /// Specifies what to display for a given input prompt.
+            /// </summary>
+            [System.Flags]
+            public enum InputPromptMode
+            {
+                Text = 1,
+                Sprite = 2
+            }
+
             public Player()
             {
                 // Remains invalid until an index has been assigned
@@ -103,11 +116,14 @@ namespace OpenGET.Input
                     {
                         case UnityEngine.InputSystem.InputDeviceChange.Added:
                         case UnityEngine.InputSystem.InputDeviceChange.Reconnected:
+                            _previousInputDevice = device != _activeInputDevice ? _activeInputDevice : _previousInputDevice;
+                            _activeInputDevice = device;
                             UpdateGamepadStatus(true);
                             break;
                         case UnityEngine.InputSystem.InputDeviceChange.Removed:
                         case UnityEngine.InputSystem.InputDeviceChange.Disconnected:
                         default:
+                            _activeInputDevice = _previousInputDevice;
                             UpdateGamepadStatus(false);
                             break;
                     }
@@ -127,6 +143,93 @@ namespace OpenGET.Input
                     this.index = -1;
                 }
             }
+
+            /// <summary>
+            /// Get an input prompt string for an input action based on the current active control scheme.
+            /// Optionally specify the name of a specific TMPro sprite sheet containing your input prompt glyphs.
+            /// </summary>
+            public string GetActionPrompt(InputAction action, InputPromptMode mode = InputPromptMode.Text | InputPromptMode.Sprite, string promptsAsset = "", InputBinding.DisplayStringOptions displayOptions = 0)
+            {
+                string sprites = "";
+
+                for (int i = 0, counti = action.bindings.Count; i < counti; i++)
+                {
+                    InputBinding binding = action.bindings[i];
+                    if (binding.groups.Contains(controlScheme) && !binding.isComposite)
+                    {
+                        TMP_SpriteAsset found = null;
+                        if ((mode & InputPromptMode.Sprite) != 0)
+                        {
+                            // Locate sprite sheet
+                            if (string.IsNullOrEmpty(promptsAsset) || !MaterialReferenceManager.TryGetSpriteAsset(TMP_TextUtilities.GetHashCode(promptsAsset), out found))
+                            {
+                                found = TMP_Settings.GetSpriteAsset();
+                            }
+
+                            // Search sprite sheet
+                            if (found != null)
+                            {
+                                found = TMP_SpriteAsset.SearchForSpriteByHashCode(
+                                    found,
+                                    TMP_TextUtilities.GetHashCode(binding.path),
+                                    false,
+                                    out int index
+                                );
+
+                                if (index < 0 || TMP_SpriteAsset.SearchForSpriteByUnicode(TMP_Settings.GetSpriteAsset(), 0, false, out index) == found)
+                                {
+                                    found = null;
+                                }
+                            }
+                            
+                            if (found == null)
+                            {
+                                Log.Warning("Failed to locate prompt sprite \"{0}\"", binding.path);
+                            }
+                        }
+
+                        string sprite = found == null ? "" : $"<sprite{(!string.IsNullOrEmpty(promptsAsset) ? $"=\"{promptsAsset}\"" : "")} name=\"{binding.path}\">";
+                        string actionPrompt = "";
+
+                        if ((mode & InputPromptMode.Text) == 0)
+                        {
+                            actionPrompt = sprite;
+                        }
+                        else {
+                            // Get a text display string using Unity's built-in method
+                            string bindString = action.GetBindingDisplayString(
+                                i,
+                                out string deviceLayoutName,
+                                out string controlPath,
+                                displayOptions
+                            );
+                            actionPrompt = ((mode & InputPromptMode.Sprite) == 0) ? bindString
+                                : string.Concat(bindString + (string.IsNullOrEmpty(bindString) || string.IsNullOrEmpty(sprite) ? "" : " "), sprite);
+                        }
+
+                        // Show all bindings for the current control scheme, including all parts of composites, but not the composite itself
+                        sprites = !string.IsNullOrEmpty(sprites) ? string.Join(
+                            "/",
+                            sprites,
+                            actionPrompt
+                        ) : actionPrompt;
+                    }
+                }
+
+                return sprites;
+            }
+
+            /// <summary>
+            /// Last activated input device associated with this player. Input prompts for that player are based on this device.
+            /// </summary>
+            public InputDevice activeInputDevice => _activeInputDevice;
+            private InputDevice _activeInputDevice = null;
+            private InputDevice _previousInputDevice = null;
+
+            /// <summary>
+            /// Get the control scheme for this player.
+            /// </summary>
+            public string controlScheme => PlayerInput.GetPlayerByIndex(index).currentControlScheme;
 
             /// <summary>
             /// Index of this player.

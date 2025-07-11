@@ -86,6 +86,21 @@ namespace OpenGET
             public Log.Level level = Log.Level.All;
         }
 
+        [System.Serializable]
+        public class AssetReferenceGenerator
+        {
+            [Tooltip("Include specific asset types in addition to IReferrable implementations. IMPORTANT: Use fully-qualified type names.")]
+            public string[] includeAssetTypes = new string[] {
+                "UnityEngine.Sprite",
+                "UnityEngine.AudioClip"
+            };
+
+            [Tooltip("Include specific prefab types in addition to IReferrable implementations. IMPORTANT: Use fully-qualified type names.")]
+            public string[] includePrefabTypes = new string[] {
+                "UnityEngine.ParticleSystem"
+            };
+        }
+
         /// <summary>
         /// Find and load (or create) an EditorConfig instance.
         /// </summary>
@@ -216,6 +231,11 @@ namespace OpenGET
         /// Tooling data for rendering a prefab to a 2D sprite.
         /// </summary>
         public PrefabToSprite prefabToSprite;
+
+        /// <summary>
+        /// Asset reference generator settings.
+        /// </summary>
+        public AssetReferenceGenerator assetReferenceGenerator;
 
     }
 

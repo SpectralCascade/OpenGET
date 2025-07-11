@@ -5,8 +5,7 @@ using UnityEngine;
 using System.IO;
 using System.Linq;
 using System;
-using Unity.VisualScripting;
-using JetBrains.Annotations;
+using System.Reflection;
 
 namespace OpenGET
 {
@@ -95,18 +94,54 @@ namespace OpenGET
                 UnityEngine.Object original = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
                 UnityEngine.Object obj = original;
 
-                // Additional asset types that should be referrable
-                Type[] extraAssetTypes = new Type[] { typeof(Texture2D), typeof(AudioClip) };
+                // Additional asset types that should be referrable, typically built-in or third-party types not implementing IReferrable
+                string[] extraAssetTypes = EditorConfig.Instance.assetReferenceGenerator.includeAssetTypes;
 
+                // Search all assemblies. Make sure to use fully-qualified type names.
+                Assembly[] assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
+                Type GetType(string fullName)
+                {
+                    Type found = null;
+                    for (int i = 0, counti = assemblies.Length; i < counti; i++)
+                    {
+                        found = assemblies[i].GetType(fullName);
+                        if (found != null)
+                        {
+                            break;
+                        }
+                    }
+                    return found;
+                }
+
+                // Determine whether the object is a valid asset type and if so, what type to use
+                // This does some custom handling for sprites as they are loaded as Texture2D by default
                 Type objType = obj.GetType();
-                Type assetType = extraAssetTypes.FirstOrDefault(x => objType == x || objType.IsSubclassOf(x));
-
-                // Insert prefab types you want here; make sure the given component is the first in the list in the prefab inspector
-                Type[] prefabTypes = new Type[] { typeof(ParticleSystem) };
+                string expectedTypeName = extraAssetTypes.FirstOrDefault(
+                    x => {
+                        Type type = GetType(x);
+                        if (type == null)
+                        {
+                            Log.Error("Attempt to validate type \"{0}\" failed! Are you using fully-qualified type names?", x);
+                        }
+                        return type != null && (x.Contains(objType.FullName) || objType.IsSubclassOf(type));
+                    }
+                );
+                Type assetType = 
+                    (objType == typeof(Texture2D) && 
+                    (TextureImporter.GetAtPath(path) as TextureImporter).textureType == TextureImporterType.Sprite &&
+                    extraAssetTypes.FirstOrDefault(x => x.Contains(typeof(Sprite).FullName)) != null
+                    ? typeof(Sprite) : (!string.IsNullOrEmpty(expectedTypeName) ? GetType(expectedTypeName) : null)
+                );
+                // Make sure the component of the type you want is the first in the list in the prefab inspector,
+                // or this code won't find it
+                string[] prefabTypes = EditorConfig.Instance.assetReferenceGenerator.includePrefabTypes;
 
                 Type prefabType = obj is GameObject && (
                     prefabTypes.FirstOrDefault(
-                        x => (obj = AssetDatabase.LoadAssetAtPath(path, x)) != null
+                        x => {
+                            Type type = GetType(x);
+                            return type != null && (obj = AssetDatabase.LoadAssetAtPath(path, type)) != null;
+                        }
                     ) != null
                 ) ? obj.GetType() : (obj = ((AssetDatabase.LoadAssetAtPath<Behaviour>(path) as IReferrable) as Behaviour))?.GetType();
 
@@ -119,7 +154,7 @@ namespace OpenGET
                 {
                     continue;
                 }
-                if (assetType != null && (obj = AssetDatabase.LoadAssetAtPath(path, assetType == typeof(Texture2D) ? typeof(Sprite) : assetType)) == null)
+                if (assetType != null && (obj = AssetDatabase.LoadAssetAtPath(path, assetType)) == null)
                 {
                     continue;
                 }

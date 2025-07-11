@@ -36,7 +36,7 @@ namespace OpenGET
         [TextArea]
         public string description = "";
 
-        [Tooltip("Allow imprecise lookups (i.e. case insensitive)")]
+        [Tooltip("[Currently unused] Allow imprecise lookups (i.e. case insensitive)")]
         public bool impreciseLookup = true;
 
         private string GetString(string text)

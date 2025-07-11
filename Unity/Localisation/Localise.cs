@@ -1,6 +1,8 @@
-﻿using System;
+﻿using OpenGET.UI;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEngine;
 
@@ -114,12 +116,12 @@ namespace OpenGET
                 Localise.language = language;
 
                 /// Find all enabled LocalisedText components and update their text.
-                LocalisedText[] allText = GameObject.FindObjectsOfType<LocalisedText>();
+                TextFormatter[] allText = GameObject.FindObjectsOfType<LocalisedText>().Select(x => x.GetComponent<TextFormatter>()).ToArray();
                 for (int i = 0, counti = allText.Length; i < counti; i++)
                 {
                     if (allText[i].enabled)
                     {
-                        allText[i].AutoLocalise();
+                        allText[i].AutoFormat();
                     }
                 }
             }
