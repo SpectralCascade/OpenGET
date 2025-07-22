@@ -155,6 +155,15 @@ namespace OpenGET.Bootstrap
         public class Input
         {
             /// <summary>
+            /// Force text to be shown alongside glyphs when displaying input prompts.
+            /// </summary>
+            public Setting<bool> alwaysDisplayPromptText = new Setting<bool>(
+                false,
+                name: () => "Always Display Text for Input Prompts",
+                desc: () => "When enabled, the name of input bindings associated with an input prompt are always displayed alongside the icon."
+            );
+
+            /// <summary>
             /// Invert Y-axis mouse (or joystick) look.
             /// </summary>
             public Setting<bool> invertLookY = new Setting<bool>(

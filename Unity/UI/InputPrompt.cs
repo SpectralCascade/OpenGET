@@ -46,21 +46,16 @@ namespace OpenGET.UI {
         public string delimiter = " ";
 
         /// <summary>
-        /// Whether to wrap the prompt in [] brackets or not.
-        /// </summary>
-        public bool wrapBrackets = false;
-
-        /// <summary>
         /// Automatically append or prepend the input prompt.
         /// </summary>
         public override string OnTextAutoFormat(string text)
         {
-            string prompt = (wrapBrackets ? "[" : "") + InputHelper.Get(0).GetActionPrompt(
+            string prompt = InputHelper.Get(0).GetActionPrompt(
                 action.action,
                 out Sprite glyph,
                 out string deviceLayoutName,
                 out string controlPath
-            ) + (wrapBrackets ? "]" : "");
+            );
             
             if (glyph != null && icon != null)
             {

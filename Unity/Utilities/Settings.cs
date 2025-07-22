@@ -357,6 +357,7 @@ namespace OpenGET
                 // Copy settings to indicate they have been applied.
                 applied.CopyIn(shared);
             }
+            applied.OnApply();
 
             return changed;
         }
@@ -405,6 +406,13 @@ namespace OpenGET
         /// Called when settings are about to be applied after being loaded for the first time.
         /// </summary>
         protected virtual void OnLoad()
+        {
+        }
+
+        /// <summary>
+        /// Called every time settings are applied (regardless of any changes).
+        /// </summary>
+        protected virtual void OnApply()
         {
         }
 

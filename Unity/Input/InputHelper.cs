@@ -28,6 +28,13 @@ namespace OpenGET.Input
             /// Sprite name prefix to use when looking up sprites in the associated sprite atlas.
             /// </summary>
             public string prefix;
+
+            /// <summary>
+            /// The text format to display for this layout. If blank, no text will be displayed!
+            /// Set to "{0}" for inserting without any formatting.
+            /// See string.Format() for formatting rules; only the display string is used as an argument.
+            /// </summary>
+            public string displayFormat;
         }
 
         /// <summary>
@@ -208,6 +215,7 @@ namespace OpenGET.Input
                             displayOptions
                         );
                         string spriteName = binding.path;
+                        string textDisplayFormat = "{0}";
 
                         // Map device layout name to TMPro sprite asset, matching in first-last order.
                         for (int mapIndex = 0, mapCount = spriteMaps.Count; mapIndex < mapCount; mapIndex++)
@@ -216,6 +224,7 @@ namespace OpenGET.Input
                             if (deviceLayoutName == spriteMaps[mapIndex].layoutName || InputSystem.IsFirstLayoutBasedOnSecond(deviceLayoutName, spriteMaps[mapIndex].layoutName))
                             {
                                 promptsAsset = spriteMaps[mapIndex].spriteAtlas;
+                                textDisplayFormat = spriteMaps[mapIndex].displayFormat;
                                 spriteName = (spriteMaps[mapIndex].prefix ?? "") + controlPath;
                                 break;
                             }
@@ -259,8 +268,14 @@ namespace OpenGET.Input
                             actionPrompt = sprite;
                         }
                         else {
-                            actionPrompt = ((mode & InputPromptMode.Sprite) == 0) ? bindString
-                                : string.Concat(bindString + (string.IsNullOrEmpty(bindString) || string.IsNullOrEmpty(sprite) ? "" : " "), sprite);
+                            actionPrompt = (((mode & InputPromptMode.Sprite) == 0) ? bindString
+                                : string.Concat(
+                                    (!string.IsNullOrEmpty(bindString) && promptsAsset != null ? 
+                                        (string.IsNullOrEmpty(textDisplayFormat) ? "" : string.Format(textDisplayFormat, bindString)) : bindString) 
+                                    + (string.IsNullOrEmpty(bindString) || string.IsNullOrEmpty(sprite) ? "" : " "),
+                                    sprite
+                                )
+                            );
                         }
 
                         if (found != null && !string.IsNullOrEmpty(spriteName) && (mode & InputPromptMode.Sprite) != 0)
@@ -282,6 +297,8 @@ namespace OpenGET.Input
                             sprites,
                             actionPrompt
                         ) : actionPrompt;
+
+                        promptsAsset = null;
                     }
                 }
 
@@ -368,12 +385,13 @@ namespace OpenGET.Input
             /// Please note, the order of addition is important for mapping specific layouts to specific sprite sheets.
             /// You should add "default"/"fallback" layouts (i.e. base layouts) AFTER more-specific layouts,
             /// e.g. "Gamepad" should be added after "DualShockGamepad".
+            /// Use a display format of "{0}" to support text for the layout; follows string.Format() rules with 1 argument (the binding display text).
             /// </summary>
-            public bool AddSpriteMap(string deviceLayoutName, TMPro.TMP_SpriteAsset spriteAtlas, string prefix = "")
+            public bool AddSpriteMap(string deviceLayoutName, TMPro.TMP_SpriteAsset spriteAtlas, string prefix = "", string displayFormat = "")
             {
                 if (spriteMaps.Where(x => x.layoutName == deviceLayoutName).Count() <= 0)
                 {
-                    spriteMaps.Add(new InputSpriteMap { layoutName = deviceLayoutName, spriteAtlas = spriteAtlas, prefix = prefix });
+                    spriteMaps.Add(new InputSpriteMap { layoutName = deviceLayoutName, spriteAtlas = spriteAtlas, prefix = prefix, displayFormat = displayFormat });
                     return true;
                 }
                 return false;
