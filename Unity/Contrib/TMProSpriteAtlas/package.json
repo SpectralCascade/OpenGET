@@ -1,0 +1,11 @@
+{
+	"name": "com.tbarendt.tmprospriteatlas",
+	"displayName": "TextMeshPro Sprite Atlas Support",
+	"description": "TextMeshPro Sprite Atlas Support",
+	"version": "1.0.2",
+	"unity": "2002.3",
+	"license": "MIT",
+	"author": "Tobias Barendt (https://github.com/TBarendt)",
+	"homepage": "https://github.com/TBarendt/TMProSpriteAtlas#readme",
+	"dependencies": { }
+  }
