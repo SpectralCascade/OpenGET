@@ -209,8 +209,14 @@ namespace OpenGET.UI
 
         public void OnPointerExit(PointerEventData eventData)
         {
-            title.text = normalName;
-            subtitle.text = "";
+            if (title != null)
+            {
+                title.text = normalName;
+            }
+            if (title != null)
+            {
+                subtitle.text = "";
+            }
             SetTooltip(normalDescription);
         }
 

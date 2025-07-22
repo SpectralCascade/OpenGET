@@ -137,8 +137,14 @@ namespace OpenGET.UI
             string disableReason = null;
             if (menu.highlighted == this)
             {
-                menu.title.text = option.text;
-                menu.subtitle.text = option.disableReason?.Invoke() ?? "";
+                if (menu.title != null)
+                {
+                    menu.title.text = option.text;
+                }
+                if (menu.subtitle != null)
+                {
+                    menu.subtitle.text = option.disableReason?.Invoke() ?? "";
+                }
 
                 if (option.tooltip != null)
                 {
@@ -168,12 +174,12 @@ namespace OpenGET.UI
         /// </summary>
         private void Update()
         {
-            string disableReason = option.disableReason?.Invoke();
-            if (menu.highlighted == this)
+            string disableReason = option?.disableReason?.Invoke();
+            if (menu != null && menu.highlighted == this)
             {
                 UpdateTooltip();
 
-                if (menu.title.text != option.text)
+                if (menu.title != null && menu.title.text != option.text)
                 {
                     menu.title.text = option.text;
                 }

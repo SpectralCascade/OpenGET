@@ -15,6 +15,20 @@ namespace OpenGET.Input
     /// </summary>
     public class InputHelper
     {
+        [System.Serializable]
+        public struct InputSpriteMap
+        {
+            [Tooltip("Name of the device layout. You can see layout names in the Input Debugger (under Window->Anaylsis).")]
+            public string layoutName;
+
+            [Tooltip("Sprite atlas to associate with the device layout.")]
+            public TMP_SpriteAsset spriteAtlas;
+
+            /// <summary>
+            /// Sprite name prefix to use when looking up sprites in the associated sprite atlas.
+            /// </summary>
+            public string prefix;
+        }
 
         /// <summary>
         /// Player lookup.
@@ -26,6 +40,14 @@ namespace OpenGET.Input
         /// </summary>
         private InputHelper()
         {
+        }
+
+        /// <summary>
+        /// Normalise control paths into compliance with file naming conventions.
+        /// </summary>
+        public static string NormaliseControlPath(string controlPath)
+        {
+            return controlPath.Replace("/", "_");
         }
 
         /// <summary>
@@ -83,8 +105,25 @@ namespace OpenGET.Input
             {
                 bool wasUsingGamepad = this.usingGamepad;
                 this.usingGamepad = usingGamepad;
+
                 if (usingGamepad != wasUsingGamepad)
                 {
+                    // Update all input prompts, and listeners
+
+                    if (Application.isPlaying)
+                    {
+                        /// Find all enabled InputPrompt components and update their text.
+                        OpenGET.UI.TextFormatter[] allText = 
+                            GameObject.FindObjectsOfType<OpenGET.UI.InputPrompt>().Select(x => x.GetComponent<OpenGET.UI.TextFormatter>()).ToArray();
+                        for (int i = 0, counti = allText.Length; i < counti; i++)
+                        {
+                            if (allText[i].enabled)
+                            {
+                                allText[i].AutoFormat();
+                            }
+                        }
+                    }
+
                     onUsingGamepad?.Invoke(usingGamepad);
                 }
             }
@@ -148,47 +187,71 @@ namespace OpenGET.Input
             /// Get an input prompt string for an input action based on the current active control scheme.
             /// Optionally specify the name of a specific TMPro sprite sheet containing your input prompt glyphs.
             /// </summary>
-            public string GetActionPrompt(InputAction action, InputPromptMode mode = InputPromptMode.Text | InputPromptMode.Sprite, string promptsAsset = "", InputBinding.DisplayStringOptions displayOptions = 0)
+            public string GetActionPrompt(InputAction action, out Sprite glyph, out string deviceLayoutName, out string controlPath, InputPromptMode mode = InputPromptMode.Text | InputPromptMode.Sprite, InputBinding.DisplayStringOptions displayOptions = 0)
             {
                 string sprites = "";
+                TMP_SpriteAsset promptsAsset = null;
+                glyph = null;
+                deviceLayoutName = null;
+                controlPath = null;
 
                 for (int i = 0, counti = action.bindings.Count; i < counti; i++)
                 {
                     InputBinding binding = action.bindings[i];
                     if (binding.groups.Contains(controlScheme) && !binding.isComposite)
                     {
+                        // Get a text display string using Unity's built-in method
+                        string bindString = action.GetBindingDisplayString(
+                            i,
+                            out deviceLayoutName,
+                            out controlPath,
+                            displayOptions
+                        );
+                        string spriteName = binding.path;
+
+                        // Map device layout name to TMPro sprite asset, matching in first-last order.
+                        for (int mapIndex = 0, mapCount = spriteMaps.Count; mapIndex < mapCount; mapIndex++)
+                        {
+                            Log.Debug("Checking layout \"{0}\" against map \"{1}\"", deviceLayoutName, spriteMaps[mapIndex].layoutName);
+                            if (deviceLayoutName == spriteMaps[mapIndex].layoutName || InputSystem.IsFirstLayoutBasedOnSecond(deviceLayoutName, spriteMaps[mapIndex].layoutName))
+                            {
+                                promptsAsset = spriteMaps[mapIndex].spriteAtlas;
+                                spriteName = (spriteMaps[mapIndex].prefix ?? "") + controlPath;
+                                break;
+                            }
+                        }
+
+                        Log.Debug(
+                            "Getting binding for control scheme \"{0}\" yields layout: \"{1}\", path: \"{2}\", sprite: \"{3}\", promptsAsset = \"{4}\"",
+                            controlScheme,
+                            deviceLayoutName,
+                            controlPath,
+                            spriteName,
+                            promptsAsset?.name
+                        );
+
                         TMP_SpriteAsset found = null;
                         if ((mode & InputPromptMode.Sprite) != 0)
                         {
                             // Locate sprite sheet
-                            if (string.IsNullOrEmpty(promptsAsset) || !MaterialReferenceManager.TryGetSpriteAsset(TMP_TextUtilities.GetHashCode(promptsAsset), out found))
+                            if (promptsAsset == null)
                             {
                                 found = TMP_Settings.GetSpriteAsset();
                             }
-
-                            // Search sprite sheet
-                            if (found != null)
+                            else
                             {
-                                found = TMP_SpriteAsset.SearchForSpriteByHashCode(
-                                    found,
-                                    TMP_TextUtilities.GetHashCode(binding.path),
-                                    false,
-                                    out int index
-                                );
-
-                                if (index < 0 || TMP_SpriteAsset.SearchForSpriteByUnicode(TMP_Settings.GetSpriteAsset(), 0, false, out index) == found)
-                                {
-                                    found = null;
-                                }
+                                found = promptsAsset;
                             }
-                            
-                            if (found == null)
+
+                            // Search sprite sheet to ensure sprite exists
+                            if (found == null || found.GetSpriteIndexFromName(spriteName) < 0)
                             {
-                                Log.Warning("Failed to locate prompt sprite \"{0}\"", binding.path);
+                                found = null;
+                                Log.Warning("Failed to locate prompt sprite \"{0}\". promptsAsset = \"{1}\"", spriteName, promptsAsset?.name ?? "");
                             }
                         }
 
-                        string sprite = found == null ? "" : $"<sprite{(!string.IsNullOrEmpty(promptsAsset) ? $"=\"{promptsAsset}\"" : "")} name=\"{binding.path}\">";
+                        string sprite = found == null ? "" : $"<size=150%><sprite{(promptsAsset != null ? $"=\"{promptsAsset?.name}\"" : "")} name=\"{spriteName}\"></size>";
                         string actionPrompt = "";
 
                         if ((mode & InputPromptMode.Text) == 0)
@@ -196,15 +259,21 @@ namespace OpenGET.Input
                             actionPrompt = sprite;
                         }
                         else {
-                            // Get a text display string using Unity's built-in method
-                            string bindString = action.GetBindingDisplayString(
-                                i,
-                                out string deviceLayoutName,
-                                out string controlPath,
-                                displayOptions
-                            );
                             actionPrompt = ((mode & InputPromptMode.Sprite) == 0) ? bindString
                                 : string.Concat(bindString + (string.IsNullOrEmpty(bindString) || string.IsNullOrEmpty(sprite) ? "" : " "), sprite);
+                        }
+
+                        if (found != null && !string.IsNullOrEmpty(spriteName) && (mode & InputPromptMode.Sprite) != 0)
+                        {
+                            int index = found.GetSpriteIndexFromName(spriteName);
+                            if (index >= 0 && index < found.spriteGlyphTable.Count)
+                            {
+                                glyph = found.spriteGlyphTable[index].sprite;
+                            }
+                            else
+                            {
+                                Log.Warning("Failed to obtain sprite glyph with name \"{0}\" from found atlas \"{1}\"", sprite, found.name);
+                            }
                         }
 
                         // Show all bindings for the current control scheme, including all parts of composites, but not the composite itself
@@ -240,6 +309,12 @@ namespace OpenGET.Input
             /// Is this player using a gamepad or some other input device (such as keyboard, mouse, touch etc.)?
             /// </summary>
             public bool usingGamepad { get; private set; }
+
+            /// <summary>
+            /// Mappings of device layouts to sprite atlases.
+            /// </summary>
+            [SerializeField]
+            private List<InputSpriteMap> spriteMaps = new List<InputSpriteMap>();
 
             /// <summary>
             /// The current selected GameObject.
@@ -286,6 +361,31 @@ namespace OpenGET.Input
             /// Callback for handling switching between a gamepad and some other control scheme.
             /// </summary>
             public event OnUsingGamepad onUsingGamepad;
+
+            /// <summary>
+            /// Add a sprite atlas mapping. Note this will only add unique layouts; you can't map multiple atlases to the same layout.
+            /// Returns true on first add, false if the layout has already been added.
+            /// Please note, the order of addition is important for mapping specific layouts to specific sprite sheets.
+            /// You should add "default"/"fallback" layouts (i.e. base layouts) AFTER more-specific layouts,
+            /// e.g. "Gamepad" should be added after "DualShockGamepad".
+            /// </summary>
+            public bool AddSpriteMap(string deviceLayoutName, TMPro.TMP_SpriteAsset spriteAtlas, string prefix = "")
+            {
+                if (spriteMaps.Where(x => x.layoutName == deviceLayoutName).Count() <= 0)
+                {
+                    spriteMaps.Add(new InputSpriteMap { layoutName = deviceLayoutName, spriteAtlas = spriteAtlas, prefix = prefix });
+                    return true;
+                }
+                return false;
+            }
+
+            /// <summary>
+            /// Clear all sprite atlas mappings.
+            /// </summary>
+            public void ClearSpriteMaps()
+            {
+                spriteMaps.Clear();
+            }
 
             /// <summary>
             /// Push a particular group of input handlers onto the priority stack.

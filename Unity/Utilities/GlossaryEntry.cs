@@ -6,7 +6,7 @@ namespace OpenGET
 {
 
     [CreateAssetMenu(fileName = "NewGlossaryEntry", menuName = "OpenGET/Glossary Entry")]
-    public class GlossaryEntry : ScriptableObject, IReferrable
+    public class GlossaryEntry : GlyphEntry, IReferrable
     {
         [System.Flags]
         public enum EntryType
@@ -17,11 +17,6 @@ namespace OpenGET
             Adjective = 4,
             Adverb = 8
         }
-
-        /// <summary>
-        /// The raw English word/phrase/acronym.
-        /// </summary>
-        public string text = "";
 
         /// <summary>
         /// The word class(es) of this entry.
@@ -36,17 +31,37 @@ namespace OpenGET
         [TextArea]
         public string description = "";
 
-        [Tooltip("[Currently unused] Allow imprecise lookups (i.e. case insensitive)")]
-        public bool impreciseLookup = true;
+        /// <summary>
+        /// Only get the glyph.
+        /// </summary>
+        public string glyphOnly => Get(false, true, false);
 
-        private string GetString(string text)
+        /// <summary>
+        /// Get string without the glossary tooltip or styling.
+        /// </summary>
+        public string withoutLink => Get(false, true, true, null);
+
+        /// <summary>
+        /// Get the localised text string in a specific style, with or without specific elements. By default, all elements are enabled.
+        /// </summary>
+        public string Get(bool showLink = true, bool showGlyph = true, bool showText = true, string style = "GlossaryEntry", bool tintGlyph = false)
         {
-            return $"<link=\"{name}\"><u>{text}</u><sup>[?]</sup></link>";
+            showText = showText && !string.IsNullOrEmpty(_text);
+            bool gotStyle = showText && !string.IsNullOrEmpty(style);
+            showGlyph = showGlyph && !string.IsNullOrEmpty(id);
+            showLink = showLink && !string.IsNullOrEmpty(description);
+            return (showLink ? $"<link=\"{name}\">" : "") 
+                + (gotStyle ? $"<style={style}>" : "")
+                + text
+                + (gotStyle ? "</style>" : "")
+                + (showLink ? "</link>" : "")
+                + (showGlyph ? (showText ? " " : "") 
+                + "<sprite" + (spriteSheet != null ? $"=\"{spriteSheet.name}\"" : "") + $" name=\"{id}\"" + (tintGlyph ? " tint=1" : "") + ">" : "");
         }
 
         public override string ToString()
         {
-            return GetString(text);
+            return Get();
         }
 
         /// <summary>

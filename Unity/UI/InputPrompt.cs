@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace OpenGET.UI {
 
@@ -18,6 +19,16 @@ namespace OpenGET.UI {
         /// </summary>
         [Auto.NullCheck]
         public InputActionReference action;
+
+        /// <summary>
+        /// Optional separate image to use for the glyph, instead of inline text.
+        /// </summary>
+        public Image icon;
+
+        /// <summary>
+        /// Optional background image to use in certain circumstances (e.g. background image for keyboard keys).
+        /// </summary>
+        public Image background;
 
         /// <summary>
         /// Whether to append the input prompt before or after any pre-existing text.
@@ -44,7 +55,26 @@ namespace OpenGET.UI {
         /// </summary>
         public override string OnTextAutoFormat(string text)
         {
-            string prompt = (wrapBrackets ? "[" : "") + InputHelper.Get(0).GetActionPrompt(action.action) + (wrapBrackets ? "]" : "");
+            string prompt = (wrapBrackets ? "[" : "") + InputHelper.Get(0).GetActionPrompt(
+                action.action,
+                out Sprite glyph,
+                out string deviceLayoutName,
+                out string controlPath
+            ) + (wrapBrackets ? "]" : "");
+            
+            if (glyph != null && icon != null)
+            {
+                icon.sprite = glyph;
+                icon.enabled = true;
+            }
+            else if (icon != null)
+            {
+                icon.enabled = false;
+            }
+            if (background != null)
+            {
+                //background.enabled = 
+            }
             return (appendBefore ? prompt + delimiter : "") + text + (appendBefore ? "" : delimiter + prompt);
         }
     }

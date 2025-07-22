@@ -12,37 +12,35 @@ namespace OpenGET
     public class GlyphEntry : ScriptableObject, IReferrable
     {
         /// <summary>
-        /// Raw English text to show alongside the glyph, if any.
+        /// Localised text to show alongside the glyph, if any.
         /// </summary>
-        public virtual string text => _text;
+        public virtual string text => Localise.Text(_text);
 
         /// <summary>
-        /// Optionally specify text to show alongside the glyph.
+        /// Text to show alongside the glyph, if any.
         /// </summary>
         [SerializeField]
-        private string _text = "";
+        protected string _text = "";
 
         /// <summary>
-        /// TextMeshPro sprite sheet asset to utilise.
+        /// TextMeshPro sprite sheet asset to utilise, if any. Default sprite sheet used if not specified.
         /// </summary>
         [SerializeField]
         protected TMPro.TMP_SpriteAsset spriteSheet;
 
         /// <summary>
-        /// Identifier of the sprite to use in the sprite sheet.
+        /// Identifier of the glyph to use in the sprite sheet.
         /// Override this in a derivative class for custom behaviour.
         /// </summary>
-        public virtual string id => _id;
+        public virtual string id => glyphName;
 
-        /// <summary>
-        /// Identifier for the sprite to use in the sprite sheet. If none, assumes the derivative class has overridden id getter.
-        /// </summary>
+        [Tooltip("Identifier for the glyph to use in the sprite sheet. If empty, no glyph will be shown.")]
         [SerializeField]
-        private string _id = "";
+        protected string glyphName = "";
 
         public override string ToString()
         {
-            return $"{(string.IsNullOrEmpty(text) ? "" : text + " ")}<sprite=\"{spriteSheet.name}\" name=\"{id}\">";
+            return $"{(string.IsNullOrEmpty(_text) ? "" : "<b>" + text + "</b> ")}" + (!string.IsNullOrEmpty(id) ? "<sprite=\"{spriteSheet.name}\" name=\"{id}\">" : "");
         }
 
     }
