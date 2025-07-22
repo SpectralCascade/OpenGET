@@ -30,6 +30,11 @@ namespace OpenGET.Input
             public string prefix;
 
             /// <summary>
+            /// Sprite name suffix to use when looking up sprites in the associated sprite atlas.
+            /// </summary>
+            public string suffix;
+
+            /// <summary>
             /// The text format to display for this layout. If blank, no text will be displayed!
             /// Set to "{0}" for inserting without any formatting.
             /// See string.Format() for formatting rules; only the display string is used as an argument.
@@ -194,7 +199,7 @@ namespace OpenGET.Input
             /// Get an input prompt string for an input action based on the current active control scheme.
             /// Optionally specify the name of a specific TMPro sprite sheet containing your input prompt glyphs.
             /// </summary>
-            public string GetActionPrompt(InputAction action, out Sprite glyph, out string deviceLayoutName, out string controlPath, InputPromptMode mode = InputPromptMode.Text | InputPromptMode.Sprite, InputBinding.DisplayStringOptions displayOptions = 0)
+            public string GetActionPrompt(InputAction action, out Sprite glyph, out string deviceLayoutName, out string controlPath, InputPromptMode mode = InputPromptMode.Text | InputPromptMode.Sprite, InputBinding.DisplayStringOptions displayOptions = 0, bool tint = false)
             {
                 string sprites = "";
                 TMP_SpriteAsset promptsAsset = null;
@@ -225,7 +230,7 @@ namespace OpenGET.Input
                             {
                                 promptsAsset = spriteMaps[mapIndex].spriteAtlas;
                                 textDisplayFormat = spriteMaps[mapIndex].displayFormat;
-                                spriteName = (spriteMaps[mapIndex].prefix ?? "") + controlPath;
+                                spriteName = (spriteMaps[mapIndex].prefix ?? "") + controlPath + (spriteMaps[mapIndex].suffix ?? "");
                                 break;
                             }
                         }
@@ -260,7 +265,7 @@ namespace OpenGET.Input
                             }
                         }
 
-                        string sprite = found == null ? "" : $"<size=150%><sprite{(promptsAsset != null ? $"=\"{promptsAsset?.name}\"" : "")} name=\"{spriteName}\"></size>";
+                        string sprite = found == null ? "" : $"<size=150%><sprite{(promptsAsset != null ? $"=\"{promptsAsset?.name}\"" : "")} name=\"{spriteName}\"{(tint ? " tint=\"1\"" : "")}></size>";
                         string actionPrompt = "";
 
                         if ((mode & InputPromptMode.Text) == 0)
@@ -387,11 +392,11 @@ namespace OpenGET.Input
             /// e.g. "Gamepad" should be added after "DualShockGamepad".
             /// Use a display format of "{0}" to support text for the layout; follows string.Format() rules with 1 argument (the binding display text).
             /// </summary>
-            public bool AddSpriteMap(string deviceLayoutName, TMPro.TMP_SpriteAsset spriteAtlas, string prefix = "", string displayFormat = "")
+            public bool AddSpriteMap(string deviceLayoutName, TMPro.TMP_SpriteAsset spriteAtlas, string prefix = "", string suffix = "", string displayFormat = "")
             {
                 if (spriteMaps.Where(x => x.layoutName == deviceLayoutName).Count() <= 0)
                 {
-                    spriteMaps.Add(new InputSpriteMap { layoutName = deviceLayoutName, spriteAtlas = spriteAtlas, prefix = prefix, displayFormat = displayFormat });
+                    spriteMaps.Add(new InputSpriteMap { layoutName = deviceLayoutName, spriteAtlas = spriteAtlas, prefix = prefix, suffix = suffix, displayFormat = displayFormat });
                     return true;
                 }
                 return false;
