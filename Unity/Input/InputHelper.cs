@@ -40,6 +40,11 @@ namespace OpenGET.Input
             /// See string.Format() for formatting rules; only the display string is used as an argument.
             /// </summary>
             public string displayFormat;
+
+            /// <summary>
+            /// Whether this layout prefers to always show text, or only when there is no glyph available.
+            /// </summary>
+            public bool showTextAlways;
         }
 
         /// <summary>
@@ -67,16 +72,6 @@ namespace OpenGET.Input
         /// </summary>
         public class Player
         {
-            /// <summary>
-            /// Specifies what to display for a given input prompt.
-            /// </summary>
-            [System.Flags]
-            public enum InputPromptMode
-            {
-                Text = 1,
-                Sprite = 2
-            }
-
             public Player()
             {
                 // Remains invalid until an index has been assigned
@@ -199,7 +194,7 @@ namespace OpenGET.Input
             /// Get an input prompt string for an input action based on the current active control scheme.
             /// Optionally specify the name of a specific TMPro sprite sheet containing your input prompt glyphs.
             /// </summary>
-            public string GetActionPrompt(InputAction action, out Sprite glyph, out string deviceLayoutName, out string controlPath, InputPromptMode mode = InputPromptMode.Text | InputPromptMode.Sprite, InputBinding.DisplayStringOptions displayOptions = 0, bool tint = false)
+            public string GetActionPrompt(InputAction action, out Sprite glyph, out string deviceLayoutName, out string controlPath, InputBinding.DisplayStringOptions displayOptions = 0, bool tint = false)
             {
                 string sprites = "";
                 TMP_SpriteAsset promptsAsset = null;
@@ -221,80 +216,71 @@ namespace OpenGET.Input
                         );
                         string spriteName = binding.path;
                         string textDisplayFormat = "{0}";
+                        bool showTextAlways = false;
 
                         // Map device layout name to TMPro sprite asset, matching in first-last order.
                         for (int mapIndex = 0, mapCount = spriteMaps.Count; mapIndex < mapCount; mapIndex++)
                         {
-                            Log.Debug("Checking layout \"{0}\" against map \"{1}\"", deviceLayoutName, spriteMaps[mapIndex].layoutName);
+                            //Log.Debug("Checking layout \"{0}\" against map \"{1}\"", deviceLayoutName, spriteMaps[mapIndex].layoutName);
                             if (deviceLayoutName == spriteMaps[mapIndex].layoutName || InputSystem.IsFirstLayoutBasedOnSecond(deviceLayoutName, spriteMaps[mapIndex].layoutName))
                             {
                                 promptsAsset = spriteMaps[mapIndex].spriteAtlas;
                                 textDisplayFormat = spriteMaps[mapIndex].displayFormat;
                                 spriteName = (spriteMaps[mapIndex].prefix ?? "") + controlPath + (spriteMaps[mapIndex].suffix ?? "");
+                                showTextAlways = spriteMaps[mapIndex].showTextAlways;
                                 break;
                             }
                         }
 
-                        Log.Debug(
-                            "Getting binding for control scheme \"{0}\" yields layout: \"{1}\", path: \"{2}\", sprite: \"{3}\", promptsAsset = \"{4}\"",
-                            controlScheme,
-                            deviceLayoutName,
-                            controlPath,
-                            spriteName,
-                            promptsAsset?.name
-                        );
+                        //Log.Debug(
+                        //    "Getting binding for control scheme \"{0}\" yields layout: \"{1}\", path: \"{2}\", sprite: \"{3}\", promptsAsset = \"{4}\"",
+                        //    controlScheme,
+                        //    deviceLayoutName,
+                        //    controlPath,
+                        //    spriteName,
+                        //    promptsAsset?.name
+                        //);
 
                         TMP_SpriteAsset found = null;
-                        if ((mode & InputPromptMode.Sprite) != 0)
+                        // Locate sprite sheet and sprite
+                        int glyphIndex = -1;
+                        if (promptsAsset == null)
                         {
-                            // Locate sprite sheet
-                            if (promptsAsset == null)
-                            {
-                                found = TMP_Settings.GetSpriteAsset();
-                            }
-                            else
-                            {
-                                found = promptsAsset;
-                            }
+                            found = TMP_Settings.GetSpriteAsset();
+                        }
+                        else
+                        {
+                            found = promptsAsset;
+                        }
+                        glyphIndex = found != null ? found.GetSpriteIndexFromName(spriteName) : -1;
 
-                            // Search sprite sheet to ensure sprite exists
-                            if (found == null || found.GetSpriteIndexFromName(spriteName) < 0)
-                            {
-                                found = null;
-                                Log.Warning("Failed to locate prompt sprite \"{0}\". promptsAsset = \"{1}\"", spriteName, promptsAsset?.name ?? "");
-                            }
+                        if (found != null && glyphIndex >= 0 && glyphIndex < found.spriteGlyphTable.Count)
+                        {
+                            glyph = found.spriteGlyphTable[glyphIndex].sprite;
+                        }
+                        else
+                        {
+                            //Log.Warning("Failed to obtain sprite glyph with name \"{0}\" from found atlas \"{1}\"", spriteName, found?.name);
+                            found = null;
                         }
 
                         string sprite = found == null ? "" : $"<size=150%><sprite{(promptsAsset != null ? $"=\"{promptsAsset?.name}\"" : "")} name=\"{spriteName}\"{(tint ? " tint=\"1\"" : "")}></size>";
                         string actionPrompt = "";
 
-                        if ((mode & InputPromptMode.Text) == 0)
+                        if (bindString == null)
                         {
-                            actionPrompt = sprite;
-                        }
-                        else {
-                            actionPrompt = (((mode & InputPromptMode.Sprite) == 0) ? bindString
-                                : string.Concat(
-                                    (!string.IsNullOrEmpty(bindString) && promptsAsset != null ? 
-                                        (string.IsNullOrEmpty(textDisplayFormat) ? "" : string.Format(textDisplayFormat, bindString)) : bindString) 
-                                    + (string.IsNullOrEmpty(bindString) || string.IsNullOrEmpty(sprite) ? "" : " "),
-                                    sprite
-                                )
-                            );
+                            bindString = "";
                         }
 
-                        if (found != null && !string.IsNullOrEmpty(spriteName) && (mode & InputPromptMode.Sprite) != 0)
-                        {
-                            int index = found.GetSpriteIndexFromName(spriteName);
-                            if (index >= 0 && index < found.spriteGlyphTable.Count)
-                            {
-                                glyph = found.spriteGlyphTable[index].sprite;
-                            }
-                            else
-                            {
-                                Log.Warning("Failed to obtain sprite glyph with name \"{0}\" from found atlas \"{1}\"", sprite, found.name);
-                            }
-                        }
+                        // Only set display string for valid format and in cases where there is no glyph/text is always shown
+                        string displayString = 
+                            (string.IsNullOrEmpty(textDisplayFormat) || !textDisplayFormat.Contains("{0}"))
+                            || string.IsNullOrEmpty(bindString)
+                            || (!showTextAlways && glyphIndex >= 0)
+                            ? "" : string.Format(textDisplayFormat, bindString);
+
+                        // Combine display string with the sprite
+                        actionPrompt = displayString + (string.IsNullOrEmpty(displayString) || string.IsNullOrEmpty(sprite) ? "" : " ") + sprite;
 
                         // Show all bindings for the current control scheme, including all parts of composites, but not the composite itself
                         sprites = !string.IsNullOrEmpty(sprites) ? string.Join(
@@ -392,11 +378,18 @@ namespace OpenGET.Input
             /// e.g. "Gamepad" should be added after "DualShockGamepad".
             /// Use a display format of "{0}" to support text for the layout; follows string.Format() rules with 1 argument (the binding display text).
             /// </summary>
-            public bool AddSpriteMap(string deviceLayoutName, TMPro.TMP_SpriteAsset spriteAtlas, string prefix = "", string suffix = "", string displayFormat = "")
+            public bool AddSpriteMap(string deviceLayoutName, TMPro.TMP_SpriteAsset spriteAtlas, string prefix = "", string suffix = "", bool showTextAlways = false, string displayFormat = "[{0}]")
             {
                 if (spriteMaps.Where(x => x.layoutName == deviceLayoutName).Count() <= 0)
                 {
-                    spriteMaps.Add(new InputSpriteMap { layoutName = deviceLayoutName, spriteAtlas = spriteAtlas, prefix = prefix, suffix = suffix, displayFormat = displayFormat });
+                    spriteMaps.Add(new InputSpriteMap {
+                        layoutName = deviceLayoutName,
+                        spriteAtlas = spriteAtlas,
+                        prefix = prefix,
+                        suffix = suffix,
+                        displayFormat = displayFormat,
+                        showTextAlways = showTextAlways
+                    });
                     return true;
                 }
                 return false;

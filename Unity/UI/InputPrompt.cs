@@ -36,11 +36,6 @@ namespace OpenGET.UI {
         public bool appendBefore = false;
 
         /// <summary>
-        /// Display options for the prompt.
-        /// </summary>
-        public InputHelper.Player.InputPromptMode display = InputHelper.Player.InputPromptMode.Text | InputHelper.Player.InputPromptMode.Sprite;
-
-        /// <summary>
         /// Delimiter character(s) between the prompt and format text.
         /// </summary>
         public string delimiter = " ";
