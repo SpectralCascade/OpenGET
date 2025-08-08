@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEngine;
@@ -11,6 +12,7 @@ namespace OpenGET.Expressions
     /// <summary>
     /// Wrapper that determines how to operate on objects of different types.
     /// </summary>
+    [NoMod]
     public abstract class Variant : IVariant
     {
         /// <summary>
@@ -54,8 +56,15 @@ namespace OpenGET.Expressions
         }
     }
 
+    [NoMod]
     public abstract class VariantFactory
     {
+        /// <summary>
+        /// Context objects with which variable fields are reflected.
+        /// These are only used by DynamicVariables in expressions.
+        /// </summary>
+        public abstract object[] contexts { get; }
+
         public abstract Variant Create(object value, Type type);
 
         public Variant Create<T>(object value)
@@ -66,6 +75,18 @@ namespace OpenGET.Expressions
 
     public class StandardVariantFactory : VariantFactory
     {
+        public override object[] contexts => _contexts;
+
+        private object[] _contexts = new object[0];
+
+        public StandardVariantFactory(object[] contexts)
+        {
+            if (contexts != null)
+            {
+                _contexts = contexts;
+            }
+        }
+
         /// <summary>
         /// A type factory for OpenGET supported variants. If you want to add custom variants,
         /// you should make your own type factory to instantiate those variants.
@@ -291,14 +312,17 @@ namespace OpenGET.Expressions
     {
         public abstract override string ToString();
 
+        /// <summary>
+        /// Evaluate an expression to get a value back.
+        /// </summary>
         public abstract Variant Evaluate<FactoryType>(FactoryType factory) where FactoryType : VariantFactory;
 
         /// <summary>
-        /// Default to standard factory.
+        /// Default to a standard factory with no contexts provided.
         /// </summary>
         public Variant Evaluate()
         {
-            return Evaluate(new StandardVariantFactory());
+            return Evaluate(new StandardVariantFactory(null));
         }
     }
 
@@ -478,7 +502,7 @@ namespace OpenGET.Expressions
     }
 
     /// <summary>
-    /// Named variable value. This maps to a reflection field on a Unity object.
+    /// Named variable value. This maps to a field on a Unity object.
     /// </summary>
     [Serializable]
     public class UnityVariable : Variable
@@ -512,9 +536,9 @@ namespace OpenGET.Expressions
     }
 
     /// <summary>
-    /// Named variable value. This maps to a reflection field on any object.
+    /// Named variable value. This maps to a field on any object.
     /// Please note however that this is unsuitable for use with Unity serialisation.
-    /// In cases where you require Unity Object serialisation, instead use UnityVariable or DynamicVariable.
+    /// In cases where you require Unity serialisation, use UnityVariable or DynamicVariable instead.
     /// </summary>
     [Serializable]
     public class ReflectionVariable : Variable
@@ -538,7 +562,11 @@ namespace OpenGET.Expressions
     }
 
     /// <summary>
-    /// Represents a variable that can change depending on the context at the time the expression is evaluated.
+    /// Represents a variable that changes depending on context provided at the time at which the expression is evaluated.
+    /// The naming scheme for dynamic variables is based on the contexts used to create the variable initially,
+    /// in the format [context index].[field name] where [context index] is the index to a target object that the target field is associated with.
+    /// This means you MUST provide the same number of contexts, and types of contexts, whenever you evaluate this DynamicVariable.
+    /// You should also take care when renaming fields, as doing so without updating DynamicVariables will break upon expression evaluation.
     /// </summary>
     [Serializable]
     public class DynamicVariable : Variable
@@ -549,10 +577,33 @@ namespace OpenGET.Expressions
 
         public override Variant Evaluate<T>(T factory)
         {
-            FieldInfo field = target.GetType().GetField(name);
+            string[] split = name.Split(".");
+            string id = split[0];
+            string fieldName = split[1];
+
+            if (!int.TryParse(id, out int index))
+            {
+                throw new Exception($"Invalid DynamicVariable \"{name}\", failed to parse context index.");
+            }
+            else if (index >= factory.contexts.Length)
+            {
+                throw new IndexOutOfRangeException($"Context at index {index} for DynamicVariable \"{name}\" is invalid (out of range).");
+            }
+            
+            object context = factory.contexts[index];
+            if (context == null)
+            {
+                throw new NullReferenceException($"Context {index} of DynamicVariable \"{name}\" is null!");
+            }
+
+            FieldInfo field = context.GetType().GetField(fieldName);
             if (field != null)
             {
-                return factory.Create(field.GetValue(target), field.FieldType);
+                return factory.Create(field.GetValue(context), field.FieldType);
+            }
+            else
+            {
+                Log.Error("No such field {0} available on context {1} of type {2} (DynamicVariable {3})", fieldName, index, context.GetType().FullName, name);
             }
             return factory.Create(null, typeof(object));
         }
