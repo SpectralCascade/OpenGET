@@ -1,0 +1,231 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using OpenGET.Expressions;
+using UnityEditor;
+using UnityEngine.UIElements;
+using UnityEngine.EventSystems;
+
+namespace OpenGET.Editor
+{
+
+    [CustomEditor(typeof(Modifier))]
+    public class ModifierEditor : UnityEditor.Editor
+    {
+
+        public override void OnInspectorGUI()
+        {
+            Modifier modifier = (Modifier)target;
+
+            // TODO: DynamicVariable contexts
+            VariantFactory factory = new StandardVariantFactory(null);
+
+            ExpressionField(modifier.expression, factory, true, "Expression: ");
+            Expression changed = ExpressionField(modifier.expression, factory);
+
+            if (changed != null)
+            {
+                modifier.expression = changed;
+            }
+            else
+            {
+                modifier.expression = new Constant(new VariantInteger(0));
+            }
+        }
+
+        public Expression ExpressionField(Expression expression, VariantFactory factory, bool readOnly = false, string label = null)
+        {
+            if (readOnly)
+            {
+                EditorGUILayout.LabelField(label + expression.ToString());
+                return expression;
+            }
+
+            Constant constant = expression as Constant;
+            if (constant != null)
+            {
+                Variant data = VariantField(constant.value, factory, out Expression inner);
+                if (data != null)
+                {
+                    if (inner != null)
+                    {
+                        expression = inner;
+                    }
+                    // Set constant value
+                    constant.value = data;
+                }
+                else if (inner != null)
+                {
+                    // Expand inner expression
+                    expression = inner;
+                }
+                else
+                {
+                    // Delete
+                    expression = null;
+                }
+            }
+
+            BinaryOperator binOp = expression as BinaryOperator;
+            if (binOp != null)
+            {
+                binOp = BinaryOperatorField(binOp, factory);
+
+                if (binOp.a == null)
+                {
+                    expression = binOp.b;
+                }
+                else if (binOp.b == null)
+                {
+                    expression = binOp.a;
+                }
+                else
+                {
+                    expression = binOp;
+                }
+            }
+
+            return expression;
+        }
+
+        /// <summary>
+        /// Show a constant value field. Returns null if the variant is deleted or expanded into an inner expression.
+        /// </summary>
+        public Variant VariantField(Variant variant, VariantFactory factory, out Expression inner)
+        {
+            Variant field = null;
+            inner = null;
+
+            EditorGUILayout.BeginHorizontal();
+
+            List<string> options = new List<string> { "[Delete]", "Integer", "Float", "String", "[+]" };
+            List<string> extensions = new List<string> { "[-]", "[*]", "[\\]", "[clamp()]" };
+            int index = 0;
+            if (variant is VariantInteger)
+            {
+                field = factory.Create(EditorGUILayout.IntField((int)variant.value));
+                index = 1;
+                options.AddRange(extensions);
+            }
+            else if (variant is VariantFloat)
+            {
+                field = factory.Create(EditorGUILayout.FloatField((float)variant.value));
+                index = 2;
+                options.AddRange(extensions);
+            }
+            else if (variant is VariantString)
+            {
+                field = factory.Create(EditorGUILayout.TextField((string)variant.value));
+                index = 3;
+            }
+            else
+            {
+                // Default to an integer of value 0
+                field = factory.Create(0);
+            }
+
+            int oldIndex = index;
+            index = EditorGUILayout.Popup(index, options.ToArray());
+            if (index != oldIndex)
+            {
+                switch (index)
+                {
+                    // Delete the variant
+                    default:
+                    case 0:
+                        field = null;
+                        break;
+                    // Set to specific type
+                    case 1:
+                        field = factory.Create(0);
+                        break;
+                    case 2:
+                        field = factory.Create(0f);
+                        break;
+                    case 3:
+                        field = factory.Create("");
+                        break;
+                    // Expand into an inner expression
+                    case 4:
+                        inner = new BinOpAdd(new Constant(field), field is IVariantNumeric ?
+                            new Constant(new VariantFloat(0f)) : new Constant(new VariantString(""))
+                        );
+                        field = null;
+                        break;
+                    // Expand into extension arithmetic expressions
+                    case 5:
+                        inner = new BinOpSubtract(new Constant(field), new Constant(new VariantFloat(0f)));
+                        field = null;
+                        break;
+                    case 6:
+                        inner = new BinOpMultiply(new Constant(field), new Constant(new VariantFloat(0f)));
+                        field = null;
+                        break;
+                    case 7:
+                        inner = new BinOpDivide(new Constant(field), new Constant(new VariantFloat(0f)));
+                        field = null;
+                        break;
+                    // TODO: Expand into clamp expression
+                    case 8:
+                        field = null;
+                        break;
+                }
+            }
+
+            EditorGUILayout.EndHorizontal();
+
+            return field;
+        }
+
+        public BinaryOperator BinaryOperatorField(BinaryOperator op, VariantFactory factory) {
+            Expression a = ExpressionField(op.a, factory);
+
+            string[] options = new string[] { "+", "-", "*", "\\" };
+            int selected = 0;
+            if (op is BinOpSubtract)
+            {
+                selected = 1;
+            }
+            else if (op is BinOpMultiply)
+            {
+                selected = 2;
+            }
+            else if (op is BinOpDivide)
+            {
+                selected = 3;
+            }
+
+            int old = selected;
+            selected = EditorGUILayout.Popup(selected, options);
+
+            if (old != selected)
+            {
+                switch (selected)
+                {
+                    default:
+                    case 0:
+                        op = new BinOpAdd(a, op.b);
+                        break;
+                    case 1:
+                        op = new BinOpSubtract(a, op.b);
+                        break;
+                    case 2:
+                        op = new BinOpMultiply(a, op.b);
+                        break;
+                    case 3:
+                        op = new BinOpDivide(a, op.b);
+                        break;
+                }
+            }
+            else
+            {
+                op.a = a;
+            }
+
+            op.b = ExpressionField(op.b, factory);
+            return op;
+        }
+
+    }
+
+}
