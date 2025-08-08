@@ -5,6 +5,8 @@ using OpenGET.Expressions;
 using UnityEditor;
 using UnityEngine.UIElements;
 using UnityEngine.EventSystems;
+using System.Reflection;
+using System.Linq;
 
 namespace OpenGET.Editor
 {
@@ -66,6 +68,29 @@ namespace OpenGET.Editor
                 }
             }
 
+            UnityVariable unityVar = expression as UnityVariable;
+            if (unityVar != null)
+            {
+                unityVar = UnityVariableField(unityVar, out Expression inner);
+                if (unityVar != null)
+                {
+                    if (inner != null)
+                    {
+                        expression = inner;
+                    }
+                }
+                else if (inner != null)
+                {
+                    // Expand inner expression
+                    expression = inner;
+                }
+                else
+                {
+                    // Delete
+                    expression = null;
+                }
+            }
+
             BinaryOperator binOp = expression as BinaryOperator;
             if (binOp != null)
             {
@@ -98,7 +123,7 @@ namespace OpenGET.Editor
 
             EditorGUILayout.BeginHorizontal();
 
-            List<string> options = new List<string> { "[Delete]", "Integer", "Float", "String", "[+]" };
+            List<string> options = new List<string> { "[Delete]", "Integer", "Float", "String", "[Variable]/Unity", "[Variable]/Dynamic", "[+]" };
             List<string> extensions = new List<string> { "[-]", "[*]", "[\\]", "[clamp()]" };
             int index = 0;
             if (variant is VariantInteger)
@@ -145,28 +170,37 @@ namespace OpenGET.Editor
                     case 3:
                         field = factory.Create("");
                         break;
-                    // Expand into an inner expression
+                    // Change to UnityVariable
                     case 4:
+                        inner = new UnityVariable("", null);
+                        field = null;
+                        break;
+                    case 5:
+                        // TODO
+                        field = null;
+                        break;
+                    // Expand into an inner expression
+                    case 6:
                         inner = new BinOpAdd(new Constant(field), field is IVariantNumeric ?
                             new Constant(new VariantFloat(0f)) : new Constant(new VariantString(""))
                         );
                         field = null;
                         break;
                     // Expand into extension arithmetic expressions
-                    case 5:
+                    case 7:
                         inner = new BinOpSubtract(new Constant(field), new Constant(new VariantFloat(0f)));
                         field = null;
                         break;
-                    case 6:
+                    case 8:
                         inner = new BinOpMultiply(new Constant(field), new Constant(new VariantFloat(0f)));
                         field = null;
                         break;
-                    case 7:
+                    case 9:
                         inner = new BinOpDivide(new Constant(field), new Constant(new VariantFloat(0f)));
                         field = null;
                         break;
                     // TODO: Expand into clamp expression
-                    case 8:
+                    case 10:
                         field = null;
                         break;
                 }
@@ -224,6 +258,90 @@ namespace OpenGET.Editor
 
             op.b = ExpressionField(op.b, factory);
             return op;
+        }
+
+        public UnityVariable UnityVariableField(UnityVariable field, out Expression inner)
+        {
+            inner = null;
+
+            EditorGUILayout.BeginHorizontal();
+
+            field._target = EditorGUILayout.ObjectField(field._target, typeof(Object), allowSceneObjects: true);
+            int index = 0;
+
+            List<string> options = new List<string> { };
+            System.Type targetType = field._target != null ? field._target.GetType() : null;
+            FieldInfo[] fields = new FieldInfo[0];
+            if (targetType != null) {
+                fields = targetType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(
+                    x => x.FieldType.Equals(typeof(string)) || x.FieldType.Equals(typeof(int)) || x.FieldType.Equals(typeof(float))
+                ).OrderBy(x => x.Name).ToArray();
+                for (int i = 0, counti = fields.Length; i < counti; i++) {
+                    options.Add(field._target.name + "/" + fields[i].Name);
+
+                    if (field.name == fields[i].Name)
+                    {
+                        index = i;
+                    }
+                }
+
+                options.Add("[Delete]");
+            }
+            else
+            {
+                options.Add("Missing");
+            }
+
+            List<string> extensions = new List<string> { "[-]", "[*]", "[\\]", "[clamp()]" };
+
+            int oldIndex = index;
+            index = EditorGUILayout.Popup(index, options.ToArray());
+            if (index != oldIndex)
+            {
+                if (index < options.Count - 1)
+                {
+                    // Set to field
+                    field.name = fields[index].Name;
+                }
+                else if (index == options.Count - 1)
+                {
+                    // Delete
+                    field = null;
+                }
+                else
+                {
+                    //switch (index - options.Count)
+                    //{
+                    //    case 0:
+                    //        inner = new BinOpAdd(new Constant(field), field is IVariantNumeric ?
+                    //            new Constant(new VariantFloat(0f)) : new Constant(new VariantString(""))
+                    //        );
+                    //        field = null;
+                    //        break;
+                    //    // Expand into extension arithmetic expressions
+                    //    case 1:
+                    //        inner = new BinOpSubtract(new Constant(field), new Constant(new VariantFloat(0f)));
+                    //        field = null;
+                    //        break;
+                    //    case 2:
+                    //        inner = new BinOpMultiply(new Constant(field), new Constant(new VariantFloat(0f)));
+                    //        field = null;
+                    //        break;
+                    //    case 3:
+                    //        inner = new BinOpDivide(new Constant(field), new Constant(new VariantFloat(0f)));
+                    //        field = null;
+                    //        break;
+                    //    // TODO: Expand into clamp expression
+                    //    case 4:
+                    //        field = null;
+                    //        break;
+                    //}
+                }
+            }
+
+            EditorGUILayout.EndHorizontal();
+
+            return field;
         }
 
     }
