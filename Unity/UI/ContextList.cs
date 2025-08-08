@@ -98,12 +98,15 @@ namespace OpenGET.UI
         /// </summary>
         private List<ContextItem> _items = new List<ContextItem>();
 
+        /// <summary>
+        /// Retrieve the array of context items.
+        /// </summary>
         public ContextItem[] items => _items.ToArray();
 
         /// <summary>
         /// Retrieve the array of context options.
         /// </summary>
-        public ContextItem[] options => _items.ToArray();
+        public Option[] options => _items.Select(x => x.option).ToArray();
 
         /// <summary>
         /// Current highlighted option.
@@ -201,6 +204,8 @@ namespace OpenGET.UI
         /// </summary>
         public void Clear()
         {
+            selected = null;
+            highlighted = null;
             for (int i = 0, counti = _items.Count; i < counti; i++) {
                 Destroy(_items[i].gameObject);
             }

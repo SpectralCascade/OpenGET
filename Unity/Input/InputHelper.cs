@@ -5,6 +5,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
+using UnityEngine.InputSystem.Users;
 
 namespace OpenGET.Input
 {
@@ -72,6 +74,89 @@ namespace OpenGET.Input
         /// </summary>
         public class Player
         {
+            /// <summary>
+            /// Last activated input device associated with this player. Input prompts for that player are based on this device.
+            /// </summary>
+            public InputDevice activeInputDevice => _activeInputDevice;
+            private InputDevice _activeInputDevice = null;
+            private InputDevice _previousInputDevice = null;
+
+            /// <summary>
+            /// Get the control scheme for this player.
+            /// </summary>
+            public string controlScheme => PlayerInput.GetPlayerByIndex(index).currentControlScheme;
+
+            /// <summary>
+            /// Index of this player.
+            /// </summary>
+            public int index { get; private set; }
+
+            /// <summary>
+            /// Is this player using a gamepad or some other native input device (such as keyboard, mouse, touch etc.)?
+            /// </summary>
+            public bool usingGamepad { get; private set; }
+
+            /// <summary>
+            /// Attempt to get a virtual mouse device (i.e. non-native mouse).
+            /// </summary>
+            public Mouse virtualMouse = InputSystem.devices.FirstOrDefault(x => x is Mouse && !x.native) as Mouse;
+
+            /// <summary>
+            /// Check if a virtual mouse is being used.
+            /// </summary>
+            public bool usingVirtualMouse => virtualMouse != null && virtualMouse.enabled;
+
+            /// <summary>
+            /// Mappings of device layouts to sprite atlases.
+            /// </summary>
+            private List<InputSpriteMap> spriteMaps = new List<InputSpriteMap>();
+
+            /// <summary>
+            /// The current selected GameObject.
+            /// Note: For local multiplayer, this may have to use the appropriate EventSystem for a particular player.
+            /// </summary>
+            public GameObject selected {
+                get { return _selected; }
+                set {
+                    GameObject current = _selected;
+                    if (current != value)
+                    {
+                        lastSelected = current;
+                    }
+                    _selected = value;
+                    EventSystem.current.SetSelectedGameObject(null);
+                    EventSystem.current.SetSelectedGameObject(_selected);
+                }
+            }
+
+            /// <summary>
+            /// The last selected GameObject. Can be null if the previous selected value was null.
+            /// </summary>
+            public GameObject lastSelected { get; private set; }
+            private GameObject _selected = null;
+
+            /// <summary>
+            /// There are cases where multiple elements in the same group may request input control,
+            /// so we need to make sure requests are cancelled out before we can pop the stack.
+            /// </summary>
+            private Dictionary<GameObject, int> requestCounts = new Dictionary<GameObject, int>();
+
+            /// <summary>
+            /// A stack of monobehaviour references that have requested input control.
+            /// The top of the stack has full control.
+            /// </summary>
+            private Stack<GameObject> controlStack = new Stack<GameObject>();
+
+            /// <summary>
+            /// Callback delegate which indicates whether the player has switched to or from the gamepad.
+            /// </summary>
+            public delegate void OnUsingGamepad(bool usingGamepad);
+
+            /// <summary>
+            /// Callback for handling switching between a gamepad and some other control scheme.
+            /// </summary>
+            public event OnUsingGamepad onUsingGamepad;
+
             public Player()
             {
                 // Remains invalid until an index has been assigned
@@ -81,7 +166,7 @@ namespace OpenGET.Input
             private void UpdateCursor(bool usingGamepad)
             {
                 Cursor.visible = !usingGamepad;
-                Cursor.lockState = usingGamepad ? CursorLockMode.Locked : CursorLockMode.None;
+                Cursor.lockState = usingGamepad ? CursorLockMode.Confined : CursorLockMode.None;
             }
 
             /// <summary>
@@ -138,15 +223,15 @@ namespace OpenGET.Input
             /// <summary>
             /// Handle switching between keyboard/mouse input and gamepad.
             /// </summary>
-            private void OnInputAction(object obj, UnityEngine.InputSystem.InputActionChange change) {
-                if (change == UnityEngine.InputSystem.InputActionChange.ActionPerformed)
+            private void OnInputAction(object obj, InputActionChange change) {
+                if (change == InputActionChange.ActionPerformed)
                 {
-                    UnityEngine.InputSystem.InputDevice controller = 
-                        ((UnityEngine.InputSystem.InputAction)obj).activeControl?.device;
+                    InputAction action = obj as InputAction;
+                    InputDevice device = action.activeControl?.device;
 
-                    if (controller != null)
+                    if (device != null)
                     {
-                        UpdateGamepadStatus(controller is UnityEngine.InputSystem.Gamepad);
+                        UpdateGamepadStatus(device is Gamepad || (device is Mouse && !(device as Mouse).native));
                     }
                 }
             }
@@ -154,25 +239,28 @@ namespace OpenGET.Input
             /// <summary>
             /// Handle gamepad connection/disconnection.
             /// </summary>
-            private void OnInputDeviceChange(UnityEngine.InputSystem.InputDevice device, UnityEngine.InputSystem.InputDeviceChange change)
+            private void OnInputDeviceChange(InputDevice device, InputDeviceChange change)
             {
-                if (device is UnityEngine.InputSystem.Gamepad)
+                switch (change)
                 {
-                    switch (change)
-                    {
-                        case UnityEngine.InputSystem.InputDeviceChange.Added:
-                        case UnityEngine.InputSystem.InputDeviceChange.Reconnected:
-                            _previousInputDevice = device != _activeInputDevice ? _activeInputDevice : _previousInputDevice;
-                            _activeInputDevice = device;
-                            UpdateGamepadStatus(true);
-                            break;
-                        case UnityEngine.InputSystem.InputDeviceChange.Removed:
-                        case UnityEngine.InputSystem.InputDeviceChange.Disconnected:
-                        default:
-                            _activeInputDevice = _previousInputDevice;
+                    case InputDeviceChange.Added:
+                    case InputDeviceChange.Reconnected:
+                        _previousInputDevice = device != _activeInputDevice ? _activeInputDevice : _previousInputDevice;
+                        _activeInputDevice = device;
+                        // Switch gamepad flag on when gamepad active OR using a virtual mouse input
+                        Log.Debug("Device add/reconnect: {0} (virtual mouse = {1}, using = {2})", device.name, virtualMouse.name, usingVirtualMouse);
+                        UpdateGamepadStatus(device is Gamepad || (usingVirtualMouse && virtualMouse == device));
+                        break;
+                    case InputDeviceChange.Removed:
+                        _activeInputDevice = _previousInputDevice;
+                        if (device is Gamepad)
+                        {
                             UpdateGamepadStatus(false);
-                            break;
-                    }
+                        }
+                        break;
+                    case InputDeviceChange.Disconnected:
+                        // This event could fire whenever; don't change the input prompts based on this alone
+                        break;
                 }
             }
 
@@ -205,7 +293,7 @@ namespace OpenGET.Input
                 for (int i = 0, counti = action.bindings.Count; i < counti; i++)
                 {
                     InputBinding binding = action.bindings[i];
-                    if (binding.groups.Contains(controlScheme) && !binding.isComposite)
+                    if (binding.groups != null && controlScheme != null && binding.groups.Contains(controlScheme) && !binding.isComposite)
                     {
                         // Get a text display string using Unity's built-in method
                         string bindString = action.GetBindingDisplayString(
@@ -295,80 +383,6 @@ namespace OpenGET.Input
 
                 return sprites;
             }
-
-            /// <summary>
-            /// Last activated input device associated with this player. Input prompts for that player are based on this device.
-            /// </summary>
-            public InputDevice activeInputDevice => _activeInputDevice;
-            private InputDevice _activeInputDevice = null;
-            private InputDevice _previousInputDevice = null;
-
-            /// <summary>
-            /// Get the control scheme for this player.
-            /// </summary>
-            public string controlScheme => PlayerInput.GetPlayerByIndex(index).currentControlScheme;
-
-            /// <summary>
-            /// Index of this player.
-            /// </summary>
-            public int index { get; private set; }
-
-            /// <summary>
-            /// Is this player using a gamepad or some other input device (such as keyboard, mouse, touch etc.)?
-            /// </summary>
-            public bool usingGamepad { get; private set; }
-
-            /// <summary>
-            /// Mappings of device layouts to sprite atlases.
-            /// </summary>
-            [SerializeField]
-            private List<InputSpriteMap> spriteMaps = new List<InputSpriteMap>();
-
-            /// <summary>
-            /// The current selected GameObject.
-            /// Note: For local multiplayer, this may have to use the appropriate EventSystem for a particular player.
-            /// </summary>
-            public GameObject selected {
-                get { return _selected; }
-                set {
-                    GameObject current = _selected;
-                    if (current != value)
-                    {
-                        lastSelected = current;
-                    }
-                    _selected = value;
-                    EventSystem.current.SetSelectedGameObject(null);
-                    EventSystem.current.SetSelectedGameObject(_selected);
-                }
-            }
-
-            /// <summary>
-            /// The last selected GameObject. Can be null if the previous selected value was null.
-            /// </summary>
-            public GameObject lastSelected { get; private set; }
-            private GameObject _selected = null;
-
-            /// <summary>
-            /// There are cases where multiple elements in the same group may request input control,
-            /// so we need to make sure requests are cancelled out before we can pop the stack.
-            /// </summary>
-            private Dictionary<GameObject, int> requestCounts = new Dictionary<GameObject, int>();
-
-            /// <summary>
-            /// A stack of monobehaviour references that have requested input control.
-            /// The top of the stack has full control.
-            /// </summary>
-            private Stack<GameObject> controlStack = new Stack<GameObject>();
-
-            /// <summary>
-            /// Callback delegate which indicates whether the player has switched to or from the gamepad.
-            /// </summary>
-            public delegate void OnUsingGamepad(bool usingGamepad);
-
-            /// <summary>
-            /// Callback for handling switching between a gamepad and some other control scheme.
-            /// </summary>
-            public event OnUsingGamepad onUsingGamepad;
 
             /// <summary>
             /// Add a sprite atlas mapping. Note this will only add unique layouts; you can't map multiple atlases to the same layout.

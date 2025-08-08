@@ -18,12 +18,12 @@ namespace OpenGET.UI
         /// <summary>
         /// Option associated with this item.
         /// </summary>
-        private ContextList.Option option;
+        public ContextList.Option option { get; private set; }
 
         /// <summary>
         /// Parent context menu.
         /// </summary>
-        private ContextList menu;
+        protected ContextList menu;
 
         /// <summary>
         /// Display icon.
@@ -53,11 +53,11 @@ namespace OpenGET.UI
 
         private void ResetContextOptions()
         {
-            for (int i = 0, counti = menu.options.Length; i < counti; i++)
+            for (int i = 0, counti = menu.items.Length; i < counti; i++)
             {
-                if (menu.options[i] != this && menu.selected != menu.options[i])
+                if (menu.items[i] != this && menu.selected != menu.items[i])
                 {
-                    menu.options[i].animator.SetTrigger(animUnhighlight);
+                    menu.items[i].animator.SetTrigger(animUnhighlight);
                 }
             }
         }
