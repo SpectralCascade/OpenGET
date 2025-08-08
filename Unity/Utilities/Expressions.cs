@@ -71,6 +71,11 @@ namespace OpenGET.Expressions
         {
             return Create(value, typeof(T));
         }
+
+        public Variant Create<T>(T value)
+        {
+            return Create<T>((object)value);
+        }
     }
 
     public class StandardVariantFactory : VariantFactory
@@ -409,9 +414,9 @@ namespace OpenGET.Expressions
     }
 
     [Serializable]
-    public class Add : BinaryOperator
+    public class BinOpAdd : BinaryOperator
     {
-        public Add(Expression a, Expression b) : base(a, b) { }
+        public BinOpAdd(Expression a, Expression b) : base(a, b) { }
 
         public override string opString => "+";
 
@@ -419,9 +424,9 @@ namespace OpenGET.Expressions
     }
 
     [Serializable]
-    public class Subtract : BinaryOperator
+    public class BinOpSubtract : BinaryOperator
     {
-        public Subtract(Expression a, Expression b) : base(a, b) { }
+        public BinOpSubtract(Expression a, Expression b) : base(a, b) { }
 
         public override string opString => "-";
 
@@ -429,9 +434,9 @@ namespace OpenGET.Expressions
     }
 
     [Serializable]
-    public class Multiply : BinaryOperator
+    public class BinOpMultiply : BinaryOperator
     {
-        public Multiply(Expression a, Expression b) : base(a, b) { }
+        public BinOpMultiply(Expression a, Expression b) : base(a, b) { }
 
         public override string opString => "*";
 
@@ -439,9 +444,9 @@ namespace OpenGET.Expressions
     }
 
     [Serializable]
-    public class Divide : BinaryOperator
+    public class BinOpDivide : BinaryOperator
     {
-        public Divide(Expression a, Expression b) : base(a, b) { }
+        public BinOpDivide(Expression a, Expression b) : base(a, b) { }
 
         public override string opString => "/";
 
@@ -463,7 +468,7 @@ namespace OpenGET.Expressions
 
         public override string ToString()
         {
-            return value.ToString();
+            return value.value?.ToString();
         }
 
         public override Variant Evaluate<T>(T factory)
