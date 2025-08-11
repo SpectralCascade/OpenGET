@@ -17,13 +17,22 @@ namespace OpenGET {
     [Serializable]
     [NoMod]
     [CreateAssetMenu(fileName = "DefaultModifier", menuName = "OpenGET/Modifier")]
-    public class Modifier : Referrable
+    public class Modifier : Referrable, ISerializationCallbackReceiver
     {
         /// <summary>
         /// Your custom expression.
         /// </summary>
         [HideInInspector]
-        public Expression expression = new Constant(new VariantInteger(0));
+        [NonSerialized]
+        public Polymorph expression = new Constant(new VariantInteger(0));
+
+        [HideInInspector]
+        [SerializeField]
+        private string data;
+
+        [HideInInspector]
+        [SerializeField]
+        private string dataType;
 
         /// <summary>
         /// Builds the expression, given some 
@@ -31,6 +40,26 @@ namespace OpenGET {
         public void Build()
         {
 
+        }
+
+        public void Save()
+        {
+            data = expression.PolymorphSerialise(out Type type);
+            dataType = type.AssemblyQualifiedName;
+        }
+
+        public void OnBeforeSerialize()
+        {
+        }
+
+        public void OnAfterDeserialize()
+        {
+            if (!string.IsNullOrEmpty(data))
+            {
+                expression = Polymorph.PolymorphLoad(data, dataType);
+                data = null;
+                dataType = null;
+            }
         }
 
         /// <summary>

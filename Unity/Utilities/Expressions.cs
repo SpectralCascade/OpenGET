@@ -13,21 +13,60 @@ namespace OpenGET.Expressions
     /// Wrapper that determines how to operate on objects of different types.
     /// </summary>
     [NoMod]
-    public abstract class Variant : IVariant
+    [Serializable]
+    public abstract class Variant : Polymorph, IVariant
     {
+        private enum VarType
+        {
+            Integer = 0,
+            Float,
+            String
+        }
+
         /// <summary>
         /// The underlying value of this variant.
         /// </summary>
         public abstract object value { get; protected set; }
 
         /// <summary>
+        /// Serialised value.
+        /// </summary>
+        [HideInInspector]
+        [SerializeField]
+        private string v = "";
+
+        /// <summary>
+        /// Serialised value type.
+        /// </summary>
+        [HideInInspector]
+        [SerializeField]
+        private VarType vt;
+
+        /// <summary>
         /// Does this have a valid value?
         /// </summary>
         public bool hasValue => value != null;
 
+        public Variant() { }
+
         public Variant(object value)
         {
             this.value = value;
+        }
+
+        public void OnBeforeSerialize()
+        {
+            v = value.ToString();
+            vt = value is int ? VarType.Integer : (value is float ? VarType.Float : VarType.String);
+        }
+
+        public void OnAfterDeserialize()
+        {
+            value = vt switch {
+                VarType.Integer => int.Parse(v),
+                VarType.Float => float.Parse(v),
+                _ => v
+            };
         }
 
         protected abstract Variant Add(Variant b);
@@ -118,6 +157,7 @@ namespace OpenGET.Expressions
     /// <summary>
     /// String value.
     /// </summary>
+    [Serializable]
     public class VariantString : Variant
     {
         public string v;
@@ -150,7 +190,7 @@ namespace OpenGET.Expressions
         }
     }
 
-    public interface IVariant
+    public interface IVariant : ISerializationCallbackReceiver
     {
         public abstract object value { get; }
     }
@@ -159,6 +199,7 @@ namespace OpenGET.Expressions
         public abstract float valueFloat { get; }
     };
 
+    [Serializable]
     public abstract class VariantNumeric<T> : Variant, IVariantNumeric where T : struct
     {
         public T v;
@@ -175,6 +216,7 @@ namespace OpenGET.Expressions
     /// <summary>
     /// Float value.
     /// </summary>
+    [Serializable]
     public class VariantFloat : VariantNumeric<float>
     {
         public override float valueFloat => v;
@@ -242,6 +284,7 @@ namespace OpenGET.Expressions
         }
     }
 
+    [Serializable]
     public class VariantInteger : VariantNumeric<int>
     {
         public override float valueFloat => v;
@@ -313,7 +356,7 @@ namespace OpenGET.Expressions
     /// Represents a logical expression.
     /// </summary>
     [Serializable]
-    public abstract class Expression
+    public abstract class Expression : Polymorph
     {
         public abstract override string ToString();
 
@@ -337,8 +380,10 @@ namespace OpenGET.Expressions
     [Serializable]
     public abstract class BinaryOperator : Expression
     {
-        public Expression a;
-        public Expression b;
+        public Polymorph a;
+        public Polymorph b;
+
+        public BinaryOperator() { }
 
         public BinaryOperator(Expression a, Expression b)
         {
@@ -360,9 +405,11 @@ namespace OpenGET.Expressions
     [Serializable]
     public class TernaryOperator : Expression
     {
-        public Expression a;
-        public Expression b;
-        public Expression c;
+        public Polymorph a;
+        public Polymorph b;
+        public Polymorph c;
+
+        public TernaryOperator() { }
 
         public TernaryOperator(Expression a, Expression b, Expression c)
         {
@@ -373,8 +420,8 @@ namespace OpenGET.Expressions
 
         public override Variant Evaluate<T>(T factory)
         {
-            Variant res = a.Evaluate(factory);
-            return res.value != null && res.value.GetType().Equals(typeof(bool)) ? ((bool)res.value ? b.Evaluate(factory) : c.Evaluate(factory)) : factory.Create(null, typeof(object));
+            Variant res = (a as Expression).Evaluate(factory);
+            return res.value != null && res.value.GetType().Equals(typeof(bool)) ? ((bool)res.value ? (b as Expression).Evaluate(factory) : (c as Expression).Evaluate(factory)) : factory.Create(null, typeof(object));
         }
 
         public override string ToString()
@@ -393,9 +440,9 @@ namespace OpenGET.Expressions
 
         public override Variant Evaluate<T>(T factory)
         {
-            IVariantNumeric a_val = a.Evaluate(factory) as IVariantNumeric;
-            IVariantNumeric b_val = b.Evaluate(factory) as IVariantNumeric;
-            IVariantNumeric c_val = c.Evaluate(factory) as IVariantNumeric;
+            IVariantNumeric a_val = (a as Expression).Evaluate(factory) as IVariantNumeric;
+            IVariantNumeric b_val = (b as Expression).Evaluate(factory) as IVariantNumeric;
+            IVariantNumeric c_val = (c as Expression).Evaluate(factory) as IVariantNumeric;
 
             bool valid = a_val != null && b_val != null && c_val != null;
             bool allIntegers = a_val is VariantInteger && b_val is VariantInteger && c_val is VariantInteger;
@@ -420,7 +467,7 @@ namespace OpenGET.Expressions
 
         public override string opString => "+";
 
-        public override Variant Evaluate<T>(T factory) => a.Evaluate(factory) + b.Evaluate(factory);
+        public override Variant Evaluate<T>(T factory) => (a as Expression).Evaluate(factory) + (b as Expression).Evaluate(factory);
     }
 
     [Serializable]
@@ -430,7 +477,7 @@ namespace OpenGET.Expressions
 
         public override string opString => "-";
 
-        public override Variant Evaluate<T>(T factory) => a.Evaluate(factory) - b.Evaluate(factory);
+        public override Variant Evaluate<T>(T factory) => (a as Expression).Evaluate(factory) - (b as Expression).Evaluate(factory);
     }
 
     [Serializable]
@@ -440,7 +487,7 @@ namespace OpenGET.Expressions
 
         public override string opString => "*";
 
-        public override Variant Evaluate<T>(T factory) => a.Evaluate(factory) * b.Evaluate(factory);
+        public override Variant Evaluate<T>(T factory) => (a as Expression).Evaluate(factory) * (b as Expression).Evaluate(factory);
     }
 
     [Serializable]
@@ -450,7 +497,7 @@ namespace OpenGET.Expressions
 
         public override string opString => "/";
 
-        public override Variant Evaluate<T>(T factory) => a.Evaluate(factory) / b.Evaluate(factory);
+        public override Variant Evaluate<T>(T factory) => (a as Expression).Evaluate(factory) / (b as Expression).Evaluate(factory);
     }
 
     /// <summary>
@@ -459,7 +506,7 @@ namespace OpenGET.Expressions
     [Serializable]
     public class Constant : Expression
     {
-        public Variant value;
+        public Polymorph value;
 
         public Constant(Variant value)
         {
@@ -468,15 +515,16 @@ namespace OpenGET.Expressions
 
         public override string ToString()
         {
-            return value.value?.ToString();
+            return (value as Variant).value?.ToString();
         }
 
         public override Variant Evaluate<T>(T factory)
         {
-            return value;
+            return value as Variant;
         }
     }
 
+    [Serializable]
     public abstract class Variable : Expression
     {
         public string name;

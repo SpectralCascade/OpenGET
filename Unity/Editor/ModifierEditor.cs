@@ -19,11 +19,17 @@ namespace OpenGET.Editor
         {
             Modifier modifier = (Modifier)target;
 
+            if (GUILayout.Button("Mark Dirty"))
+            {
+                modifier.Save();
+                EditorUtility.SetDirty(target);
+            }
+
             // TODO: DynamicVariable contexts
             VariantFactory factory = new StandardVariantFactory(null);
 
-            ExpressionField(modifier.expression, factory, true, "Expression: ");
-            Expression changed = ExpressionField(modifier.expression, factory);
+            ExpressionField(modifier.expression as Expression, factory, true, "Expression: ");
+            Expression changed = ExpressionField(modifier.expression as Expression, factory);
 
             if (changed != null)
             {
@@ -46,7 +52,7 @@ namespace OpenGET.Editor
             Constant constant = expression as Constant;
             if (constant != null)
             {
-                Variant data = VariantField(constant.value, factory, out Expression inner);
+                Variant data = VariantField(constant.value as Variant, factory, out Expression inner);
                 if (data != null)
                 {
                     if (inner != null)
@@ -98,11 +104,11 @@ namespace OpenGET.Editor
 
                 if (binOp.a == null)
                 {
-                    expression = binOp.b;
+                    expression = binOp.b as Expression;
                 }
                 else if (binOp.b == null)
                 {
-                    expression = binOp.a;
+                    expression = binOp.a as Expression;
                 }
                 else
                 {
@@ -212,7 +218,7 @@ namespace OpenGET.Editor
         }
 
         public BinaryOperator BinaryOperatorField(BinaryOperator op, VariantFactory factory) {
-            Expression a = ExpressionField(op.a, factory);
+            Expression a = ExpressionField(op.a as Expression, factory);
 
             string[] options = new string[] { "+", "-", "*", "\\" };
             int selected = 0;
@@ -238,16 +244,16 @@ namespace OpenGET.Editor
                 {
                     default:
                     case 0:
-                        op = new BinOpAdd(a, op.b);
+                        op = new BinOpAdd(a, op.b as Expression);
                         break;
                     case 1:
-                        op = new BinOpSubtract(a, op.b);
+                        op = new BinOpSubtract(a, op.b as Expression);
                         break;
                     case 2:
-                        op = new BinOpMultiply(a, op.b);
+                        op = new BinOpMultiply(a, op.b as Expression);
                         break;
                     case 3:
-                        op = new BinOpDivide(a, op.b);
+                        op = new BinOpDivide(a, op.b as Expression);
                         break;
                 }
             }
@@ -256,7 +262,7 @@ namespace OpenGET.Editor
                 op.a = a;
             }
 
-            op.b = ExpressionField(op.b, factory);
+            op.b = ExpressionField(op.b as Expression, factory);
             return op;
         }
 

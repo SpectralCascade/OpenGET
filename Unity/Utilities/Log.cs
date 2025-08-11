@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using UnityEditor;
 
 namespace OpenGET {
 
@@ -26,13 +27,20 @@ namespace OpenGET {
             public void OnLog(Level level, string message, params object[] args)
             {
 #if UNITY_EDITOR
-                if (!UnityEditor.EditorPrefs.HasKey("OpenGET/LogLevel"))
+                try
                 {
-                    UnityEditor.EditorPrefs.SetInt("OpenGET/LogLevel", (int)Level.All);
+                    if (!UnityEditor.EditorPrefs.HasKey("OpenGET/LogLevel"))
+                    {
+                        UnityEditor.EditorPrefs.SetInt("OpenGET/LogLevel", (int)Level.All);
+                    }
+                    else if ((UnityEditor.EditorPrefs.GetInt("OpenGET/LogLevel") & (int)level) == 0)
+                    {
+                        return;
+                    }
                 }
-                else if ((UnityEditor.EditorPrefs.GetInt("OpenGET/LogLevel") & (int)level) == 0)
+                catch (System.Exception e)
                 {
-                    return;
+                    // Do nothing; probably tried to call during serialisation
                 }
 #endif
                 LogType type = level switch {
@@ -115,11 +123,21 @@ namespace OpenGET {
         /// </summary>
         private static void UpdateLoggers(Level level, string message, params object[] args) {
 #if UNITY_EDITOR
-            if (!UnityEditor.EditorPrefs.HasKey("OpenGET/LogLevel"))
+            bool allowed = false;
+            try
             {
-                UnityEditor.EditorPrefs.SetInt("OpenGET/LogLevel", (int)Level.All);
+                if (!UnityEditor.EditorPrefs.HasKey("OpenGET/LogLevel"))
+                {
+                    UnityEditor.EditorPrefs.SetInt("OpenGET/LogLevel", (int)Level.All);
+                }
+                allowed = (UnityEditor.EditorPrefs.GetInt("OpenGET/LogLevel") & (int)level) != 0;
             }
-            if ((UnityEditor.EditorPrefs.GetInt("OpenGET/LogLevel") & (int)level) != 0)
+            catch (System.Exception e)
+            {
+                // Do nothing; probably attempted to log during serialisation, just let all logs through
+                allowed = true;
+            }
+            if (allowed)
             {
 #endif
                 foreach (KeyValuePair<ILogger, Level> logger in loggers) {
