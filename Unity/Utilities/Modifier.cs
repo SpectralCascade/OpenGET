@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using OpenGET.Expressions;
 using UnityEngine;
+using Newtonsoft.Json;
 
 namespace OpenGET {
 
@@ -24,42 +25,31 @@ namespace OpenGET {
         /// </summary>
         [HideInInspector]
         [NonSerialized]
-        public Polymorph expression = new Constant(new VariantInteger(0));
-
-        [HideInInspector]
-        [SerializeField]
-        private string data;
-
-        [HideInInspector]
-        [SerializeField]
-        private string dataType;
+        public Expression expression = new Constant(new VariantInteger(0));
 
         /// <summary>
-        /// Builds the expression, given some 
+        /// Serialised expression data.
         /// </summary>
-        public void Build()
-        {
+        [HideInInspector]
+        [SerializeField]
+        private string serialised = "";
 
-        }
-
-        public void Save()
+        private static JsonSerializerSettings GetSettingsJSON()
         {
-            data = expression.PolymorphSerialise(out Type type);
-            dataType = type.AssemblyQualifiedName;
+            return new JsonSerializerSettings() {
+                TypeNameHandling = TypeNameHandling.All,
+            };
         }
 
         public void OnBeforeSerialize()
         {
+            serialised = JsonConvert.SerializeObject(expression, GetSettingsJSON());
         }
 
         public void OnAfterDeserialize()
         {
-            if (!string.IsNullOrEmpty(data))
-            {
-                expression = Polymorph.PolymorphLoad(data, dataType);
-                data = null;
-                dataType = null;
-            }
+            expression = JsonConvert.DeserializeObject(serialised, GetSettingsJSON()) as Expression;
+            serialised = "";
         }
 
         /// <summary>
