@@ -339,8 +339,20 @@ namespace OpenGET.Expressions
             /// Your custom expression.
             /// </summary>
             [HideInInspector]
-            [NonSerialized]
-            public Expression expression = new Constant(new VariantFloat(0f));
+            public Expression expression {
+                get {
+                    if (!string.IsNullOrEmpty(data))
+                    {
+                        _expression = FromJSON(data);
+                        data = "";
+                    }
+                    return _expression;
+                }
+                set {
+                    _expression = value;
+                }
+            }
+            private Expression _expression = new Constant(new VariantFloat(0f));
 
             /// <summary>
             /// Serialised expression data.
@@ -356,8 +368,7 @@ namespace OpenGET.Expressions
 
             public void OnAfterDeserialize()
             {
-                expression = FromJSON(data);
-                data = "";
+                // Do nothing; lazy-load from JSON via getter to avoid Unity being unhappy with Object references
             }
         }
 
@@ -576,6 +587,9 @@ namespace OpenGET.Expressions
     [Serializable]
     public class UnityVariable : Variable
     {
+        /// <summary>
+        /// Workaround for serialising Unity object references.
+        /// </summary>
         private class ObjectConverter : JsonConverter<ObjectWrapper>
         {
             public override ObjectWrapper ReadJson(JsonReader reader, Type objectType, ObjectWrapper existingValue, bool hasExistingValue, JsonSerializer serializer)
@@ -584,7 +598,7 @@ namespace OpenGET.Expressions
                 ObjectWrapper obj = new ObjectWrapper();
                 if (valid)
                 {
-                    object restored = JsonUtility.FromJson(reader.Value as string, objectType);
+                    object restored = JsonUtility.FromJson((string)reader.Value, objectType);
                     if (restored != null)
                     {
                         obj = (ObjectWrapper)restored;
