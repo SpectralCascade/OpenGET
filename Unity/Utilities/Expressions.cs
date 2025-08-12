@@ -1,10 +1,12 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices.WindowsRuntime;
+using UnityEditorInternal;
 using UnityEngine;
 
 namespace OpenGET.Expressions
@@ -34,8 +36,6 @@ namespace OpenGET.Expressions
         /// Does this have a valid value?
         /// </summary>
         public bool hasValue => value != null;
-
-        public Variant() { }
 
         public Variant(object value)
         {
@@ -332,6 +332,35 @@ namespace OpenGET.Expressions
     [JsonObject(MemberSerialization.Fields)]
     public abstract class Expression
     {
+        [Serializable]
+        public class Serialisable : ISerializationCallbackReceiver
+        {
+            /// <summary>
+            /// Your custom expression.
+            /// </summary>
+            [HideInInspector]
+            [NonSerialized]
+            public Expression expression = new Constant(new VariantFloat(0f));
+
+            /// <summary>
+            /// Serialised expression data.
+            /// </summary>
+            [HideInInspector]
+            [SerializeField]
+            private string data = "";
+
+            public void OnBeforeSerialize()
+            {
+                data = ToJSON(expression);
+            }
+
+            public void OnAfterDeserialize()
+            {
+                expression = FromJSON(data);
+                data = "";
+            }
+        }
+
         public static JsonSerializerSettings JsonSerialization => new JsonSerializerSettings()
         {
             TypeNameHandling = TypeNameHandling.All,
@@ -547,16 +576,48 @@ namespace OpenGET.Expressions
     [Serializable]
     public class UnityVariable : Variable
     {
+        private class ObjectConverter : JsonConverter<ObjectWrapper>
+        {
+            public override ObjectWrapper ReadJson(JsonReader reader, Type objectType, ObjectWrapper existingValue, bool hasExistingValue, JsonSerializer serializer)
+            {
+                bool valid = reader.Value != null && (string)reader.Value != "";
+                ObjectWrapper obj = new ObjectWrapper();
+                if (valid)
+                {
+                    object restored = JsonUtility.FromJson(reader.Value as string, objectType);
+                    if (restored != null)
+                    {
+                        obj = (ObjectWrapper)restored;
+                    }
+                }
+                return obj;
+            }
+
+            public override void WriteJson(JsonWriter writer, ObjectWrapper value, JsonSerializer serializer)
+            {
+                writer.WriteValue(JsonUtility.ToJson(value, false));
+            }
+        }
+
+        /// <summary>
+        /// Shim class for using Unity serialisation.
+        /// </summary>
+        public struct ObjectWrapper
+        {
+            public UnityEngine.Object reference;
+        }
+
         /// <summary>
         /// Target Unity object to reflect.
         /// </summary>
-        public UnityEngine.Object _target;
+        [JsonConverter(typeof(ObjectConverter))]
+        public ObjectWrapper _target = new ObjectWrapper();
 
-        public override object target => _target;
+        public override object target => _target.reference;
 
         public UnityVariable(string name, UnityEngine.Object target) : base(name)
         {
-            _target = target;
+            _target.reference = target;
         }
 
         public override string ToString()

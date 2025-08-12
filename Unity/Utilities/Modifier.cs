@@ -18,32 +18,12 @@ namespace OpenGET {
     [Serializable]
     [NoMod]
     [CreateAssetMenu(fileName = "DefaultModifier", menuName = "OpenGET/Modifier")]
-    public class Modifier : Referrable, ISerializationCallbackReceiver
+    public class Modifier : Referrable
     {
         /// <summary>
-        /// Your custom expression.
+        /// Modification expression.
         /// </summary>
-        [HideInInspector]
-        [NonSerialized]
-        public Expression expression = new Constant(new VariantInteger(0));
-
-        /// <summary>
-        /// Serialised expression data.
-        /// </summary>
-        [HideInInspector]
-        [SerializeField]
-        private string serialised = "";
-
-        public void OnBeforeSerialize()
-        {
-            serialised = Expression.ToJSON(expression);
-        }
-
-        public void OnAfterDeserialize()
-        {
-            expression = Expression.FromJSON(serialised);
-            serialised = "";
-        }
+        public Expression.Serialisable modifier;
 
         /// <summary>
         /// Apply expression to modify the target value using custom Variants.
@@ -99,7 +79,7 @@ namespace OpenGET {
 
         public override string ToString()
         {
-            return expression.ToString();
+            return modifier.ToString();
         }
     }
 
