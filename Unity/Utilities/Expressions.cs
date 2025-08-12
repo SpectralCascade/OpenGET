@@ -332,6 +332,21 @@ namespace OpenGET.Expressions
     [JsonObject(MemberSerialization.Fields)]
     public abstract class Expression
     {
+        public static JsonSerializerSettings JsonSerialization => new JsonSerializerSettings()
+        {
+            TypeNameHandling = TypeNameHandling.All,
+        };
+
+        public static Expression FromJSON(string json)
+        {
+            return JsonConvert.DeserializeObject(json, JsonSerialization) as Expression;
+        }
+
+        public static string ToJSON(Expression obj)
+        {
+            return JsonConvert.SerializeObject(obj, JsonSerialization);
+        }
+
         public abstract override string ToString();
 
         /// <summary>

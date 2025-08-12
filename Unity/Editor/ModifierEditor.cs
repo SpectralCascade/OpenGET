@@ -23,9 +23,9 @@ namespace OpenGET.Editor
             VariantFactory factory = new StandardVariantFactory(null);
 
             bool modified = false;
-            ExpressionField(modifier.expression as Expression, factory, ref modified, true, "Expression: ");
+            ExpressionField(modifier.expression, factory, ref modified, true, "Expression: ");
             modified = false;
-            Expression changed = ExpressionField(modifier.expression as Expression, factory, ref modified);
+            Expression changed = ExpressionField(modifier.expression, factory, ref modified);
 
             if (modified)
             {
@@ -44,7 +44,7 @@ namespace OpenGET.Editor
 
         public Expression ExpressionField(Expression expression, VariantFactory factory, ref bool changed, bool readOnly = false, string label = null)
         {
-            changed = false;
+            changed |= false;
 
             if (readOnly)
             {
@@ -107,11 +107,11 @@ namespace OpenGET.Editor
 
                 if (binOp.a == null)
                 {
-                    expression = binOp.b as Expression;
+                    expression = binOp.b;
                 }
                 else if (binOp.b == null)
                 {
-                    expression = binOp.a as Expression;
+                    expression = binOp.a;
                 }
                 else
                 {
@@ -233,7 +233,7 @@ namespace OpenGET.Editor
         }
 
         public BinaryOperator BinaryOperatorField(BinaryOperator op, VariantFactory factory, ref bool changed) {
-            Expression a = ExpressionField(op.a as Expression, factory, ref changed);
+            Expression a = ExpressionField(op.a, factory, ref changed);
 
             string[] options = new string[] { "+", "-", "*", "\\" };
             int selected = 0;
@@ -260,16 +260,16 @@ namespace OpenGET.Editor
                 {
                     default:
                     case 0:
-                        op = new BinOpAdd(a, op.b as Expression);
+                        op = new BinOpAdd(a, op.b);
                         break;
                     case 1:
-                        op = new BinOpSubtract(a, op.b as Expression);
+                        op = new BinOpSubtract(a, op.b);
                         break;
                     case 2:
-                        op = new BinOpMultiply(a, op.b as Expression);
+                        op = new BinOpMultiply(a, op.b);
                         break;
                     case 3:
-                        op = new BinOpDivide(a, op.b as Expression);
+                        op = new BinOpDivide(a, op.b);
                         break;
                 }
             }
@@ -278,7 +278,7 @@ namespace OpenGET.Editor
                 op.a = a;
             }
 
-            op.b = ExpressionField(op.b as Expression, factory, ref changed);
+            op.b = ExpressionField(op.b, factory, ref changed);
             return op;
         }
 

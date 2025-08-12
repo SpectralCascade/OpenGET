@@ -34,21 +34,14 @@ namespace OpenGET {
         [SerializeField]
         private string serialised = "";
 
-        private static JsonSerializerSettings GetSettingsJSON()
-        {
-            return new JsonSerializerSettings() {
-                TypeNameHandling = TypeNameHandling.All,
-            };
-        }
-
         public void OnBeforeSerialize()
         {
-            serialised = JsonConvert.SerializeObject(expression, GetSettingsJSON());
+            serialised = Expression.ToJSON(expression);
         }
 
         public void OnAfterDeserialize()
         {
-            expression = JsonConvert.DeserializeObject(serialised, GetSettingsJSON()) as Expression;
+            expression = Expression.FromJSON(serialised);
             serialised = "";
         }
 
