@@ -43,9 +43,10 @@ namespace OpenGET
         /// <summary>
         /// Get registered asset by id.
         /// </summary>
-        public static Object GetObject(int id)
+        public static Object GetObject(int id, AssetRegistry registry = null)
         {
-            return id >= 0 && id < Instance.assets.Length ? Instance.assets[id] : null;
+            registry = registry ?? Instance;
+            return id >= 0 && registry != null && id < registry.assets.Length ? registry.assets[id] : null;
         }
 
         /// <summary>

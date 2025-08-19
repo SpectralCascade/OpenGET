@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices.WindowsRuntime;
+using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 
@@ -15,7 +16,6 @@ namespace OpenGET.Expressions
     /// <summary>
     /// Wrapper that determines how to operate on objects of different types.
     /// </summary>
-    [NoMod]
     [Serializable]
     [JsonObject(MemberSerialization.Fields)]
     public abstract class Variant : IVariant
@@ -68,14 +68,22 @@ namespace OpenGET.Expressions
         }
     }
 
-    [NoMod]
-    public abstract class VariantFactory
+    public abstract class VariantFactory : Expression.IContext
     {
         /// <summary>
         /// Context objects with which variable fields are reflected.
         /// These are only used by DynamicVariables in expressions.
         /// </summary>
-        public abstract object[] contexts { get; }
+        public abstract object[] args { get; set; }
+
+        public abstract Expression.IContext.Parameter[] parameters { get; }
+
+        public VariantFactory(params object[] args) {
+            if (args != null)
+            {
+                this.args = args;
+            }
+        }
 
         public abstract Variant Create(object value, Type type);
 
@@ -92,17 +100,19 @@ namespace OpenGET.Expressions
 
     public class StandardVariantFactory : VariantFactory
     {
-        public override object[] contexts => _contexts;
+        /// <summary>
+        /// Arguments corresponding to the context parameters.
+        /// </summary>
+        public override object[] args { get { return _args; } set { _args = value; } }
+        private object[] _args = new object[0];
 
-        private object[] _contexts = new object[0];
+        /// <summary>
+        /// Supply context parameters.
+        /// </summary>
+        public override Expression.IContext.Parameter[] parameters => new Expression.IContext.Parameter[0];
 
-        public StandardVariantFactory(object[] contexts)
-        {
-            if (contexts != null)
-            {
-                _contexts = contexts;
-            }
-        }
+        public StandardVariantFactory() { }
+        public StandardVariantFactory(params object[] args) : base(args) { }
 
         /// <summary>
         /// A type factory for OpenGET supported variants. If you want to add custom variants,
@@ -110,21 +120,58 @@ namespace OpenGET.Expressions
         /// </summary>
         public override Variant Create(object value, Type type)
         {
-            if (type.Equals(typeof(string)))
+            if (type.Equals(typeof(string)) || (value != null && value is string))
             {
                 return new VariantString(value);
             }
-            else if (type.Equals(typeof(float)))
+            else if (type.Equals(typeof(float)) || (value != null && (value is float || value is double)))
             {
                 return new VariantFloat(value);
             }
-            else if (type.Equals(typeof(int)))
+            else if (type.Equals(typeof(int)) || (value != null && (value is int)))
             {
                 return new VariantInteger(value);
             }
 
+            if (value == null)
+            {
+                throw new NullReferenceException("Specified value is null! StandardVariantFactory only supports non-null values in Variants.");
+            }
             throw new ArgumentException($"Variant of type {type.FullName} is unsupported by {GetType().FullName}. Please use a custom type factory instead.");
         }
+    }
+
+    public class StandardVariantFactory<T1> : StandardVariantFactory
+    {
+        public StandardVariantFactory() { }
+        public StandardVariantFactory(params object[] args) : base(args) { }
+
+        public override Expression.IContext.Parameter[] parameters => new Expression.IContext.Parameter[] {
+            new Expression.IContext.Parameter(typeof(T1), typeof(T1).Name + "_0")
+        };
+    }
+
+    public class StandardVariantFactory<T1, T2> : StandardVariantFactory
+    {
+        public StandardVariantFactory() { }
+        public StandardVariantFactory(params object[] args) : base(args) { }
+
+        public override Expression.IContext.Parameter[] parameters => new Expression.IContext.Parameter[] {
+            new Expression.IContext.Parameter(typeof(T1), typeof(T1).Name + "_0"),
+            new Expression.IContext.Parameter(typeof(T2), typeof(T2).Name + "_1")
+        };
+    }
+
+    public class StandardVariantFactory<T1, T2, T3> : StandardVariantFactory
+    {
+        public StandardVariantFactory() { }
+        public StandardVariantFactory(params object[] args) : base(args) { }
+
+        public override Expression.IContext.Parameter[] parameters => new Expression.IContext.Parameter[] {
+            new Expression.IContext.Parameter(typeof(T1), typeof(T1).Name + "_0"),
+            new Expression.IContext.Parameter(typeof(T2), typeof(T2).Name + "_1"),
+            new Expression.IContext.Parameter(typeof(T3), typeof(T3).Name + "_2")
+        };
     }
 
     /// <summary>
@@ -161,6 +208,8 @@ namespace OpenGET.Expressions
         {
             throw new InvalidOperationException("Cannot subtract string variants!");
         }
+
+        public override string ToString() => v;
     }
 
     public interface IVariant
@@ -184,6 +233,8 @@ namespace OpenGET.Expressions
         public abstract float valueFloat { get; }
 
         public VariantNumeric(object value) : base(value) { }
+
+        public override string ToString() => v.ToString();
     }
 
     /// <summary>
@@ -332,8 +383,43 @@ namespace OpenGET.Expressions
     [JsonObject(MemberSerialization.Fields)]
     public abstract class Expression
     {
+        [Flags]
+        public enum Mutability
+        {
+            Immutable = 0,
+            Value = 1,
+            Type = 2,
+            Operator = 4,
+            Delete = 8,
+            FullyMutable = Value | Type | Operator | Delete
+        }
+
+        /// <summary>
+        /// Provides contextual data for expressions.
+        /// </summary>
+        public interface IContext
+        {
+            public struct Parameter
+            {
+                public Parameter(Type type, string name)
+                {
+                    this.type = type;
+                    this.name = name;
+                }
+
+                public Type type;
+                public string name;
+            }
+
+            /// <summary>
+            /// Returns the list of parameters available for use with DynamicVariables.
+            /// </summary>
+            public Parameter[] parameters { get; }
+
+        }
+
         [Serializable]
-        public class Serialisable : ISerializationCallbackReceiver
+        public abstract class BaseSerialisable : ISerializationCallbackReceiver
         {
             /// <summary>
             /// Your custom expression.
@@ -352,7 +438,23 @@ namespace OpenGET.Expressions
                     _expression = value;
                 }
             }
-            private Expression _expression = new Constant(new VariantFloat(0f));
+#if UNITY_EDITOR
+            [System.NonSerialized]
+            public
+#else
+            private
+#endif
+                Expression _expression = null;
+
+            /// <summary>
+            /// Get the variant factory.
+            /// </summary>
+            public abstract VariantFactory CreateFactory(params object[] args);
+
+            /// <summary>
+            /// Is the expression mutable, and if so in what way?
+            /// </summary>
+            public Mutability mutability = Mutability.FullyMutable;
 
             /// <summary>
             /// Serialised expression data.
@@ -361,14 +463,60 @@ namespace OpenGET.Expressions
             [SerializeField]
             private string data = "";
 
+            public BaseSerialisable() { }
+
+            public BaseSerialisable(Mutability mutability)
+            {
+                this.mutability = mutability;
+            }
+
+            public abstract Variant Evaluate();
+
+            public abstract Variant Evaluate(params object[] args);
+
             public void OnBeforeSerialize()
             {
-                data = ToJSON(expression);
+#if UNITY_EDITOR
+                if (!EditorApplication.isUpdating && _expression != null)
+                {
+#endif
+                    data = ToJSON(expression);
+#if UNITY_EDITOR
+                }
+#endif
             }
 
             public void OnAfterDeserialize()
             {
                 // Do nothing; lazy-load from JSON via getter to avoid Unity being unhappy with Object references
+            }
+        }
+
+        [Serializable]
+        public class Serialisable<FactoryType> : BaseSerialisable where FactoryType : VariantFactory, new()
+        {
+            public Serialisable() : base() { }
+
+            public Serialisable(Mutability mutability) : base(mutability) { }
+
+            public override Variant Evaluate()
+            {
+                return expression.Evaluate(CreateFactory());
+            }
+
+            public override Variant Evaluate(params object[] args)
+            {
+                return expression.Evaluate(CreateFactory(args));
+            }
+
+            public override VariantFactory CreateFactory(params object[] args)
+            {
+                FactoryType factory = new FactoryType();
+                if (args != null)
+                {
+                    factory.args = args;
+                }
+                return factory;
             }
         }
 
@@ -395,11 +543,11 @@ namespace OpenGET.Expressions
         public abstract Variant Evaluate<FactoryType>(FactoryType factory) where FactoryType : VariantFactory;
 
         /// <summary>
-        /// Default to a standard factory with no contexts provided.
+        /// Default to a standard factory with no context provided.
         /// </summary>
         public Variant Evaluate()
         {
-            return Evaluate(new StandardVariantFactory(null));
+            return Evaluate(new StandardVariantFactory());
         }
     }
 
@@ -528,14 +676,16 @@ namespace OpenGET.Expressions
     }
 
     /// <summary>
-    /// Constant value.
+    /// Represents a variable that holds a specific value.
     /// </summary>
-    [Serializable]
-    public class Constant : Expression
+    public abstract class Variable : Expression
     {
-        public Variant value;
+        [JsonIgnore]
+        public abstract Variant value { get; set; }
 
-        public Constant(Variant value)
+        public Variable() { }
+
+        public Variable(Variant value)
         {
             this.value = value;
         }
@@ -551,14 +701,42 @@ namespace OpenGET.Expressions
         }
     }
 
+    /// <summary>
+    /// Constant value that should not change at runtime.
+    /// </summary>
     [Serializable]
-    public abstract class Variable : Expression
+    public class Constant : Variable
     {
+        public override Variant value {
+            get => _val;
+            set => _val = value;
+        }
+
+        [JsonRequired]
+        protected Variant _val;
+
+        public Constant() { }
+
+        public Constant(Variant value) : base(value) { }
+
+    }
+
+    /// <summary>
+    /// A variable with a name.
+    /// </summary>
+    [Serializable]
+    public abstract class NamedVariable : Variable
+    {
+        public override Variant value {
+            get => Evaluate();
+            set => target?.GetType()?.GetField(name)?.SetValue(target, value.value);
+        }
+
         public string name;
 
         public abstract object target { get; }
 
-        public Variable(string name)
+        public NamedVariable(string name)
         {
             this.name = name;
         }
@@ -585,58 +763,67 @@ namespace OpenGET.Expressions
     /// Named variable value. This maps to a field on a Unity object.
     /// </summary>
     [Serializable]
-    public class UnityVariable : Variable
+    public class AssetVariable : NamedVariable
     {
         /// <summary>
         /// Workaround for serialising Unity object references.
         /// </summary>
-        private class ObjectConverter : JsonConverter<ObjectWrapper>
+        private class Converter : JsonConverter<AssetWrapper>
         {
-            public override ObjectWrapper ReadJson(JsonReader reader, Type objectType, ObjectWrapper existingValue, bool hasExistingValue, JsonSerializer serializer)
+            public override AssetWrapper ReadJson(JsonReader reader, Type objectType, AssetWrapper existingValue, bool hasExistingValue, JsonSerializer serializer)
             {
-                bool valid = reader.Value != null && (string)reader.Value != "";
-                ObjectWrapper obj = new ObjectWrapper();
+                int id = -1;
+                bool valid = reader.TokenType == JsonToken.Integer && (id = Convert.ToInt32(reader.Value)) >= 0;
+                AssetWrapper obj = new AssetWrapper();
                 if (valid)
                 {
-                    object restored = JsonUtility.FromJson((string)reader.Value, objectType);
-                    if (restored != null)
+                    Referrable reference = AssetRegistry.GetObject(id
+#if UNITY_EDITOR
+                        , Application.isPlaying ? null : AssetDatabase.LoadAssetAtPath<AssetRegistry>(AssetDatabase.GUIDToAssetPath(AssetDatabase.FindAssets("t:AssetRegistry").FirstOrDefault()))
+#endif
+                    )
+                    as Referrable;
+                    if (reference == null)
                     {
-                        obj = (ObjectWrapper)restored;
+                        Log.Warning("Failed to locate reference with id {0}!", id);
                     }
+                    obj = new AssetWrapper() {
+                        reference = reference
+                    };
                 }
                 return obj;
             }
 
-            public override void WriteJson(JsonWriter writer, ObjectWrapper value, JsonSerializer serializer)
+            public override void WriteJson(JsonWriter writer, AssetWrapper value, JsonSerializer serializer)
             {
-                writer.WriteValue(JsonUtility.ToJson(value, false));
+                writer.WriteValue(value.reference != null ? value.reference.PersistentId : -1);
             }
         }
 
         /// <summary>
         /// Shim class for using Unity serialisation.
         /// </summary>
-        public struct ObjectWrapper
+        public struct AssetWrapper
         {
-            public UnityEngine.Object reference;
+            public Referrable reference;
         }
 
         /// <summary>
         /// Target Unity object to reflect.
         /// </summary>
-        [JsonConverter(typeof(ObjectConverter))]
-        public ObjectWrapper _target = new ObjectWrapper();
+        [JsonConverter(typeof(Converter))]
+        public AssetWrapper _target = new AssetWrapper();
 
         public override object target => _target.reference;
 
-        public UnityVariable(string name, UnityEngine.Object target) : base(name)
+        public AssetVariable(string name, Referrable target) : base(name)
         {
             _target.reference = target;
         }
 
         public override string ToString()
         {
-            return target?.GetType()?.Name + "." + name;
+            return (((target as Referrable) != null ? (target as Referrable)?.name : null) ?? target?.GetType()?.Name) + "." + name;
         }
 
         public override Variant Evaluate<T>(T factory)
@@ -656,7 +843,7 @@ namespace OpenGET.Expressions
     /// In cases where you require Unity serialisation, use UnityVariable or DynamicVariable instead.
     /// </summary>
     [Serializable]
-    public class ReflectionVariable : Variable
+    public class ReflectionVariable : NamedVariable
     {
         /// <summary>
         /// Target object to reflect.
@@ -684,41 +871,38 @@ namespace OpenGET.Expressions
     /// You should also take care when renaming fields, as doing so without updating DynamicVariables will break upon expression evaluation.
     /// </summary>
     [Serializable]
-    public class DynamicVariable : Variable
+    public class DynamicVariable : NamedVariable
     {
         public override object target => null;
 
-        public DynamicVariable(string name) : base(name) {}
+        /// <summary>
+        /// Parameter index.
+        /// </summary>
+        public int index;
+
+        public DynamicVariable(int index, string name) : base(name) { this.index = index; }
 
         public override Variant Evaluate<T>(T factory)
         {
-            string[] split = name.Split(".");
-            string id = split[0];
-            string fieldName = split[1];
-
-            if (!int.TryParse(id, out int index))
+            if (index >= factory.args.Length || index < 0)
             {
-                throw new Exception($"Invalid DynamicVariable \"{name}\", failed to parse context index.");
-            }
-            else if (index >= factory.contexts.Length)
-            {
-                throw new IndexOutOfRangeException($"Context at index {index} for DynamicVariable \"{name}\" is invalid (out of range).");
+                throw new IndexOutOfRangeException($"Argument {index} of DynamicVariable \"{name}\" is invalid (out of range).");
             }
             
-            object context = factory.contexts[index];
-            if (context == null)
+            object arg = factory.args[index];
+            if (arg == null)
             {
-                throw new NullReferenceException($"Context {index} of DynamicVariable \"{name}\" is null!");
+                throw new NullReferenceException($"Argument {index} of DynamicVariable \"{name}\" is null.");
             }
 
-            FieldInfo field = context.GetType().GetField(fieldName);
+            FieldInfo field = arg.GetType().GetField(name);
             if (field != null)
             {
-                return factory.Create(field.GetValue(context), field.FieldType);
+                return factory.Create(field.GetValue(arg), field.FieldType);
             }
             else
             {
-                Log.Error("No such field {0} available on context {1} of type {2} (DynamicVariable {3})", fieldName, index, context.GetType().FullName, name);
+                Log.Error("No such field {0} available at index {1} of type {2} (DynamicVariable {3})", name, index, arg.GetType().FullName, name);
             }
             return factory.Create(null, typeof(object));
         }
