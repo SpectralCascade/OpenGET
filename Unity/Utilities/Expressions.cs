@@ -68,7 +68,7 @@ namespace OpenGET.Expressions
         }
     }
 
-    public abstract class VariantFactory : Expression.IContext
+    public abstract class VariantFactory : IContext
     {
         /// <summary>
         /// Context objects with which variable fields are reflected.
@@ -76,7 +76,7 @@ namespace OpenGET.Expressions
         /// </summary>
         public abstract object[] args { get; set; }
 
-        public abstract Expression.IContext.Parameter[] parameters { get; }
+        public abstract IContext.Parameter[] parameters { get; }
 
         public VariantFactory(params object[] args) {
             if (args != null)
@@ -109,7 +109,7 @@ namespace OpenGET.Expressions
         /// <summary>
         /// Supply context parameters.
         /// </summary>
-        public override Expression.IContext.Parameter[] parameters => new Expression.IContext.Parameter[0];
+        public override IContext.Parameter[] parameters => new IContext.Parameter[0];
 
         public StandardVariantFactory() { }
         public StandardVariantFactory(params object[] args) : base(args) { }
@@ -146,8 +146,8 @@ namespace OpenGET.Expressions
         public StandardVariantFactory() { }
         public StandardVariantFactory(params object[] args) : base(args) { }
 
-        public override Expression.IContext.Parameter[] parameters => new Expression.IContext.Parameter[] {
-            new Expression.IContext.Parameter(typeof(T1), typeof(T1).Name + "_0")
+        public override IContext.Parameter[] parameters => new IContext.Parameter[] {
+            new IContext.Parameter(typeof(T1), typeof(T1).Name + "_0")
         };
     }
 
@@ -156,9 +156,9 @@ namespace OpenGET.Expressions
         public StandardVariantFactory() { }
         public StandardVariantFactory(params object[] args) : base(args) { }
 
-        public override Expression.IContext.Parameter[] parameters => new Expression.IContext.Parameter[] {
-            new Expression.IContext.Parameter(typeof(T1), typeof(T1).Name + "_0"),
-            new Expression.IContext.Parameter(typeof(T2), typeof(T2).Name + "_1")
+        public override IContext.Parameter[] parameters => new IContext.Parameter[] {
+            new IContext.Parameter(typeof(T1), typeof(T1).Name + "_0"),
+            new IContext.Parameter(typeof(T2), typeof(T2).Name + "_1")
         };
     }
 
@@ -167,10 +167,10 @@ namespace OpenGET.Expressions
         public StandardVariantFactory() { }
         public StandardVariantFactory(params object[] args) : base(args) { }
 
-        public override Expression.IContext.Parameter[] parameters => new Expression.IContext.Parameter[] {
-            new Expression.IContext.Parameter(typeof(T1), typeof(T1).Name + "_0"),
-            new Expression.IContext.Parameter(typeof(T2), typeof(T2).Name + "_1"),
-            new Expression.IContext.Parameter(typeof(T3), typeof(T3).Name + "_2")
+        public override IContext.Parameter[] parameters => new IContext.Parameter[] {
+            new IContext.Parameter(typeof(T1), typeof(T1).Name + "_0"),
+            new IContext.Parameter(typeof(T2), typeof(T2).Name + "_1"),
+            new IContext.Parameter(typeof(T3), typeof(T3).Name + "_2")
         };
     }
 
@@ -377,6 +377,33 @@ namespace OpenGET.Expressions
     }
 
     /// <summary>
+    /// Provides contextual data for expressions.
+    /// </summary>
+    public interface IContext
+    {
+        /// <summary>
+        /// Defines an expected type parameter.
+        /// </summary>
+        public struct Parameter
+        {
+            public Parameter(Type type, string name)
+            {
+                this.type = type;
+                this.name = name;
+            }
+
+            public Type type;
+            public string name;
+        }
+
+        /// <summary>
+        /// Returns the list of parameters expected for this context.
+        /// </summary>
+        public Parameter[] parameters { get; }
+
+    }
+
+    /// <summary>
     /// Represents a logical expression.
     /// </summary>
     [Serializable]
@@ -392,30 +419,6 @@ namespace OpenGET.Expressions
             Operator = 4,
             Delete = 8,
             FullyMutable = Value | Type | Operator | Delete
-        }
-
-        /// <summary>
-        /// Provides contextual data for expressions.
-        /// </summary>
-        public interface IContext
-        {
-            public struct Parameter
-            {
-                public Parameter(Type type, string name)
-                {
-                    this.type = type;
-                    this.name = name;
-                }
-
-                public Type type;
-                public string name;
-            }
-
-            /// <summary>
-            /// Returns the list of parameters available for use with DynamicVariables.
-            /// </summary>
-            public Parameter[] parameters { get; }
-
         }
 
         [Serializable]
@@ -878,9 +881,14 @@ namespace OpenGET.Expressions
         /// <summary>
         /// Parameter index.
         /// </summary>
-        public int index;
+        public int index = 0;
 
         public DynamicVariable(int index, string name) : base(name) { this.index = index; }
+
+        public override string ToString()
+        {
+            return index + "." + name;
+        }
 
         public override Variant Evaluate<T>(T factory)
         {
@@ -895,7 +903,7 @@ namespace OpenGET.Expressions
                 throw new NullReferenceException($"Argument {index} of DynamicVariable \"{name}\" is null.");
             }
 
-            FieldInfo field = arg.GetType().GetField(name);
+            FieldInfo field = arg.GetType().GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
             if (field != null)
             {
                 return factory.Create(field.GetValue(arg), field.FieldType);

@@ -1,9 +1,9 @@
-using System.Collections.Generic;
-using UnityEngine;
 using OpenGET.Expressions;
-using UnityEditor;
-using System.Reflection;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using UnityEditor;
+using UnityEngine;
 
 namespace OpenGET.Editor
 {
@@ -270,11 +270,6 @@ namespace OpenGET.Editor
                     {
                         fieldNames.Add(fields[i].Name + $" ({fields[i].FieldType.Name})");
 
-                        if (uvar.name == fields[i].Name)
-                        {
-                            fieldIndex = i;
-                        }
-
                         if (index == 0 || uvar.name == fields[i].Name)
                         {
                             fieldIndex = i;
@@ -332,80 +327,88 @@ namespace OpenGET.Editor
                     options.AddRange(new string[] { "Integer/Dynamic", "Float/Dynamic", "String/Dynamic" });
                 }
 
-                List<string> fieldNames = new List<string> { };
-                Expression.IContext context = factory;
-                FieldInfo[] fields = new FieldInfo[0];
-                //if (context != null)
-                //{
-                //    fields = context.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(
-                //        x => x.FieldType.Equals(typeof(int)) || x.FieldType.Equals(typeof(float)) || x.FieldType.Equals(typeof(string))
-                //    ).OrderBy(x => x.Name).ToArray();
-                //    for (int i = 0, counti = fields.Length; i < counti; i++)
-                //    {
-                //        fieldNames.Add(fields[i].Name + $" ({fields[i].FieldType.Name})");
+                List<string> dynOptions = new List<string> { };
+                List<FieldInfo[]> fieldsByParameter = new List<FieldInfo[]>(factory.parameters.Length);
+                int[] numFields = new int[factory.parameters.Length];
+                int paramIndex = -1;
+                int fieldIndex = -1;
+                bool foundMatch = false;
+                int oldArgIndex = -1;
+                int fieldCount = 0;
+                for (int i = 0, counti = factory.parameters.Length; i < counti; i++)
+                {
+                    IContext.Parameter parameter = factory.parameters[i];
+                    fieldsByParameter.Add(
+                        parameter.type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(
+                            x => x.FieldType.Equals(typeof(int)) || x.FieldType.Equals(typeof(float)) || x.FieldType.Equals(typeof(string))
+                        ).OrderBy(x => x.Name).ToArray()
+                    );
+                    numFields[i] = fieldsByParameter[i].Length;
+                    for (int j = 0, countj = fieldsByParameter[i].Length; j < countj; j++)
+                    {
+                        FieldInfo field = fieldsByParameter[i][j];
+                        dynOptions.Add($"{parameter.name}/{field.Name} ({field.FieldType.Name})");
 
-                //        if (dynVar.name == fields[i].Name)
-                //        {
-                //            fieldIndex = i;
-                //        }
+                        foundMatch = dynVar.name == field.Name && dynVar.index == i;
+                        if (index == 0 || foundMatch)
+                        {
+                            paramIndex = i;
+                            fieldIndex = j;
+                            oldArgIndex = fieldCount + fieldIndex;
+                            dynVar.name = string.IsNullOrEmpty(dynVar.name) ? field.Name : dynVar.name;
+                            index = field.FieldType.Equals(typeof(int)) ? op_DynInt
+                                : (field.FieldType.Equals(typeof(float)) ? op_DynFloat : op_DynString);
+                        }
+                    }
+                    fieldCount += numFields[i];
+                }
 
-                //        if (index == 0 || dynVar.name == fields[i].Name)
-                //        {
-                //            fieldIndex = i;
-                //            dynVar.name = string.IsNullOrEmpty(dynVar.name) ? fields[i].Name : dynVar.name;
-                //            index = fields[i].FieldType.Equals(typeof(int)) ? op_AssetInt
-                //                : (fields[i].FieldType.Equals(typeof(float)) ? op_AssetFloat : op_AssetString);
-                //        }
-                //    }
-                //}
-                //DynamicVariable dynVar = data as DynamicVariable;
-                //int oldIndex = dynVar.index;
-                //string oldName = dynVar.name;
-                //EditorGUILayout.Popup(oldArgIndex, )
-                //dynVar._target.reference = EditorGUILayout.ObjectField(dynVar._target.reference, typeof(Referrable), allowSceneObjects: false) as Referrable;
-                //if (oldArgIndex != dynVar._target.reference)
-                //{
-                //    changed = true;
-                //}
-                //int fieldIndex = -1;
+                if (fieldsByParameter.Count == 0)
+                {
+                    dynOptions.Add("(none)");
+                }
 
-                
-                //else
-                //{
-                //    index = op_AssetFloat;
-                //}
+                int argIndex = EditorGUILayout.Popup(oldArgIndex, dynOptions.ToArray());
+                if (oldArgIndex != argIndex)
+                {
+                    changed = true;
 
-                //if (fieldIndex < 0)
-                //{
-                //    fieldIndex = 0;
-                //    dynVar.name = fields.Length > 0 ? fieldNames[0] : "";
-                //}
+                    paramIndex = -1;
+                    int totalOptions = 0;
+                    // Step through parameters to find the chosen field
+                    for (int counti = fieldsByParameter.Count; paramIndex < counti;)
+                    {
+                        paramIndex++;
+                        int oldTotal = totalOptions;
+                        totalOptions += fieldsByParameter[paramIndex].Length;
+                        if (argIndex >= oldTotal && argIndex < totalOptions)
+                        {
+                            // Found field corresponding to the selected option
+                            fieldIndex = argIndex - oldTotal;
+                            break;
+                        }
+                    }
 
-                //if (fields.Length == 0)
-                //{
-                //    if (changed)
-                //    {
-                //        Log.Debug("Changed = {0}, former = {1}", changed, oldArgIndex?.name);
-                //    }
-                //    fieldNames.Add(context != null ? "(none)" : "(missing)");
-                //}
+                    if (paramIndex >= 0 && fieldIndex >= 0 && paramIndex < fieldsByParameter.Count && fieldIndex < fieldsByParameter[paramIndex].Length)
+                    {
+                        // Set to field
+                        dynVar.index = paramIndex;
+                        dynVar.name = fieldsByParameter[paramIndex][fieldIndex].Name;
+                    }
+                    else
+                    {
+                        // Clear
+                        dynVar = new DynamicVariable(0, "");
+                    }
+                }
 
-                //int oldField = fieldIndex;
-                //fieldIndex = EditorGUILayout.Popup(fieldIndex, fieldNames.ToArray());
-                //if (fieldIndex != oldField)
-                //{
-                //    changed = true;
-                //    if (fieldIndex < fields.Length)
-                //    {
-                //        // Set to field
-                //        dynVar.name = fields[fieldIndex].Name;
-                //    }
-                //    else
-                //    {
-                //        // Clear
-                //        dynVar = new AssetVariable("", null);
-                //    }
-                //}
+                if (fieldIndex < 0 || paramIndex < 0)
+                {
+                    fieldIndex = 0;
+                    paramIndex = 0;
+                    dynVar.name = fieldsByParameter.Count > 0 && fieldsByParameter[0].Length > 0 ? fieldsByParameter[0][0].Name : "";
+                }
+
             }
 
             if (!mutValue)
@@ -480,15 +483,15 @@ namespace OpenGET.Editor
                 }
                 else if (index == op_DynInt)
                 {
-                    data = new DynamicVariable(-1, "");
+                    data = new DynamicVariable(0, "");
                 }
                 else if (index == op_DynFloat)
                 {
-                    data = new DynamicVariable(-1, "");
+                    data = new DynamicVariable(0, "");
                 }
                 else if (index == op_DynString)
                 {
-                    data = new DynamicVariable(-1, "");
+                    data = new DynamicVariable(0, "");
                 }
                 else if (index == op_BinOpAdd)
                 {
