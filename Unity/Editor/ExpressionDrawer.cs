@@ -35,10 +35,10 @@ namespace OpenGET.Editor
                 EditorUtility.SetDirty(property.serializedObject.targetObject);
             }
 
-            label.text = fieldInfo.Name + ": " + expression?.ToString();
-
-            // TODO: DynamicVariable contexts
             VariantFactory factory = serialised.CreateFactory();
+
+            // Format expression with dynamic variable names
+            label.text = fieldInfo.Name + ": " + string.Format(expression?.ToString(), factory.parameters.Select(x => (object)x.name).ToArray());
 
             // Begin GUI
             Rect foldoutRect = new Rect(position.x, position.y, position.width, EditorGUIUtility.singleLineHeight);
@@ -347,7 +347,7 @@ namespace OpenGET.Editor
                     for (int j = 0, countj = fieldsByParameter[i].Length; j < countj; j++)
                     {
                         FieldInfo field = fieldsByParameter[i][j];
-                        dynOptions.Add($"{parameter.name}/{field.Name} ({field.FieldType.Name})");
+                        dynOptions.Add($"{i}: {parameter.name}/{field.Name} ({field.FieldType.Name})");
 
                         foundMatch = dynVar.name == field.Name && dynVar.index == i;
                         if (index == 0 || foundMatch)

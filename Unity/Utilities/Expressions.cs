@@ -147,7 +147,7 @@ namespace OpenGET.Expressions
         public StandardVariantFactory(params object[] args) : base(args) { }
 
         public override IContext.Parameter[] parameters => new IContext.Parameter[] {
-            new IContext.Parameter(typeof(T1), typeof(T1).Name + "_0")
+            new IContext.Parameter(typeof(T1), typeof(T1).Name)
         };
     }
 
@@ -157,8 +157,8 @@ namespace OpenGET.Expressions
         public StandardVariantFactory(params object[] args) : base(args) { }
 
         public override IContext.Parameter[] parameters => new IContext.Parameter[] {
-            new IContext.Parameter(typeof(T1), typeof(T1).Name + "_0"),
-            new IContext.Parameter(typeof(T2), typeof(T2).Name + "_1")
+            new IContext.Parameter(typeof(T1), typeof(T1).Name),
+            new IContext.Parameter(typeof(T2), typeof(T2).Name)
         };
     }
 
@@ -168,9 +168,9 @@ namespace OpenGET.Expressions
         public StandardVariantFactory(params object[] args) : base(args) { }
 
         public override IContext.Parameter[] parameters => new IContext.Parameter[] {
-            new IContext.Parameter(typeof(T1), typeof(T1).Name + "_0"),
-            new IContext.Parameter(typeof(T2), typeof(T2).Name + "_1"),
-            new IContext.Parameter(typeof(T3), typeof(T3).Name + "_2")
+            new IContext.Parameter(typeof(T1), typeof(T1).Name),
+            new IContext.Parameter(typeof(T2), typeof(T2).Name),
+            new IContext.Parameter(typeof(T3), typeof(T3).Name)
         };
     }
 
@@ -841,32 +841,6 @@ namespace OpenGET.Expressions
     }
 
     /// <summary>
-    /// Named variable value. This maps to a field on any object.
-    /// Please note however that this is unsuitable for use with Unity serialisation.
-    /// In cases where you require Unity serialisation, use UnityVariable or DynamicVariable instead.
-    /// </summary>
-    [Serializable]
-    public class ReflectionVariable : NamedVariable
-    {
-        /// <summary>
-        /// Target object to reflect.
-        /// </summary>
-        public object _target;
-
-        public override object target => _target;
-
-        public ReflectionVariable(string name, object target) : base(name)
-        {
-            _target = target;
-        }
-
-        public override string ToString()
-        {
-            return target?.GetType()?.Name + "." + name;
-        }
-    }
-
-    /// <summary>
     /// Represents a variable that changes depending on context provided at the time at which the expression is evaluated.
     /// The naming scheme for dynamic variables is based on the contexts used to create the variable initially,
     /// in the format [context index].[field name] where [context index] is the index to a target object that the target field is associated with.
@@ -885,9 +859,12 @@ namespace OpenGET.Expressions
 
         public DynamicVariable(int index, string name) : base(name) { this.index = index; }
 
+        /// <summary>
+        /// Warning: Provides formatters with argument indexers corresponding to parameters.
+        /// </summary>
         public override string ToString()
         {
-            return index + "." + name;
+            return $"{{{index}}}.{name}";
         }
 
         public override Variant Evaluate<T>(T factory)
