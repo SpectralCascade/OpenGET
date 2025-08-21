@@ -900,7 +900,7 @@ namespace OpenGET.Expressions
 
     /// <summary>
     /// Defines access rights to a field or property by expressions.
-    /// By default, private + protected fields as well as ALL properties have no access, while public fields have ReadWrite access.
+    /// By default, private & protected members have no access, while public members have ReadWrite access.
     /// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
     public class AccessAttribute : Attribute

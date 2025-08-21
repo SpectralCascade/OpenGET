@@ -109,16 +109,25 @@ namespace OpenGET.Editor
 
         /// <summary>
         /// Gets all fields and props for access by expressions on a given type.
+        /// Always returns pub
         /// </summary>
         private IEnumerable<MemberInfo> GetFieldsAndProps(Type targetType)
         {
             IEnumerable<MemberInfo> fields = targetType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(
                         x => (x.FieldType.Equals(typeof(int)) || x.FieldType.Equals(typeof(float)) || x.FieldType.Equals(typeof(string))) &&
-                            (x.IsPublic || ((x.GetCustomAttribute<AccessAttribute>()?.access ?? Access.None) & Access.Read) != 0)
+                            (
+                                (x.IsPublic && x.GetCustomAttribute<AccessAttribute>() == null) || 
+                                ((x.GetCustomAttribute<AccessAttribute>()?.access ?? Access.None) & Access.Read) != 0
+                            )
                     );
             IEnumerable<MemberInfo> props = targetType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(
-                x => (x.PropertyType.Equals(typeof(int)) || x.PropertyType.Equals(typeof(float)) || x.PropertyType.Equals(typeof(string))) &&
-                    (x.GetGetMethod(nonPublic: true) != null && (x.GetGetMethod(nonPublic: true).IsPublic || ((x.GetCustomAttribute<AccessAttribute>()?.access ?? Access.None) & Access.Read) != 0))
+                x => (x.PropertyType.Equals(typeof(int)) || x.PropertyType.Equals(typeof(float)) || x.PropertyType.Equals(typeof(string))) && (
+                    x.GetGetMethod(nonPublic: true) != null && 
+                    (
+                        (x.GetGetMethod(nonPublic: true).IsPublic && x.GetCustomAttribute<AccessAttribute>() == null) ||
+                        ((x.GetCustomAttribute<AccessAttribute>()?.access ?? Access.None) & Access.Read) != 0
+                    )
+                )
             );
             return fields.Concat(props).OrderBy(x => x.Name);
         }
