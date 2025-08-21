@@ -1,4 +1,5 @@
 using OpenGET.Expressions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -26,7 +27,6 @@ namespace OpenGET.Editor
             }
 
             Expression expression = serialised.expression;
-
             if (expression == null)
             {
                 expression = new Constant(new VariantInteger(0));
@@ -105,6 +105,22 @@ namespace OpenGET.Editor
             }
 
             return expression;
+        }
+
+        /// <summary>
+        /// Gets all fields and props for access by expressions on a given type.
+        /// </summary>
+        private IEnumerable<MemberInfo> GetFieldsAndProps(Type targetType)
+        {
+            IEnumerable<MemberInfo> fields = targetType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(
+                        x => (x.FieldType.Equals(typeof(int)) || x.FieldType.Equals(typeof(float)) || x.FieldType.Equals(typeof(string))) &&
+                            (x.IsPublic || ((x.GetCustomAttribute<AccessAttribute>()?.access ?? Access.None) & Access.Read) != 0)
+                    );
+            IEnumerable<MemberInfo> props = targetType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(
+                x => (x.PropertyType.Equals(typeof(int)) || x.PropertyType.Equals(typeof(float)) || x.PropertyType.Equals(typeof(string))) &&
+                    (x.GetGetMethod(nonPublic: true) != null && (x.GetGetMethod(nonPublic: true).IsPublic || ((x.GetCustomAttribute<AccessAttribute>()?.access ?? Access.None) & Access.Read) != 0))
+            );
+            return fields.Concat(props).OrderBy(x => x.Name);
         }
 
         /// <summary>
@@ -194,7 +210,7 @@ namespace OpenGET.Editor
             // Handle constant values
             if (data is Constant)
             {
-                Variant constant = (data as Constant).value;
+                Variant constant = (data as Constant).Evaluate(factory);
                 if (constant is VariantInteger)
                 {
                     int oldVal = (int)constant.value;
@@ -256,26 +272,28 @@ namespace OpenGET.Editor
                 {
                     changed = true;
                 }
-                int fieldIndex = -1;
+                int memberIndex = -1;
 
-                List<string> fieldNames = new List<string> { };
+                List<string> memberNames = new List<string> { };
                 System.Type targetType = uvar._target.reference != null ? uvar._target.reference.GetType() : null;
-                FieldInfo[] fields = new FieldInfo[0];
+                MemberInfo[] fieldsAndProps = new MemberInfo[0];
                 if (targetType != null)
                 {
-                    fields = targetType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(
-                        x => x.FieldType.Equals(typeof(int)) || x.FieldType.Equals(typeof(float)) || x.FieldType.Equals(typeof(string))
-                    ).OrderBy(x => x.Name).ToArray();
-                    for (int i = 0, counti = fields.Length; i < counti; i++)
-                    {
-                        fieldNames.Add(fields[i].Name + $" ({fields[i].FieldType.Name})");
+                    fieldsAndProps = GetFieldsAndProps(targetType).ToArray();
 
-                        if (index == 0 || uvar.name == fields[i].Name)
+                    for (int i = 0, counti = fieldsAndProps.Length; i < counti; i++)
+                    {
+                        MemberInfo member = fieldsAndProps[i];
+                        Type memberType = member is FieldInfo ? (member as FieldInfo).FieldType : (member as PropertyInfo).PropertyType;
+
+                        memberNames.Add(member.Name + $" ({memberType.Name})");
+
+                        if (index == 0 || uvar.name == member.Name)
                         {
-                            fieldIndex = i;
-                            uvar.name = string.IsNullOrEmpty(uvar.name) ? fields[i].Name : uvar.name;
-                            index = fields[i].FieldType.Equals(typeof(int)) ? op_AssetInt
-                                : (fields[i].FieldType.Equals(typeof(float)) ? op_AssetFloat : op_AssetString);
+                            memberIndex = i;
+                            uvar.name = string.IsNullOrEmpty(uvar.name) ? member.Name : uvar.name;
+                            index = memberType.Equals(typeof(int)) ? op_AssetInt
+                                : (memberType.Equals(typeof(float)) ? op_AssetFloat : op_AssetString);
                         }
                     }
                 }
@@ -284,30 +302,30 @@ namespace OpenGET.Editor
                     index = op_AssetFloat;
                 }
 
-                if (fieldIndex < 0)
+                if (memberIndex < 0)
                 {
-                    fieldIndex = 0;
-                    uvar.name = fields.Length > 0 ? fieldNames[0] : "";
+                    memberIndex = 0;
+                    uvar.name = fieldsAndProps.Length > 0 ? memberNames[0] : "";
                 }
 
-                if (fields.Length == 0)
+                if (fieldsAndProps.Length == 0)
                 {
                     if (changed)
                     {
                         Log.Debug("Changed = {0}, former = {1}", changed, old?.name);
                     }
-                    fieldNames.Add(targetType != null ? "(none)" : "(missing)");
+                    memberNames.Add(targetType != null ? "(none)" : "(missing)");
                 }
 
-                int oldField = fieldIndex;
-                fieldIndex = EditorGUILayout.Popup(fieldIndex, fieldNames.ToArray());
-                if (fieldIndex != oldField)
+                int oldMember = memberIndex;
+                memberIndex = EditorGUILayout.Popup(memberIndex, memberNames.ToArray());
+                if (memberIndex != oldMember)
                 {
                     changed = true;
-                    if (fieldIndex < fields.Length)
+                    if (memberIndex < fieldsAndProps.Length)
                     {
                         // Set to field
-                        uvar.name = fields[fieldIndex].Name;
+                        uvar.name = fieldsAndProps[memberIndex].Name;
                     }
                     else
                     {
@@ -328,42 +346,47 @@ namespace OpenGET.Editor
                 }
 
                 List<string> dynOptions = new List<string> { };
-                List<FieldInfo[]> fieldsByParameter = new List<FieldInfo[]>(factory.parameters.Length);
-                int[] numFields = new int[factory.parameters.Length];
+                // Fields and properties indexed by parameters
+                List<MemberInfo[]> fieldsAndProps = new List<MemberInfo[]>(factory.parameters.Length);
+                int[] numMembers = new int[factory.parameters.Length];
                 int paramIndex = -1;
-                int fieldIndex = -1;
+                int memberIndex = -1;
                 bool foundMatch = false;
                 int oldArgIndex = -1;
-                int fieldCount = 0;
+                int memberCount = 0;
                 for (int i = 0, counti = factory.parameters.Length; i < counti; i++)
                 {
                     IContext.Parameter parameter = factory.parameters[i];
-                    fieldsByParameter.Add(
-                        parameter.type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(
-                            x => x.FieldType.Equals(typeof(int)) || x.FieldType.Equals(typeof(float)) || x.FieldType.Equals(typeof(string))
-                        ).OrderBy(x => x.Name).ToArray()
-                    );
-                    numFields[i] = fieldsByParameter[i].Length;
-                    for (int j = 0, countj = fieldsByParameter[i].Length; j < countj; j++)
-                    {
-                        FieldInfo field = fieldsByParameter[i][j];
-                        dynOptions.Add($"{i}: {parameter.name}/{field.Name} ({field.FieldType.Name})");
 
-                        foundMatch = dynVar.name == field.Name && dynVar.index == i;
+                    // Find all fields & properties matching type and access requirements
+                    // Bonus: Support custom types
+                    fieldsAndProps.Add(GetFieldsAndProps(parameter.type).ToArray());
+
+                    // Now step through members and locate selected, if any
+                    numMembers[i] = fieldsAndProps[i].Length;
+                    for (int j = 0, countj = fieldsAndProps[i].Length; j < countj; j++)
+                    {
+                        MemberInfo member = fieldsAndProps[i][j];
+                        Type type = member is FieldInfo ? (member as FieldInfo).FieldType : (member as PropertyInfo).PropertyType;
+
+                        dynOptions.Add($"{i}: {parameter.name}/{member.Name} ({type.Name})");
+
+                        foundMatch = dynVar.name == member.Name && dynVar.index == i;
                         if (index == 0 || foundMatch)
                         {
+                            // Found selected member by name, or just the first member as a fallback
                             paramIndex = i;
-                            fieldIndex = j;
-                            oldArgIndex = fieldCount + fieldIndex;
-                            dynVar.name = string.IsNullOrEmpty(dynVar.name) ? field.Name : dynVar.name;
-                            index = field.FieldType.Equals(typeof(int)) ? op_DynInt
-                                : (field.FieldType.Equals(typeof(float)) ? op_DynFloat : op_DynString);
+                            memberIndex = j;
+                            oldArgIndex = memberCount + memberIndex;
+                            dynVar.name = string.IsNullOrEmpty(dynVar.name) ? member.Name : dynVar.name;
+                            index = type.Equals(typeof(int)) ? op_DynInt
+                                : (type.Equals(typeof(float)) ? op_DynFloat : op_DynString);
                         }
                     }
-                    fieldCount += numFields[i];
+                    memberCount += numMembers[i];
                 }
 
-                if (fieldsByParameter.Count == 0)
+                if (fieldsAndProps.Count == 0)
                 {
                     dynOptions.Add("(none)");
                 }
@@ -376,24 +399,24 @@ namespace OpenGET.Editor
                     paramIndex = -1;
                     int totalOptions = 0;
                     // Step through parameters to find the chosen field
-                    for (int counti = fieldsByParameter.Count; paramIndex < counti;)
+                    for (int counti = fieldsAndProps.Count; paramIndex < counti;)
                     {
                         paramIndex++;
                         int oldTotal = totalOptions;
-                        totalOptions += fieldsByParameter[paramIndex].Length;
+                        totalOptions += fieldsAndProps[paramIndex].Length;
                         if (argIndex >= oldTotal && argIndex < totalOptions)
                         {
                             // Found field corresponding to the selected option
-                            fieldIndex = argIndex - oldTotal;
+                            memberIndex = argIndex - oldTotal;
                             break;
                         }
                     }
 
-                    if (paramIndex >= 0 && fieldIndex >= 0 && paramIndex < fieldsByParameter.Count && fieldIndex < fieldsByParameter[paramIndex].Length)
+                    if (paramIndex >= 0 && memberIndex >= 0 && paramIndex < fieldsAndProps.Count && memberIndex < fieldsAndProps[paramIndex].Length)
                     {
                         // Set to field
                         dynVar.index = paramIndex;
-                        dynVar.name = fieldsByParameter[paramIndex][fieldIndex].Name;
+                        dynVar.name = fieldsAndProps[paramIndex][memberIndex].Name;
                     }
                     else
                     {
@@ -402,11 +425,11 @@ namespace OpenGET.Editor
                     }
                 }
 
-                if (fieldIndex < 0 || paramIndex < 0)
+                if (memberIndex < 0 || paramIndex < 0)
                 {
-                    fieldIndex = 0;
+                    memberIndex = 0;
                     paramIndex = 0;
-                    dynVar.name = fieldsByParameter.Count > 0 && fieldsByParameter[0].Length > 0 ? fieldsByParameter[0][0].Name : "";
+                    dynVar.name = fieldsAndProps.Count > 0 && fieldsAndProps[0].Length > 0 ? fieldsAndProps[0][0].Name : "";
                 }
 
             }
@@ -456,18 +479,18 @@ namespace OpenGET.Editor
                 if (index == op_ConstInt)
                 {
                     data = new Constant(factory.Create(
-                        Mathf.FloorToInt(oldIndex == 2 ? (float)data.value?.value : (oldIndex == 3 && float.TryParse(data.value?.value as string, out float oldFloat) ? oldFloat : 0f))
+                        Mathf.FloorToInt(oldIndex == op_ConstFloat ? (float)data.Evaluate(factory)?.value : (oldIndex == op_ConstString && float.TryParse(data.Evaluate(factory)?.value as string, out float oldFloat) ? oldFloat : 0f))
                     ));
                 }
                 else if (index == op_ConstFloat)
                 {
                     data = new Constant(factory.Create(
-                        oldIndex == 1 ? (int)data.value?.value : (oldIndex == 3 && float.TryParse(data.value?.value as string, out float oldValue) ? oldValue : 0f)
+                        oldIndex == op_ConstInt ? (int)data.Evaluate(factory)?.value : (op_ConstString == 3 && float.TryParse(data.Evaluate(factory)?.value as string, out float oldValue) ? oldValue : 0f)
                     ));
                 }
                 else if (index == op_ConstString)
                 {
-                    data = new Constant(factory.Create(data.value?.value?.ToString()));
+                    data = new Constant(factory.Create(data is Constant ? data.Evaluate(factory)?.value?.ToString() : ""));
                 }
                 else if (index == op_AssetInt)
                 {
@@ -495,9 +518,7 @@ namespace OpenGET.Editor
                 }
                 else if (index == op_BinOpAdd)
                 {
-                    inner = new BinOpAdd(data, data.value is IVariantNumeric ?
-                        new Constant(new VariantFloat(0f)) : new Constant(new VariantString(""))
-                    );
+                    inner = new BinOpAdd(data, new Constant(new VariantFloat(0f)));
                 }
                 else if (index == op_BinOpSubtract)
                 {

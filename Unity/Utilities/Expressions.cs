@@ -1,13 +1,8 @@
 using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEditor;
-using UnityEditorInternal;
 using UnityEngine;
 
 namespace OpenGET.Expressions
@@ -430,10 +425,9 @@ namespace OpenGET.Expressions
             [HideInInspector]
             public Expression expression {
                 get {
-                    if (!string.IsNullOrEmpty(data))
-                    {
+                    if (!string.IsNullOrEmpty(data) && isDirty) {
                         _expression = FromJSON(data);
-                        data = "";
+                        isDirty = false;
                     }
                     return _expression;
                 }
@@ -447,7 +441,7 @@ namespace OpenGET.Expressions
 #else
             private
 #endif
-                Expression _expression = null;
+                Expression _expression = new Constant(new VariantInteger(0));
 
             /// <summary>
             /// Get the variant factory.
@@ -466,6 +460,12 @@ namespace OpenGET.Expressions
             [SerializeField]
             private string data = "";
 
+            /// <summary>
+            /// Used for checking whether deserialisation has occurred.
+            /// </summary>
+            [System.NonSerialized]
+            public bool isDirty = false;
+
             public BaseSerialisable() { }
 
             public BaseSerialisable(Mutability mutability)
@@ -480,7 +480,7 @@ namespace OpenGET.Expressions
             public void OnBeforeSerialize()
             {
 #if UNITY_EDITOR
-                if (!EditorApplication.isUpdating && _expression != null)
+                if (!EditorApplication.isUpdating && !EditorApplication.isCompiling && _expression != null)
                 {
 #endif
                     data = ToJSON(expression);
@@ -492,6 +492,7 @@ namespace OpenGET.Expressions
             public void OnAfterDeserialize()
             {
                 // Do nothing; lazy-load from JSON via getter to avoid Unity being unhappy with Object references
+                isDirty = true;
             }
         }
 
@@ -683,24 +684,13 @@ namespace OpenGET.Expressions
     /// </summary>
     public abstract class Variable : Expression
     {
-        [JsonIgnore]
-        public abstract Variant value { get; set; }
+        public abstract void SetValue(Variant value);
 
         public Variable() { }
 
         public Variable(Variant value)
         {
-            this.value = value;
-        }
-
-        public override string ToString()
-        {
-            return value.value?.ToString();
-        }
-
-        public override Variant Evaluate<T>(T factory)
-        {
-            return value;
+            SetValue(value);
         }
     }
 
@@ -710,9 +700,8 @@ namespace OpenGET.Expressions
     [Serializable]
     public class Constant : Variable
     {
-        public override Variant value {
-            get => _val;
-            set => _val = value;
+        public override void SetValue(Variant value) {
+            _val = value;
         }
 
         [JsonRequired]
@@ -722,6 +711,12 @@ namespace OpenGET.Expressions
 
         public Constant(Variant value) : base(value) { }
 
+        public override string ToString()
+        {
+            return _val.ToString();
+        }
+
+        public override Variant Evaluate<FactoryType>(FactoryType factory) => _val;
     }
 
     /// <summary>
@@ -730,9 +725,8 @@ namespace OpenGET.Expressions
     [Serializable]
     public abstract class NamedVariable : Variable
     {
-        public override Variant value {
-            get => Evaluate();
-            set => target?.GetType()?.GetField(name)?.SetValue(target, value.value);
+        public override void SetValue(Variant value) {
+            target?.GetType()?.GetField(name)?.SetValue(target, value.value);
         }
 
         public string name;
@@ -746,10 +740,28 @@ namespace OpenGET.Expressions
 
         public override Variant Evaluate<T>(T factory)
         {
-            FieldInfo field = target.GetType().GetField(name);
+            return Evaluate(factory, target);
+        }
+
+        // Internal handler for fields/properties access
+        protected Variant Evaluate<T>(T factory, object arg) where T : VariantFactory
+        {
+            FieldInfo field = arg.GetType().GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
             if (field != null)
             {
-                return factory.Create(field.GetValue(target), field.FieldType);
+                return factory.Create(field.GetValue(arg), field.FieldType);
+            }
+            else
+            {
+                PropertyInfo prop = arg.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                if (prop != null)
+                {
+                    return factory.Create(prop.GetValue(arg), prop.PropertyType);
+                }
+                else
+                {
+                    Log.Error("No such member {0} of type {1} available ({2} {3})", name, arg.GetType().FullName, GetType().Name, name);
+                }
             }
             return factory.Create(null, typeof(object));
         }
@@ -828,16 +840,6 @@ namespace OpenGET.Expressions
         {
             return (((target as Referrable) != null ? (target as Referrable)?.name : null) ?? target?.GetType()?.Name) + "." + name;
         }
-
-        public override Variant Evaluate<T>(T factory)
-        {
-            FieldInfo field = target.GetType().GetField(name);
-            if (field != null)
-            {
-                return factory.Create(field.GetValue(target), field.FieldType);
-            }
-            return factory.Create(null, typeof(object));
-        }
     }
 
     /// <summary>
@@ -880,16 +882,33 @@ namespace OpenGET.Expressions
                 throw new NullReferenceException($"Argument {index} of DynamicVariable \"{name}\" is null.");
             }
 
-            FieldInfo field = arg.GetType().GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            if (field != null)
-            {
-                return factory.Create(field.GetValue(arg), field.FieldType);
-            }
-            else
-            {
-                Log.Error("No such field {0} available at index {1} of type {2} (DynamicVariable {3})", name, index, arg.GetType().FullName, name);
-            }
-            return factory.Create(null, typeof(object));
+            return Evaluate(factory, arg);
+        }
+    }
+
+    /// <summary>
+    /// Access rights for expressions.
+    /// </summary>
+    [Flags]
+    public enum Access
+    {
+        None = 0,
+        Read = 1,
+        Write = 2,
+        ReadWrite = Read | Write
+    }
+
+    /// <summary>
+    /// Defines access rights to a field or property by expressions.
+    /// By default, private + protected fields as well as ALL properties have no access, while public fields have ReadWrite access.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
+    public class AccessAttribute : Attribute
+    {
+        public Access access { get; private set; }
+
+        public AccessAttribute(Access access = Access.ReadWrite) {
+            this.access = access;
         }
     }
 
