@@ -12,68 +12,149 @@ namespace OpenGET.Editor
     [CustomPropertyDrawer(typeof(Expression.BaseSerialisable), true)]
     public class ExpressionDrawer : PropertyDrawer
     {
-        private static readonly Dictionary<string, bool> propertyStates = new Dictionary<string, bool>();
+        private class PropertyState
+        {
+            public bool expanded = false;
+            public Rect rect;
+        }
+
+        private static readonly Dictionary<string, PropertyState> propertyStates = new Dictionary<string, PropertyState>();
+
+        private readonly float LineHeight = EditorGUIUtility.singleLineHeight;
+
+        private int propIndex = 0;
+
+        private string key = "";
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
+            key = property.propertyPath;
+            state.rect = position;
+            state.rect.height = 0;
+            state.rect.width = position.width;
+
             object target = property.serializedObject.targetObject;
             Expression.BaseSerialisable serialised = fieldInfo.GetValue(target) as Expression.BaseSerialisable;
+            if (serialised == null)
+            {
+                // FieldInfo is pointing at an array of some sort
+                if (fieldInfo.FieldType.IsArray)
+                {
+                    Expression.BaseSerialisable[] data = fieldInfo.GetValue(target) as Expression.BaseSerialisable[];
+
+                    bool changed = false;
+                    if (property.propertyPath.Contains("[0]"))
+                    {
+                        propIndex = 0;
+                    }
+                    int i = Mathf.Clamp(propIndex, 0, data.Length);
+                    ExpressionGUI(data[i], property, label, ref changed, i, true);
+
+                    propIndex++;
+                    if (changed)
+                    {
+                        fieldInfo.SetValue(target, data);
+                        EditorUtility.SetDirty(property.serializedObject.targetObject);
+                    }
+                }
+                else
+                {
+                    Log.Error("Serialised type is null or not supported! Arrays must NOT be lists.");
+                }
+            }
+            else
+            {
+                bool changed = false;
+                ExpressionGUI(serialised, property, label, ref changed);
+                if (changed)
+                {
+                    fieldInfo.SetValue(target, serialised);
+                    EditorUtility.SetDirty(property.serializedObject.targetObject);
+                }
+            }
+        }
+
+        private Expression.BaseSerialisable ExpressionGUI(Expression.BaseSerialisable serialised, SerializedProperty property, GUIContent label, ref bool changed, int index = 0, bool isElement = false)
+        {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
             {
-                EditorGUILayout.LabelField(fieldInfo.Name + ": " + serialised._expression?.ToString());
-                EditorGUILayout.HelpBox("Expression modification is unavailable in Play Mode.", MessageType.Info);
+                EditorGUI.LabelField(state.rect, fieldInfo.Name + ": " + serialised._expression?.ToString());
+                EditorGUI.HelpBox(state.rect, "Expression modification is unavailable in Play Mode.", MessageType.Info);
                 // Early out
-                return;
+                return null;
             }
 
             Expression expression = serialised.expression;
             if (expression == null)
             {
+                changed = true;
                 expression = new Constant(new VariantInteger(0));
                 serialised.expression = expression;
-                fieldInfo.SetValue(target, serialised);
-                EditorUtility.SetDirty(property.serializedObject.targetObject);
             }
 
             VariantFactory factory = serialised.CreateFactory();
 
             // Format expression with dynamic variable names
-            label.text = fieldInfo.Name + ": " + string.Format(expression?.ToString(), factory.parameters.Select(x => (object)x.name).ToArray());
+            string text = (isElement ? ($"Element {index}") : fieldInfo.Name) +
+                string.Format(": " + expression?.ToString(), factory.parameters.Select(x => (object)x.name).ToArray());
 
             // Begin GUI
-            Rect foldoutRect = new Rect(position.x, position.y, position.width, EditorGUIUtility.singleLineHeight);
-            if (!propertyStates.TryGetValue(property.propertyPath, out bool expanded))
-            {
-                expanded = false;
-            }
-            expanded = EditorGUI.Foldout(foldoutRect, expanded, label, true);
-            propertyStates[property.propertyPath] = expanded;
+            state.expanded = EditorGUI.Foldout(GetSection(), state.expanded, text, true);
+            StepLines();
 
-            if (expanded)
+            if (state.expanded)
             {
-                EditorGUI.BeginProperty(position, label, property);
-
-                bool changed = false;
                 Expression updated = ExpressionField(expression, factory, ref changed);
                 if (changed && updated != null)
                 {
                     serialised.expression = updated;
-                    fieldInfo.SetValue(target, serialised);
-                    EditorUtility.SetDirty(property.serializedObject.targetObject);
                 }
-
-                EditorGUI.EndProperty();
             }
+
+            return serialised;
         }
 
-        public Expression ExpressionField(Expression expression, VariantFactory factory, ref bool changed, Expression.Mutability mutability = Expression.Mutability.FullyMutable, string label = null)
+        /// <summary>
+        /// Current state getter/setter.
+        /// </summary>
+        private PropertyState state {
+            get => propertyStates.TryGetValue(key, out PropertyState state) && state != null ? state : propertyStates[key] = new PropertyState();
+            set => propertyStates[key] = value;
+        }
+
+        /// <summary>
+        /// Get the rect for a section consisting of a specified number of lines.
+        /// </summary>
+        private Rect GetSection(int parts = 1, int index = 0, int lines = 1) => 
+            new Rect(state.rect.x + (index * (state.rect.width / parts)), state.rect.y, state.rect.width / parts, lines * LineHeight);
+
+        private void StepLines(int lines = 1)
+        {
+            float change = (lines * LineHeight) + (lines * EditorGUIUtility.standardVerticalSpacing);
+            state.rect.y += change;
+            state.rect.height += change;
+        }
+
+        public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+        {
+            key = property.propertyPath;
+            if (!state.expanded)
+            {
+                return LineHeight;
+            }
+
+            return state.rect.height;
+        }
+
+        public Expression ExpressionField(Expression expression, VariantFactory factory, ref bool changed, Expression.Mutability mutability = Expression.Mutability.FullyMutable, string label = null, int depth = 0)
         {
             changed |= false;
 
             // Only show evaluated value if readonly
             if (mutability == Expression.Mutability.Immutable)
             {
-                EditorGUILayout.LabelField(label + expression?.ToString());
+                EditorGUI.LabelField(state.rect, label + expression?.ToString());
+                StepLines();
                 return expression;
             }
 
@@ -88,7 +169,7 @@ namespace OpenGET.Editor
             BinaryOperator binOp = expression as BinaryOperator;
             if (binOp != null)
             {
-                binOp = BinaryOperatorField(binOp, factory, mutability, ref changed);
+                binOp = BinaryOperatorField(binOp, factory, mutability, ref changed, depth + 1);
 
                 if (binOp.a == null)
                 {
@@ -141,7 +222,7 @@ namespace OpenGET.Editor
             changed |= false;
             inner = null;
 
-            EditorGUILayout.BeginHorizontal();
+            int parts = 2;
 
             // Initialise options and option count
             List<string> options = new List<string>();
@@ -223,7 +304,7 @@ namespace OpenGET.Editor
                 if (constant is VariantInteger)
                 {
                     int oldVal = (int)constant.value;
-                    int newVal = mutValue ? EditorGUILayout.IntField(oldVal) : oldVal;
+                    int newVal = mutValue ? EditorGUI.IntField(GetSection(parts), oldVal) : oldVal;
                     changed |= (newVal != oldVal);
                     data = new Constant(factory.Create(newVal));
                     if (op_ConstInt < 0)
@@ -236,7 +317,7 @@ namespace OpenGET.Editor
                 else if (constant is VariantFloat)
                 {
                     float oldVal = (float)constant.value;
-                    float newVal = mutValue ? EditorGUILayout.FloatField(oldVal) : oldVal;
+                    float newVal = mutValue ? EditorGUI.FloatField(GetSection(parts), oldVal) : oldVal;
                     changed |= (newVal != oldVal);
                     data = new Constant(factory.Create(newVal));
                     if (op_ConstFloat < 0)
@@ -249,7 +330,7 @@ namespace OpenGET.Editor
                 else if (constant is VariantString)
                 {
                     string oldVal = (string)constant.value;
-                    string newVal = EditorGUILayout.TextField(oldVal);
+                    string newVal = EditorGUI.TextField(GetSection(parts), oldVal);
                     changed |= (newVal != oldVal);
                     data = new Constant(factory.Create(newVal));
                     if (op_ConstString < 0)
@@ -274,9 +355,10 @@ namespace OpenGET.Editor
                     options.AddRange(new string[] { "Integer/Asset", "Float/Asset", "String/Asset" });
                 }
 
+                parts++;
                 AssetVariable uvar = data as AssetVariable;
                 Referrable old = uvar._target.reference;
-                uvar._target.reference = EditorGUILayout.ObjectField(uvar._target.reference, typeof(Referrable), allowSceneObjects: false) as Referrable;
+                uvar._target.reference = EditorGUI.ObjectField(GetSection(parts), uvar._target.reference, typeof(Referrable), allowSceneObjects: false) as Referrable;
                 if (old != uvar._target.reference)
                 {
                     changed = true;
@@ -319,15 +401,11 @@ namespace OpenGET.Editor
 
                 if (fieldsAndProps.Length == 0)
                 {
-                    if (changed)
-                    {
-                        Log.Debug("Changed = {0}, former = {1}", changed, old?.name);
-                    }
                     memberNames.Add(targetType != null ? "(none)" : "(missing)");
                 }
 
                 int oldMember = memberIndex;
-                memberIndex = EditorGUILayout.Popup(memberIndex, memberNames.ToArray());
+                memberIndex = EditorGUI.Popup(GetSection(parts, 1), memberIndex, memberNames.ToArray());
                 if (memberIndex != oldMember)
                 {
                     changed = true;
@@ -400,7 +478,7 @@ namespace OpenGET.Editor
                     dynOptions.Add("(none)");
                 }
 
-                int argIndex = EditorGUILayout.Popup(oldArgIndex, dynOptions.ToArray());
+                int argIndex = EditorGUI.Popup(GetSection(parts), oldArgIndex, dynOptions.ToArray());
                 if (oldArgIndex != argIndex)
                 {
                     changed = true;
@@ -481,7 +559,7 @@ namespace OpenGET.Editor
 
             // TODO: Cast old value into new type rather than discarding it entirely
             int oldIndex = index;
-            index = EditorGUILayout.Popup(index, options.ToArray());
+            index = EditorGUI.Popup(GetSection(parts, parts - 1), index, options.ToArray());
             if (index != oldIndex)
             {
                 changed = true;
@@ -553,15 +631,22 @@ namespace OpenGET.Editor
                 EditorGUI.EndDisabledGroup();
             }
 
-            EditorGUILayout.EndHorizontal();
+            StepLines();
 
             return data;
         }
 
-        public BinaryOperator BinaryOperatorField(BinaryOperator op, VariantFactory factory, Expression.Mutability mutability, ref bool changed) {
-            Expression a = ExpressionField(op.a, factory, ref changed);
+        public BinaryOperator BinaryOperatorField(BinaryOperator op, VariantFactory factory, Expression.Mutability mutability, ref bool changed, int depth = 0) {
+            Expression a = ExpressionField(op.a, factory, ref changed, mutability, depth: depth + 1);
 
-            string[] options = new string[] { "+", "-", "*", "\\" };
+            // Limit assignment to a root variable
+            bool assignable = a is DynamicVariable && depth <= 1;
+            List<string> options = new List<string> { "+", "-", "*", "\\" };
+            if (assignable)
+            {
+                options.Add("=");
+            }
+
             int selected = 0;
             if (op is BinOpSubtract)
             {
@@ -575,9 +660,13 @@ namespace OpenGET.Editor
             {
                 selected = 3;
             }
+            else if (op is BinOpAssign && assignable)
+            {
+                selected = 4;
+            }
 
             int old = selected;
-            selected = EditorGUILayout.Popup(selected, options);
+            selected = EditorGUI.Popup(GetSection(), selected, options.ToArray());
 
             if (old != selected)
             {
@@ -597,6 +686,12 @@ namespace OpenGET.Editor
                     case 3:
                         op = new BinOpDivide(a, op.b);
                         break;
+                    case 4:
+                        if (assignable)
+                        {
+                            op = new BinOpAssign(a as DynamicVariable ?? new DynamicVariable(0, ""), op.b);
+                        }
+                        break;
                 }
             }
             else
@@ -604,7 +699,9 @@ namespace OpenGET.Editor
                 op.a = a;
             }
 
-            op.b = ExpressionField(op.b, factory, ref changed);
+            StepLines();
+
+            op.b = ExpressionField(op.b, factory, ref changed, mutability, depth: depth + 1);
             return op;
         }
 

@@ -679,6 +679,21 @@ namespace OpenGET.Expressions
         public override Variant Evaluate<T>(T factory) => a.Evaluate(factory) / b.Evaluate(factory);
     }
 
+    [Serializable]
+    public class BinOpAssign : BinaryOperator
+    {
+        public BinOpAssign(DynamicVariable a, Expression b) : base(a, b) { }
+
+        public override string opString => "=";
+
+        public override Variant Evaluate<FactoryType>(FactoryType factory)
+        {
+            Variant value = b.Evaluate(factory);
+            (a as DynamicVariable).SetValue(value);
+            return value;
+        }
+    }
+
     /// <summary>
     /// Represents a variable that holds a specific value.
     /// </summary>
