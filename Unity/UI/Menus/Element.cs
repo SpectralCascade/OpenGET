@@ -1,6 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace OpenGET.UI
 {
@@ -12,6 +14,51 @@ namespace OpenGET.UI
     {
         void SetValue(object value);
         object GetValue();
+    }
+
+    /// <summary>
+    /// Most elements implement pointer handlers. However, these block scroll inputs.
+    /// This class automatically passes the scroll event back up to the parent scroll rect (if any).
+    /// </summary>
+    public abstract class Element : AutoBehaviour, IElement, IScrollHandler, IDragHandler, IBeginDragHandler, IEndDragHandler {
+        public abstract void SetValue(object value);
+        public abstract object GetValue();
+
+        private ScrollRect _containerScrollRect;
+        protected ScrollRect parentScrollRect => 
+            _containerScrollRect != null ? _containerScrollRect : _containerScrollRect = GetComponentInParent<ScrollRect>();
+
+        public virtual void OnScroll(PointerEventData eventData)
+        {
+            if (parentScrollRect != null)
+            {
+                parentScrollRect.OnScroll(eventData);
+            }
+        }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (parentScrollRect != null)
+            {
+                parentScrollRect.OnDrag(eventData);
+            }
+        }
+
+        public void OnBeginDrag(PointerEventData eventData)
+        {
+            if (parentScrollRect != null)
+            {
+                parentScrollRect.OnBeginDrag(eventData);
+            }
+        }
+
+        public void OnEndDrag(PointerEventData eventData)
+        {
+            if (parentScrollRect != null)
+            {
+                parentScrollRect.OnEndDrag(eventData);
+            }
+        }
     }
 
     /// <summary>

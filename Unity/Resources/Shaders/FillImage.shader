@@ -15,6 +15,7 @@
         _StencilReadMask ("Stencil Read Mask", Float) = 255
 
 		_ColorMask("Color Mask", Float) = 15
+		_RectUV("UV Rect", Vector) = (0, 0, 1, 1)
 
 		[Toggle(UNITY_UI_ALPHACLIP)] _UseUIAlphaClip("Use Alpha Clip", Float) = 0
     }
@@ -92,20 +93,34 @@
 			// UI clipping rect
 			float4 _ClipRect;
 
+			// UV rect with min and max UV coordinates
+			float4 _RectUV;
+
+            // Map UVs from rect to texture UVs.
+			float2 MapRectUV(float2 uv)
+            {
+                float4 res;
+				res.x = (uv.x - _RectUV.x) / (_RectUV.z - _RectUV.x);
+				res.y = (uv.y - _RectUV.y) / (_RectUV.w - _RectUV.y);
+				return res;
+            }
+
 			fixed4 frag(v2f i) : SV_Target
 			{
 				fixed4 col;
+
+				float2 texUV = MapRectUV(i.uv);
 #ifdef VERTICAL_FILL_ON
 	#ifdef FLIP_FILL_ON
-				if (_FillAmount >= 1 - i.uv.y) {
+				if (_FillAmount >= 1 - texUV.y) {
 	#else
-				if (_FillAmount >= i.uv.y) {
+				if (_FillAmount >= texUV.y) {
 	#endif
 #else
 	#ifdef FLIP_FILL_ON
-				if (_FillAmount >= 1 - i.uv.x) {
+				if (_FillAmount >= 1 - texUV.x) {
 	#else
-				if (_FillAmount >= i.uv.x) {
+				if (_FillAmount >= texUV.x) {
 	#endif
 #endif
 					col = tex2D(_FillTex, i.uv) * _FillColor;

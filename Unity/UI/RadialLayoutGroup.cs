@@ -19,6 +19,9 @@ namespace OpenGET.UI
         [Range(0f, 360f)]
         public float spreadAngleMax = 360f;
 
+        [Tooltip("Evenly spaces the elements in a circular layout; up to spreadAngleMax.")]
+        public bool evenSpread = false;
+
         [Tooltip("What rotation angle the first element should start at.")]
         [Range(0f, 360f)]
         public float angleStart = 0f;
@@ -75,7 +78,8 @@ namespace OpenGET.UI
             }
 
             float angleOffset = ((angleMax - angleMin)) / (transform.childCount - 1);
-            float angleChange = angleOffset < 0 ? Mathf.Max(angleOffset, -spreadAngleMax) : Mathf.Min(angleOffset, spreadAngleMax);
+            float spreadAngle = evenSpread ? Mathf.Min(360f / transform.childCount, spreadAngleMax) : spreadAngleMax;
+            float angleChange = angleOffset < 0 ? Mathf.Max(angleOffset, -spreadAngle) : Mathf.Min(angleOffset, spreadAngle);
             float angleEnd = angleChange * (transform.childCount - 1);
 
             float angle = centerOnStartAngle ? angleStart - (angleEnd * 0.5f) : angleStart;

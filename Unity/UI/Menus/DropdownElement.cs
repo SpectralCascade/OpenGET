@@ -11,7 +11,7 @@ namespace OpenGET.UI
     /// <summary>
     /// Similar to a dropdown but rather than overlaying on the current screen, acts as it's own view.
     /// </summary>
-    public class DropdownElement : AutoBehaviour, IElement, IPointerEnterHandler, IPointerExitHandler
+    public class DropdownElement : Element, IPointerEnterHandler, IPointerExitHandler
     {
 
         public UnityEngine.Events.UnityEvent<bool> onHoverChange = new UnityEngine.Events.UnityEvent<bool>();
@@ -76,7 +76,7 @@ namespace OpenGET.UI
             private set { SetValue(value); }
         }
 
-        public void SetValue(object value)
+        public override void SetValue(object value)
         {
             if (dropdown.value != (int)value)
             {
@@ -85,7 +85,7 @@ namespace OpenGET.UI
             }
         }
 
-        public object GetValue()
+        public override object GetValue()
         {
             return dropdown.value;
         }

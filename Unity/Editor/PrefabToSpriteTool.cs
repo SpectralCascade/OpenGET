@@ -78,7 +78,7 @@ namespace OpenGET
                     int width = config.prefabToSprite.spriteWidth;
                     int height = config.prefabToSprite.spriteHeight;
                     Rect rect = new Rect(0, 0, width, height);
-                    RenderTexture renderOut = new RenderTexture(width, height, 24);
+                    RenderTexture renderOut = new RenderTexture(width, height, 32, RenderTextureFormat.ARGB32);
                     cam.targetTexture = renderOut;
                     Texture2D outputTexture = null;
 
@@ -119,10 +119,18 @@ namespace OpenGET
                                 cam.transform.position = modelBounds.center - cam.transform.forward * distance;
 
                                 outputTexture = new Texture2D(width, height, TextureFormat.RGBA32, false);
-                                cam.Render();
+                                renderOut = new RenderTexture(width, height, 32, RenderTextureFormat.ARGB32);
+                                renderOut.enableRandomWrite = false;
+                                renderOut.Create();
 
                                 RenderTexture originalRT = RenderTexture.active;
                                 RenderTexture.active = renderOut;
+
+                                cam.clearFlags = CameraClearFlags.SolidColor;
+                                cam.backgroundColor = Colors.Alpha(Color.black, 0);
+                                cam.targetTexture = renderOut;
+                                cam.Render();
+
                                 outputTexture.ReadPixels(rect, 0, 0);
                                 outputTexture.Apply();
 

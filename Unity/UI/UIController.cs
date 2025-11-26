@@ -47,7 +47,7 @@ namespace OpenGET.UI
         [SerializeField]
         [Auto.NullCheck]
         [Auto.Hookup]
-        protected List<ScrollRect> scrollRects = new List<ScrollRect>();
+        protected ScrollRect[] scrollRects = new ScrollRect[0];
 
         /// <summary>
         /// Current player input index.

@@ -207,7 +207,11 @@ namespace OpenGET.UI {
         /// <summary>
         /// Show or hide this panel.
         /// </summary>
-        public virtual void SetShown(bool value, float fadeTime) {
+        public virtual void SetShown(bool value, float fadeTime)
+        {
+            // Override startShown when a code call is made to show/hide, in case things have not initialised yet
+            startShown = value;
+
             if (value)
             {
                 if (!fader.isFadingIn)
@@ -308,7 +312,7 @@ namespace OpenGET.UI {
             {
                 Show();
             }
-            else if (!fader.isFullyHidden)
+            else if (!startShown && !fader.isFullyHidden)
             {
                 Hide(0);
             }

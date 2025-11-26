@@ -20,6 +20,16 @@ namespace OpenGET.UI
         public interface ITooltip
         {
             public string GetTooltip();
+
+            /// <summary>
+            /// Optional offset to use instead of fixed offset.
+            /// </summary>
+            public Vector2? getTooltipOffset => null;
+
+            /// <summary>
+            /// Optional position to use instead of mouse pos.
+            /// </summary>
+            public Vector2? getTooltipPosition => null;
         }
 
         [Tooltip("Optional custom tooltip prefab to use. If null, a default tooltip is used from UI settings.")]
@@ -40,6 +50,9 @@ namespace OpenGET.UI
 
         [Tooltip("Show the tooltip when this object is hovered over")]
         public bool showOnHover = true;
+
+        [Tooltip("Fixed offset to use when no dynamic tooltip text is in use.")]
+        public Vector2 offset = new Vector2(32, -32);
 
         [Tooltip("Unlocalised (raw english) text string to show in the tooltip")]
         [TextArea]
@@ -99,7 +112,10 @@ namespace OpenGET.UI
 
         public void UpdateTooltip()
         {
-            tooltip.SetPosition(Pointer.current.position.ReadValue() + new Vector2(32, -32));
+            Vector2 customOffset = custom?.getTooltipOffset ?? offset;
+            Vector2 customPosition = custom?.getTooltipPosition ?? Pointer.current.position.ReadValue();
+
+            tooltip.SetPosition(customPosition + customOffset);
 
             if (custom != null)
             {

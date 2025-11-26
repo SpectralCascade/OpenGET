@@ -88,6 +88,7 @@ namespace OpenGET
                     OnFadeComplete?.Invoke(this, 1);
                     fadeCoroutine = null;
                 }
+                fadeDirection = 0;
             }
             else if (implementation != null) {
                 fadeDirection = 1;

@@ -14,14 +14,27 @@ namespace OpenGET
 
         /// <summary>
         /// Pick a random element from an array.
+        /// Optionally specify a requirement condition for the picked element.
+        /// Note that the condition substantially degrades performance from constant time to at least O(n).
         /// </summary>
-        public static T Pick<T>(IList<T> array)
+        public static T Pick<T>(IList<T> array, System.Predicate<T> condition = null)
         {
             if (array.Count <= 0)
             {
                 return default(T);
             }
-            int index = Random.Range(0, array.Count);
+            int index = 0;
+            if (condition != null)
+            {
+                List<T> required = array.Where(x => condition(x)).ToList();
+                if (required.Count <= 0)
+                {
+                    return default(T);
+                }
+                index = Random.Range(0, required.Count);
+                return required[index];
+            }
+            index = Random.Range(0, array.Count);
             return array[index];
         }
 

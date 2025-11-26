@@ -25,7 +25,7 @@ namespace OpenGET
             public readonly Mode mode;
 
             /// <summary>
-            /// Defaults to first found child component.
+            /// Defaults to first found child component, or all child components for arrays.
             /// </summary>
             public HookupAttribute(Mode mode = Mode.Children)
             {
@@ -127,21 +127,26 @@ namespace OpenGET
 
                         System.Type elementType = field.FieldType.GetElementType();
                         Component[] comps = null;
-
+                        //Log.Debug(
+                        //    "AUTO-HOOKING ARRAY {0}[] {1} on {2} @ {3} with mode {4}",
+                        //    elementType.Name, field.Name, obj.GetType().Name, SceneNavigator.GetPath(obj), autoHook
+                        //);
                         switch (autoHook)
                         {
                             case Mode.Self:
                                 comps = obj.GetComponents(elementType);
                                 break;
                             case Mode.Children:
-                                comps = obj.GetComponentsInChildren(elementType);
+                                comps = obj.GetComponentsInChildren(elementType, true);
+                                //Log.Debug("Found {0} children for AutoHookup of type {1}.", comps.Length, elementType.Name);
                                 break;
                             case Mode.Parent:
-                                comps = obj.GetComponentsInParent(elementType);
+                                comps = obj.GetComponentsInParent(elementType, true);
                                 break;
                             default:
                                 break;
                         }
+
                         System.Array instance = System.Array.CreateInstance(elementType, comps.Length);
                         for (int j = 0, countj = instance.Length; j < countj; j++)
                         {
@@ -160,6 +165,10 @@ namespace OpenGET
                                 SceneNavigator.GetPath(obj.gameObject)
                             );
                             UnityEditor.EditorUtility.SetDirty(obj);
+                        }
+                        else
+                        {
+                            //Log.Debug("No components assigned to array, comps = {0} [{1}]", comps.Length, string.Join(", ", comps.Select(x => x?.name)));//instance.GetEnumerator().MoveNext() ? instance.GetEnumerator().Current : null));
                         }
                     }
                 }

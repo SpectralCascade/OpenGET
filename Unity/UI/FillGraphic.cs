@@ -136,6 +136,7 @@ namespace OpenGET.UI
         public static readonly int propTexFill = Shader.PropertyToID("_FillTex");
         public static readonly int propColourMain = Shader.PropertyToID("_BaseColor");
         public static readonly int propColourFill = Shader.PropertyToID("_FillColor");
+        public static readonly int propRectUV = Shader.PropertyToID("_RectUV");
 
         /// <summary>
         /// Material to use for the fill.
@@ -209,6 +210,22 @@ namespace OpenGET.UI
             }
         }
 
+        /// <summary>
+        /// Calculate the UV rect for a given sprite.
+        /// </summary>
+        private Vector4 GetRectUV(Sprite sprite)
+        {
+            Rect texRect = sprite.textureRect;
+            Texture tex = sprite.texture;
+
+            float uMin = texRect.x / tex.width;
+            float vMin = texRect.y / tex.height;
+            float uMax = (texRect.x + texRect.width) / tex.width;
+            float vMax = (texRect.y + texRect.height) / tex.height;
+
+            return new Vector4(uMin, vMin, uMax, vMax);
+        }
+
         public virtual void UpdateMaterial()
         {
             if (image != null)
@@ -230,11 +247,13 @@ namespace OpenGET.UI
                 {
                     _material.SetTexture(propTexMain, baseSprite.texture);
                     _material.SetColor(propColourMain, baseColor);
+                    _material.SetVector(propRectUV, GetRectUV(baseSprite));
                 }
                 if (fillSprite != null && fillSprite.texture != null)
                 {
                     _material.SetTexture(propTexFill, fillSprite.texture);
                     _material.SetColor(propColourFill, fillColor);
+                    _material.SetVector(propRectUV, GetRectUV(fillSprite));
                 }
                 Material instance = Material.Instantiate(_material);
                 instance.CopyPropertiesFromMaterial(_material);

@@ -9,7 +9,7 @@ namespace OpenGET.UI
     /// <summary>
     /// Hints such as a pointer or highlight intended to guide the player to look towards a position or direction.
     /// </summary>
-    public abstract class Hint : AutoBehaviour
+    public abstract class Hint : AutoBehaviour, IReferrable
     {
 
         /// <summary>

@@ -161,7 +161,7 @@ namespace OpenGET.Editor
             // Handle variable
             Variable data = expression as Variable;
             if (data != null) {
-                data = VarField(data, factory, mutability, out Expression inner, ref changed);
+                data = VarField(data, factory, mutability, out Expression inner, ref changed, depth);
                 expression = inner ?? data;
             }
 
@@ -217,7 +217,7 @@ namespace OpenGET.Editor
         /// Takes a Variable. Displays relevant options depending on the type.
         /// Depending on the mutability, the field may be converted between derivative types of Variable (e.g. between Constant and AssetVariable).
         /// </summary>
-        public Variable VarField(Variable data, VariantFactory factory, Expression.Mutability mutability, out Expression inner, ref bool changed)
+        public Variable VarField(Variable data, VariantFactory factory, Expression.Mutability mutability, out Expression inner, ref bool changed, int depth)
         {
             changed |= false;
             inner = null;
@@ -232,7 +232,7 @@ namespace OpenGET.Editor
             int op_ConstInt, op_ConstFloat, op_ConstString,
                 op_AssetInt, op_AssetFloat, op_AssetString,
                 op_DynInt, op_DynFloat, op_DynString,
-                op_BinOpAdd, op_BinOpSubtract, op_BinOpMultiply, op_BinOpDivide, op_Clamp,
+                op_BinOpAdd, op_BinOpSubtract, op_BinOpMultiply, op_BinOpDivide, op_BinOpAssign,
                 op_Delete;
 
             // Deletion
@@ -533,7 +533,7 @@ namespace OpenGET.Editor
                 op_BinOpSubtract = -1;
                 op_BinOpMultiply = -1;
                 op_BinOpDivide = -1;
-                op_Clamp = -1;
+                op_BinOpAssign = -1;
             }
             else
             {
@@ -541,14 +541,22 @@ namespace OpenGET.Editor
                 op_BinOpSubtract = countOp++;
                 op_BinOpMultiply = countOp++;
                 op_BinOpDivide = countOp++;
-                op_Clamp = countOp++;
                 options.AddRange(new string[] {
                     "Operator/[+] Add",
                     "Operator/[-] Subtract",
                     "Operator/[*] Multiply",
-                    "Operator/[\\] Divide",
-                    "Operator/[Clamp]",
+                    "Operator/[\\] Divide"
                 });
+
+                if (depth <= 1 && data is DynamicVariable)
+                {
+                    op_BinOpAssign = countOp++;
+                    options.Add("Operator/[=] Assign");
+                }
+                else
+                {
+                    op_BinOpAssign = -1;
+                }
             }
 
             bool mutType = (mutability & Expression.Mutability.Type) != 0;
@@ -619,6 +627,10 @@ namespace OpenGET.Editor
                 {
                     inner = new BinOpDivide(data, new Constant(new VariantFloat(0f)));
                 }
+                else if (index == op_BinOpAssign)
+                {
+                    inner = new BinOpAssign(data as DynamicVariable, new Constant(new VariantFloat(0f)));
+                }
                 else
                 {
                     // Delete
@@ -647,7 +659,11 @@ namespace OpenGET.Editor
                 options.Add("=");
             }
 
-            int selected = 0;
+            int selected = -1;
+            if (op is BinOpAdd)
+            {
+                selected = 0;
+            }
             if (op is BinOpSubtract)
             {
                 selected = 1;
@@ -666,6 +682,7 @@ namespace OpenGET.Editor
             }
 
             int old = selected;
+            selected = Mathf.Max(0, selected);
             selected = EditorGUI.Popup(GetSection(), selected, options.ToArray());
 
             if (old != selected)

@@ -5,6 +5,11 @@ using System.Reflection;
 using UnityEngine;
 using System.Linq;
 
+
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
+
 namespace OpenGET.UI
 {
 
@@ -41,6 +46,10 @@ namespace OpenGET.UI
         [SerializeField]
         [Tooltip("Optional container prefab for elements.")]
         private ElementContainer elementContainerPrefab;
+
+        [SerializeField]
+        [Tooltip("The prefab for an input binding element.")]
+        private InputBindElement elementInputBindingPrefab;
 
         /// <summary>
         /// The local menu builder instance.
@@ -289,6 +298,23 @@ namespace OpenGET.UI
                         dropdown.Init();
                     }, elementContainerPrefab);
                 }
+#if ENABLE_INPUT_SYSTEM
+                else if (fieldValue is IInputActionCollection2)
+                {
+                    IInputActionCollection2 actions = fieldValue as IInputActionCollection2;
+                    foreach (InputAction action in actions) {
+                        ElementContainer created = builder.Add(
+                            elementInputBindingPrefab,
+                            action,
+                            (bindElement) => {
+                                // TODO: Handle multiple bindings and control schemes
+                                bindElement.bindingId = bindElement.action.bindings[0].id.ToString();
+                            },
+                            elementContainerPrefab
+                        );
+                    }
+                }
+#endif
                 else
                 {
                     // Unknown type!

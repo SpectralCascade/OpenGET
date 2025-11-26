@@ -9,7 +9,7 @@ namespace OpenGET.UI
     /// <summary>
     /// A button with text.
     /// </summary>
-    public class TextButton : AutoBehaviour, IPointerEnterHandler, IPointerExitHandler
+    public class TextButton : AutoBehaviour, IPointerEnterHandler, IPointerExitHandler, IScrollHandler
     {
 
         /// <summary>
@@ -44,6 +44,17 @@ namespace OpenGET.UI
         public void OnPointerExit(PointerEventData eventData)
         {
             onHoverChange?.Invoke(false);
+        }
+
+        private ScrollRect _containerScrollRect;
+
+        public void OnScroll(PointerEventData eventData)
+        {
+            _containerScrollRect = _containerScrollRect != null ? _containerScrollRect : GetComponentInParent<ScrollRect>();
+            if (_containerScrollRect != null)
+            {
+                _containerScrollRect.OnScroll(eventData);
+            }
         }
     }
 

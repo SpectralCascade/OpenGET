@@ -163,7 +163,7 @@ namespace OpenGET.UI
             {
                 menu.SetTooltip(disableReason);
             }
-            else if (option.tooltip == null || (option.tooltip.Invoke() != ""))
+            else// if (option.tooltip == null || (option.tooltip.Invoke() != ""))
             {
                 menu.SetTooltip(menu.normalDescription);
             }

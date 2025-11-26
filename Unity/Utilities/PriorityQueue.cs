@@ -182,7 +182,7 @@ namespace OpenGET
 
         /// <summary>
         /// Sort the underlying data by priority. This is done automatically on dequeue if it hasn't been done since enqueue,
-        /// or priority values have been modified.
+        /// or priority values have been modified. Defaults to descending order (highest priority first in the queue).
         /// </summary>
         public void SortByPriority()
         {

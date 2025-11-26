@@ -10,6 +10,7 @@ namespace OpenGET
     /// <summary>
     /// Component used for automatically localising text.
     /// </summary>
+    [RequireComponent(typeof(TextFormatter))]
     public class LocalisedText : AutoTextFormat
     {
         public override string OnTextAutoFormat(string text)

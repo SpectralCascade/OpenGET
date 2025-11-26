@@ -142,7 +142,7 @@ namespace OpenGET.Expressions
         public StandardVariantFactory(params object[] args) : base(args) { }
 
         public override IContext.Parameter[] parameters => new IContext.Parameter[] {
-            new IContext.Parameter(typeof(T1), typeof(T1).Name)
+            new IContext.Parameter(typeof(T1), typeof(T1).FullName.Replace('+', '.'))
         };
     }
 
@@ -152,8 +152,8 @@ namespace OpenGET.Expressions
         public StandardVariantFactory(params object[] args) : base(args) { }
 
         public override IContext.Parameter[] parameters => new IContext.Parameter[] {
-            new IContext.Parameter(typeof(T1), typeof(T1).Name),
-            new IContext.Parameter(typeof(T2), typeof(T2).Name)
+            new IContext.Parameter(typeof(T1), typeof(T1).FullName.Replace('+', '.')),
+            new IContext.Parameter(typeof(T2), typeof(T2).FullName.Replace('+', '.'))
         };
     }
 
@@ -163,9 +163,22 @@ namespace OpenGET.Expressions
         public StandardVariantFactory(params object[] args) : base(args) { }
 
         public override IContext.Parameter[] parameters => new IContext.Parameter[] {
-            new IContext.Parameter(typeof(T1), typeof(T1).Name),
-            new IContext.Parameter(typeof(T2), typeof(T2).Name),
-            new IContext.Parameter(typeof(T3), typeof(T3).Name)
+            new IContext.Parameter(typeof(T1), typeof(T1).FullName.Replace('+', '.')),
+            new IContext.Parameter(typeof(T2), typeof(T2).FullName.Replace('+', '.')),
+            new IContext.Parameter(typeof(T3), typeof(T3).FullName.Replace('+', '.'))
+        };
+    }
+
+    public class StandardVariantFactory<T1, T2, T3, T4> : StandardVariantFactory
+    {
+        public StandardVariantFactory() { }
+        public StandardVariantFactory(params object[] args) : base(args) { }
+
+        public override IContext.Parameter[] parameters => new IContext.Parameter[] {
+            new IContext.Parameter(typeof(T1), typeof(T1).FullName.Replace('+', '.')),
+            new IContext.Parameter(typeof(T2), typeof(T2).FullName.Replace('+', '.')),
+            new IContext.Parameter(typeof(T3), typeof(T3).FullName.Replace('+', '.')),
+            new IContext.Parameter(typeof(T4), typeof(T4).FullName.Replace('+', '.'))
         };
     }
 
@@ -689,7 +702,7 @@ namespace OpenGET.Expressions
         public override Variant Evaluate<FactoryType>(FactoryType factory)
         {
             Variant value = b.Evaluate(factory);
-            (a as DynamicVariable).SetValue(value);
+            (a as DynamicVariable).SetValue(factory, value);
             return value;
         }
     }
@@ -699,13 +712,13 @@ namespace OpenGET.Expressions
     /// </summary>
     public abstract class Variable : Expression
     {
-        public abstract void SetValue(Variant value);
+        public abstract void SetValue<T>(T factory, Variant value) where T : VariantFactory;
 
         public Variable() { }
 
         public Variable(Variant value)
         {
-            SetValue(value);
+            SetValue<VariantFactory>(null, value);
         }
     }
 
@@ -715,7 +728,7 @@ namespace OpenGET.Expressions
     [Serializable]
     public class Constant : Variable
     {
-        public override void SetValue(Variant value) {
+        public override void SetValue<T>(T factory, Variant value) {
             _val = value;
         }
 
@@ -740,7 +753,7 @@ namespace OpenGET.Expressions
     [Serializable]
     public abstract class NamedVariable : Variable
     {
-        public override void SetValue(Variant value) {
+        public override void SetValue<T>(T factory, Variant value) {
             target?.GetType()?.GetField(name)?.SetValue(target, value.value);
         }
 
@@ -875,6 +888,12 @@ namespace OpenGET.Expressions
         public int index = 0;
 
         public DynamicVariable(int index, string name) : base(name) { this.index = index; }
+
+        public override void SetValue<T>(T factory, Variant value)
+        {
+            object obj = index < factory.args.Length ? factory.args[index] : null;
+            obj?.GetType()?.GetField(name)?.SetValue(obj, value.value);
+        }
 
         /// <summary>
         /// Warning: Provides formatters with argument indexers corresponding to parameters.

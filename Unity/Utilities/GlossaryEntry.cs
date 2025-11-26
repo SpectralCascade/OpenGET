@@ -32,14 +32,14 @@ namespace OpenGET
         public string description = "";
 
         /// <summary>
-        /// Only get the glyph.
+        /// Only get the glyph. Do not tint.
         /// </summary>
         public string glyphOnly => Get(false, true, false);
 
         /// <summary>
-        /// Get string without the glossary tooltip or styling.
+        /// Get string without the glossary tooltip or styling; tinted to match the text colour.
         /// </summary>
-        public string withoutLink => Get(false, true, true, null);
+        public string clean => Get(false, true, true, null, true);
 
         /// <summary>
         /// Get the localised text string in a specific style, with or without specific elements. By default, all elements are enabled.

@@ -278,15 +278,21 @@ namespace OpenGET.Input
                 }
             }
 
+            public string GetActionPrompt(InputAction action, InputBinding.DisplayStringOptions displayOptions = 0, bool tint = false)
+            {
+                return GetActionPrompt(action, out TMP_SpriteAsset _, out TMP_SpriteGlyph _, out string _, out string _, displayOptions: displayOptions, tint: tint);
+            }
+
             /// <summary>
             /// Get an input prompt string for an input action based on the current active control scheme.
             /// Optionally specify the name of a specific TMPro sprite sheet containing your input prompt glyphs.
             /// </summary>
-            public string GetActionPrompt(InputAction action, out Sprite glyph, out string deviceLayoutName, out string controlPath, InputBinding.DisplayStringOptions displayOptions = 0, bool tint = false)
+            public string GetActionPrompt(InputAction action, out TMP_SpriteAsset asset, out TMP_SpriteGlyph glyph, out string deviceLayoutName, out string controlPath, InputBinding.DisplayStringOptions displayOptions = 0, bool tint = false)
             {
                 string sprites = "";
                 TMP_SpriteAsset promptsAsset = null;
                 glyph = null;
+                asset = null;
                 deviceLayoutName = null;
                 controlPath = null;
 
@@ -342,16 +348,19 @@ namespace OpenGET.Input
                         }
                         glyphIndex = found != null ? found.GetSpriteIndexFromName(spriteName) : -1;
 
-                        if (found != null && glyphIndex >= 0 && glyphIndex < found.spriteGlyphTable.Count)
+                        if (found != null && glyphIndex >= 0 && glyphIndex < found.spriteGlyphTable.Count && glyph == null)
                         {
-                            glyph = found.spriteGlyphTable[glyphIndex].sprite;
+                            // TMP is pretty useless and doesn't expose sprites properly (the glyph sprite is not guaranteed)
+                            // Therefore, we have to create our own here for the first match
+                            glyph = found.spriteGlyphTable[glyphIndex];
                         }
-                        else
+                        else if (glyph == null)
                         {
                             //Log.Warning("Failed to obtain sprite glyph with name \"{0}\" from found atlas \"{1}\"", spriteName, found?.name);
                             found = null;
                         }
 
+                        asset = found;
                         string sprite = found == null ? "" : $"<size=150%><sprite{(promptsAsset != null ? $"=\"{promptsAsset?.name}\"" : "")} name=\"{spriteName}\"{(tint ? " tint=\"1\"" : "")}></size>";
                         string actionPrompt = "";
 
