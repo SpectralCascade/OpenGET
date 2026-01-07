@@ -23,7 +23,7 @@ public class _TemplateRef_
 		/// <typeparam name="T">Asset type.</typeparam>
 		/// <param name="id">Identifier of the asset - this is the filename without extension.</param>
 		/// <param name="recursive">Search child folders recursively.</param>
-        public Wrapper<T> Find<T>(string id, bool recursive = true) where T : UnityEngine.Object, OpenGET.IReferrable
+        public Wrapper<T> Find<T>(string id, bool recursive = true) where T : UnityEngine.Object
         {
             Wrapper<T> found = mapped.TryGetValue(id, out WrapperBase wrapper) ? wrapper as Wrapper<T> : null;
             if (found == null && recursive)
@@ -38,6 +38,22 @@ public class _TemplateRef_
 				}
             }
             return found;
+        }
+
+		/// <summary>
+		/// Get all assets of a specified type.
+		/// </summary>
+		/// <typeparam name="T">Asset type.</typeparam>
+		/// <param name="recursive">Include child folders recursively.</param>
+        public Wrapper<T>[] GetAll<T>(bool recursive = true) where T : UnityEngine.Object
+        {
+            IEnumerable<Wrapper<T>> all = mapped.Where(x => x.Value != null && x.Value is Wrapper<T>).Select(x => x.Value as Wrapper<T>);
+            if (recursive) {
+                for (int i = 0, counti = children.Length; i < counti; i++) {
+                    all = all.Concat(children[i].GetAll<T>());
+                }
+            }
+            return all.ToArray();
         }
     }
 

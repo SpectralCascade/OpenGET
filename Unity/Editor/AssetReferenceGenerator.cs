@@ -177,9 +177,14 @@ namespace OpenGET
 
                     string gen_start = "\n\n" + baseTabs + "public class " + className + " : Node\n" + baseTabs + "{\n"
                         + innerTabs + "internal static " + className + " _shared_instance_ = new " + className + "();\n\n"
-                        + innerTabs + "public new static Wrapper<T> Find<T>(string id, bool recursive = true) where T : UnityEngine.Object, OpenGET.IReferrable {\n"
+                        + innerTabs + "public new static Wrapper<T> Find<T>(string id, bool recursive = true) where T : UnityEngine.Object {\n"
                         + innerTabs + '\t' + "return ((Node)_shared_instance_).Find<T>(id, recursive);\n"
+                        + innerTabs + "}\n"
+                        + innerTabs + "\n"
+                        + innerTabs + "public new static Wrapper<T>[] GetAll<T>(bool recursive = true) where T : UnityEngine.Object {\n"
+                        + innerTabs + "\t" + "return ((Node)_shared_instance_).GetAll<T>(recursive);\n"
                         + innerTabs + "}\n";
+
                     string gen_end = "\n\n" + baseTabs + "}\n";
                     return new Node { name = parts[index], isLeaf = false, depth = index, generated_start = gen_start, generated_end = gen_end };
                 }

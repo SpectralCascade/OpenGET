@@ -115,9 +115,14 @@ namespace OpenGET
                         }
                     }
                 }
-                else if (field.FieldType.IsArray && field.FieldType.GetElementType().IsSubclassOf(typeof(Component)) &&
-                    !field.IsNotSerialized)
-                {
+                else if (
+                    ((field.FieldType.IsArray && field.FieldType.GetElementType().IsSubclassOf(typeof(Component))) 
+                        || (field.FieldType.IsGenericType && field.FieldType.GetGenericTypeDefinition() == typeof(List<>)
+                            && field.FieldType.GetGenericArguments()[0].IsSubclassOf(typeof(Component))
+                        )
+                    ) &&
+                    !field.IsNotSerialized
+                ) {
                     System.Reflection.CustomAttributeData attribute = field.CustomAttributes.FirstOrDefault(
                         x => x.AttributeType == typeof(HookupAttribute)
                     );
@@ -125,7 +130,7 @@ namespace OpenGET
                     {
                         Mode autoHook = (Mode)attribute.ConstructorArguments[0].Value;
 
-                        System.Type elementType = field.FieldType.GetElementType();
+                        System.Type elementType = field.FieldType.IsGenericType ? field.FieldType.GetGenericArguments()[0] : field.FieldType.GetElementType();
                         Component[] comps = null;
                         //Log.Debug(
                         //    "AUTO-HOOKING ARRAY {0}[] {1} on {2} @ {3} with mode {4}",
@@ -147,14 +152,28 @@ namespace OpenGET
                                 break;
                         }
 
-                        System.Array instance = System.Array.CreateInstance(elementType, comps.Length);
-                        for (int j = 0, countj = instance.Length; j < countj; j++)
+                        object instance = null;
+                        if (field.FieldType.IsGenericType)
                         {
-                            instance.SetValue(comps[j], j);
+                            instance = System.Activator.CreateInstance(field.FieldType);
+                            for (int j = 0, countj = comps.Length; j < countj; j++)
+                            {
+                                (instance as IList).Add(comps[j]);
+                            }
+                        }
+                        else
+                        {
+                            instance = System.Array.CreateInstance(elementType, comps.Length);
+                            for (int j = 0, countj = comps.Length; j < countj; j++)
+                            {
+                                (instance as System.Array).SetValue(comps[j], j);
+                            }
                         }
                         field.SetValue(obj, instance);
 
-                        object[] array = field.GetValue(obj) as object[];
+                        object obtained = field.GetValue(obj);
+                        // Note: We don't populate the generic array here as we are only validating assignment
+                        object[] array = obtained != null && field.FieldType.IsGenericType ? new object[(obtained as IList).Count] : obtained as object[];
                         if (array != null && array.Length > 0)
                         {
                             Log.Verbose(

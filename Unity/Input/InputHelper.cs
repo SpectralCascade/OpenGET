@@ -82,6 +82,11 @@ namespace OpenGET.Input
             private InputDevice _previousInputDevice = null;
 
             /// <summary>
+            /// All available devices.
+            /// </summary>
+            public InputDevice[] availableDevices => PlayerInput.GetPlayerByIndex(index).devices.ToArray();
+
+            /// <summary>
             /// Get the control scheme for this player.
             /// </summary>
             public string controlScheme => PlayerInput.GetPlayerByIndex(index).currentControlScheme;
@@ -248,7 +253,7 @@ namespace OpenGET.Input
                         _previousInputDevice = device != _activeInputDevice ? _activeInputDevice : _previousInputDevice;
                         _activeInputDevice = device;
                         // Switch gamepad flag on when gamepad active OR using a virtual mouse input
-                        Log.Debug("Device add/reconnect: {0} (virtual mouse = {1}, using = {2})", device.name, virtualMouse.name, usingVirtualMouse);
+                        Log.Debug("Device add/reconnect: {0} (virtual mouse = {1}, using = {2})", device.name, virtualMouse?.name, usingVirtualMouse);
                         UpdateGamepadStatus(device is Gamepad || (usingVirtualMouse && virtualMouse == device));
                         break;
                     case InputDeviceChange.Removed:

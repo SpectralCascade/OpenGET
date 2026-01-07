@@ -5,7 +5,6 @@ using System.Reflection;
 using UnityEngine;
 using System.Linq;
 
-
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -44,12 +43,16 @@ namespace OpenGET.UI
         private DropdownElement elementDropdownPrefab;
 
         [SerializeField]
-        [Tooltip("Optional container prefab for elements.")]
-        private ElementContainer elementContainerPrefab;
+        [Tooltip("The prefab for an input action element.")]
+        private InputActionElement elementInputActionPrefab;
 
         [SerializeField]
-        [Tooltip("The prefab for an input binding element.")]
-        private InputBindElement elementInputBindingPrefab;
+        [Tooltip("Optional prefab for subheading text (non-editable).")]
+        private HeadingElement elementHeadingPrefab;
+
+        [SerializeField]
+        [Tooltip("Optional container prefab for elements.")]
+        private ElementContainer elementContainerPrefab;
 
         /// <summary>
         /// The local menu builder instance.
@@ -299,16 +302,65 @@ namespace OpenGET.UI
                     }, elementContainerPrefab);
                 }
 #if ENABLE_INPUT_SYSTEM
-                else if (fieldValue is IInputActionCollection2)
+                else if (fieldValue is IActionMapBindings)
                 {
-                    IInputActionCollection2 actions = fieldValue as IInputActionCollection2;
-                    foreach (InputAction action in actions) {
+                    IActionMapBindings map = fieldValue as IActionMapBindings;
+                    foreach (InputAction action in map.actions) {
+                        if (map.enabledMaps != null && !map.enabledMaps.Contains(action.actionMap.name))
+                        {
+                            // Skip uneditable maps
+                            continue;
+                        }
+                        string[] enabledBinds = map.GetEnabledBindGroups();
+                        if (enabledBinds != null && enabledBinds.Where(
+                            x => {
+                                if (string.IsNullOrEmpty(x))
+                                {
+                                    return false;
+                                }
+                                for (int i = 0, counti = action.bindings.Count; i < counti; i++)
+                                {
+                                    UnityEngine.InputSystem.InputBinding bind = action.bindings[i];
+                                    if ((!bind.isComposite && !bind.isPartOfComposite && bind.groups.Contains(x)) ||
+                                        (bind.isPartOfComposite && bind.groups.Contains(x)))
+                                    {
+                                        return true;
+                                    }
+                                }
+                                return false;
+                            }
+                        ).Count() <= 0)
+                        {
+                            // Skip actions that have no enabled bindings.
+                            continue;
+                        }
+                        else
+                        {
+                            //Log.Debug("Enabled binds: [{0}]. Setting up action {1} with binding groups: [{2}]", string.Join(", ", enabledBinds), action.name, string.Join(", ", action.bindings.Select(x => x.groups)));
+                        }
+
                         ElementContainer created = builder.Add(
-                            elementInputBindingPrefab,
+                            elementInputActionPrefab,
                             action,
-                            (bindElement) => {
-                                // TODO: Handle multiple bindings and control schemes
-                                bindElement.bindingId = bindElement.action.bindings[0].id.ToString();
+                            (element) => {
+                                element.enabledControls = enabledBinds;
+                                element.UpdateBindings();
+                                object innerCapApplyField = applyField;
+                                object innerCapField = field;
+                                element.onBindChanged.AddListener((a) => {
+                                    // Note: As map is a struct, we don't need to do a capture.
+                                    // However, the changes applied to it MUST be copied to the matching settings field.
+                                    map.UpdateAction(a);
+                                    if (hasApplyInterface)
+                                    {
+                                        (innerCapApplyField as IApplySetting).SetValue(map);
+                                        field.SetValue(group, applyField);
+                                    }
+                                    else
+                                    {
+                                        field.SetValue(group, map);
+                                    }
+                                });
                             },
                             elementContainerPrefab
                         );

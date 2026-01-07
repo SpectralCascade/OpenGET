@@ -16,12 +16,6 @@ namespace OpenGET.Bootstrap
     public class SettingsCrossplatform<Derived> : Settings<Derived> where Derived : SettingsCrossplatform<Derived>, new()
     {
 
-        /// <summary>
-        /// All video related settings.
-        /// </summary>
-        [SettingsGroup("Graphics", "Display preferences and visual quality. These settings impact game performance.")]
-        public Video video = new Video();
-
         [Serializable]
         public class Video
         {
@@ -73,12 +67,6 @@ namespace OpenGET.Bootstrap
             );
 
         };
-
-        /// <summary>
-        /// All audio related settings.
-        /// </summary>
-        [SettingsGroup("Audio", "Volume levels for different types of audio playback in the game.")]
-        public Audio audio = new Audio();
 
         [Serializable]
         public class Audio
@@ -144,12 +132,6 @@ namespace OpenGET.Bootstrap
             );
             
         }
-
-        /// <summary>
-        /// All input related settings.
-        /// </summary>
-        [SettingsGroup("Input", "Global input settings.")]
-        public Input input = new Input();
 
         [Serializable]
         public class Input

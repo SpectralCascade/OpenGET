@@ -33,7 +33,7 @@ namespace OpenGET.UI
         /// <summary>
         /// Get the current active tab, if any.
         /// </summary>
-        public Tab current => tabs.Length > 0 ? tabs[index] : null;
+        public Tab current => tabs.Length > 0 && index < tabs.Length ? tabs[index] : null;
 
         /// <summary>
         /// Is this group currently switching tabs?
@@ -109,7 +109,10 @@ namespace OpenGET.UI
                 Tab prev = current;
                 index = found;
                 switching = true;
-                prev.OnSwitch(false);
+                if (prev != null)
+                {
+                    prev.OnSwitch(false);
+                }
                 current.OnSwitch(true);
                 switching = false;
             }

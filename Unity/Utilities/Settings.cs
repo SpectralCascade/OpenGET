@@ -5,6 +5,11 @@ using System.IO;
 using System.Reflection;
 using UnityEngine;
 using System.Linq;
+using Newtonsoft.Json.Bson;
+
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 namespace OpenGET
 {
@@ -12,9 +17,10 @@ namespace OpenGET
     /// Individual settings should use this wrapper class so they can be applied in some way once a value is selected.
     /// </summary>
     [Serializable]
-    public struct Setting<T> : IApplySetting
+    public struct Setting<T> : IApplySetting where T : struct
     {
         public delegate void ApplySetting(T current);
+        public delegate void OnSettingUpdate(T current, object data);
 
         public delegate string GetText();
 
@@ -31,6 +37,8 @@ namespace OpenGET
         /// </param>
         /// <param name="name">Get a text string to use as the setting name. If null, uses member name.</param>
         /// <param name="desc">Get a text string to use as the setting description.</param>
+        /// <param name="save">Serialise the setting into a string.</param>
+        /// <param name="load">Deserialise the setting from a string.</param>
         /// <param name="customData">Custom non-serialised data that can be accessed & changed dynamically at runtime.</param>
         public Setting(
             T value = default,
@@ -39,16 +47,18 @@ namespace OpenGET
             float autoRevertTime = 0,
             GetText name = null,
             GetText desc = null,
+            OnSettingUpdate onUpdate = null,
             object[] customData = null
         )
         {
             this.value = value;
             this.apply = apply;
+            this.onUpdate = onUpdate;
             this.previewOnChange = previewOnChange;
             this.autoRevertTime = autoRevertTime;
             this.getName = name;
             this.getDescription = desc;
-            this.customData = customData;
+            this.customData = customData ?? new object[0];
         }
 
         public static implicit operator T(Setting<T> s)
@@ -56,21 +66,26 @@ namespace OpenGET
             return s.value;
         }
 
-        public static implicit operator Setting<T>(T s)
-        {
-            return new Setting<T>(s);
-        }
+        //public static implicit operator Setting<T>(T s)
+        //{
+        //    return new Setting<T>(s);
+        //}
 
         /// <summary>
         /// The setting value to be serialised.
         /// </summary>
         [SerializeField]
-        private T value;
+        public T value;
 
         /// <summary>
-        /// Function used to apply the given setting.
+        /// Function used to apply the setting.
         /// </summary>
         private ApplySetting apply;
+
+        /// <summary>
+        /// Callback to handle interaction or changes to the setting.
+        /// </summary>
+        private OnSettingUpdate onUpdate;
 
         /// <summary>
         /// Should this setting be immediately applied for preview when it is changed?
@@ -93,7 +108,7 @@ namespace OpenGET
         private GetText getDescription;
 
         /// <summary>
-        /// Custom data that is not serialised.
+        /// Custom data that will be not be serialised.
         /// </summary>
         [NonSerialized]
         public object[] customData;
@@ -107,7 +122,16 @@ namespace OpenGET
         }
 
         /// <summary>
+        /// Update the setting with contextual data.
+        /// </summary>
+        public void Update(object data)
+        {
+            onUpdate?.Invoke(value, data);
+        }
+
+        /// <summary>
         /// Check if the setting has a different value to another.
+        /// The given IApplySetting MUST be an object of the same type as this.
         /// </summary>
         public bool HasDifference(IApplySetting other)
         {
@@ -123,7 +147,8 @@ namespace OpenGET
         }
 
         /// <summary>
-        /// Set the setting value as an object. This is not recommended for general use.
+        /// Set the setting value and apply if changes should be previewed immediately.
+        /// This is not recommended for general use.
         /// </summary>
         public void SetValue(object value)
         {
@@ -134,6 +159,11 @@ namespace OpenGET
             {
                 apply?.Invoke(this.value);
             }
+        }
+
+        public void SetValueRaw(object value)
+        {
+            this.value = (T)value;
         }
 
         /// <summary>
@@ -151,6 +181,7 @@ namespace OpenGET
         {
             return getDescription?.Invoke();
         }
+
     }
 
     /// <summary>
@@ -161,7 +192,6 @@ namespace OpenGET
     [Serializable]
     public class Settings<Derived> where Derived : Settings<Derived>, new()
     {
-
         /// <summary>
         /// The current active settings.
         /// </summary>
@@ -223,6 +253,8 @@ namespace OpenGET
         /// </summary>
         public void CopyIn(Derived source)
         {
+            Log.Debug("Copying in settings from {0} to {1}...", source.GetHashCode(), GetHashCode());
+
             List<object> sourceGroups = source.GetGroups();
             List<object> instanceGroups = GetGroups();
             for (int i = 0, counti = sourceGroups.Count; i < counti; i++)
@@ -230,8 +262,15 @@ namespace OpenGET
                 FieldInfo[] fields = sourceGroups[i].GetType().GetFields(BindingFlags.Instance | BindingFlags.Public);
                 for (int fieldIndex = 0, totalFields = fields.Length; fieldIndex < totalFields; fieldIndex++)
                 {
-                    // Overwrite this instance's value
-                    fields[fieldIndex].SetValue(instanceGroups[i], fields[fieldIndex].GetValue(sourceGroups[i]));
+                    FieldInfo field = fields[fieldIndex];
+                    object copy = fields[fieldIndex].GetValue(sourceGroups[i]);
+                    object val = ((IApplySetting)copy).GetValue();
+                    if (val is ICloneable)
+                    {
+                        // We try and clone the value whenever possible
+                        ((IApplySetting)copy).SetValueRaw(((ICloneable)val).Clone());
+                    }
+                    fields[fieldIndex].SetValue(instanceGroups[i], copy);
                 }
             }
         }
@@ -239,18 +278,23 @@ namespace OpenGET
         /// <summary>
         /// Overwrite the settings saved on file with the current applied settings.
         /// </summary>
-        public static Result Save(string customPath = "")
+        public static Result Save(string path = "")
         {
             CheckInit();
+            path = string.IsNullOrEmpty(path) ? instance.GetPath() : path;
             try
             {
                 // Attempt with applied settings, if never applied then use current instance instead
-                string json = JsonUtility.ToJson(applied ?? instance);
-                File.WriteAllText(string.IsNullOrEmpty(customPath) ? instance.GetPath() : customPath, json);
+                string json = JsonUtility.ToJson(applied ?? instance
+#if UNITY_EDITOR
+                    , true
+#endif
+                );
+                File.WriteAllText(path, json);
             }
             catch (Exception e)
             {
-                return new Result("Failed to save settings.", e);
+                return new Result($"Failed to save settings to \"{path}\".", e);
             }
             return new Result();
         }
@@ -258,17 +302,18 @@ namespace OpenGET
         /// <summary>
         /// Load settings from file. Returns false upon failure.
         /// </summary>
-        public static Result Load(string customPath = "")
+        public static Result Load(string path = "")
         {
             CheckInit();
+            path = string.IsNullOrEmpty(path) ? instance.GetPath() : path;
             try
             {
-                string json = File.ReadAllText(string.IsNullOrEmpty(customPath) ? Path : customPath);
+                string json = File.ReadAllText(path);
                 JsonUtility.FromJsonOverwrite(json, instance);
             }
             catch (Exception e)
             {
-                return new Result("Failed to load settings.", e);
+                return new Result($"Failed to load settings from \"{path}\".", e);
             }
             Log.Debug("Loaded settings successfully.");
             return new Result();
@@ -287,6 +332,11 @@ namespace OpenGET
             // Get settings groups using reflection
             List<object> groups = instance.GetGroups();
             List<object> appliedGroups = applied.GetGroups();
+            //Log.Debug(
+            //    "Current groups = [{0}], applied groups = [{1}]",
+            //    string.Join(", ", groups.Select(x => x.GetHashCode())),
+            //    string.Join(", ", appliedGroups.Select(x => x.GetHashCode()))
+            //);
             for (int i = 0, counti = groups.Count; i < counti; i++)
             {
                 // Get all IApply fields
@@ -299,10 +349,16 @@ namespace OpenGET
                 // Compare the values of the fields between the shared instance and the applied instance.
                 for (int j = 0, countj = fields.Length; j < countj; j++)
                 {
-                    IApplySetting field = fields[j].GetValue(groups[i]) as IApplySetting;
-                    IApplySetting current = fields[j].GetValue(appliedGroups[i]) as IApplySetting;
-                    if (field.HasDifference(current))
+                    IApplySetting current = fields[j].GetValue(groups[i]) as IApplySetting;
+                    IApplySetting applied = fields[j].GetValue(appliedGroups[i]) as IApplySetting;
+                    if (current.HasDifference(applied))
                     {
+                        //Log.Debug(
+                        //    "Difference detected between current & applied values of field {0}: \"{1}\" != \"{2}\"",
+                        //    fields[j].Name,
+                        //    current.GetValue().ToString(),
+                        //    applied.GetValue().ToString()
+                        //);
                         return true;
                     }
                 }
@@ -343,7 +399,6 @@ namespace OpenGET
                 {
                     IApplySetting settingCurrent = fields[j].GetValue(groups[i]) as IApplySetting;
                     IApplySetting settingApplied = fields[j].GetValue(appliedGroups[i]) as IApplySetting;
-                    //Log.Debug("Setting {0} current: {1}, applied: {2}", fields[j].Name, settingCurrent.GetValue(), settingApplied.GetValue());
                     if (settingCurrent.HasDifference(settingApplied) || firstTime || force)
                     {
                         settingCurrent.Apply();
@@ -441,6 +496,7 @@ namespace OpenGET
                 }
                 else
                 {
+                    Log.Debug("Initialising Settings instance...");
                     instance.OnLoad();
                     Apply();
                     Log.Debug("Successfully initialised settings instance.");
@@ -448,6 +504,19 @@ namespace OpenGET
             }
         }
 
+    }
+
+    [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
+    public class SettingsHeaderAttribute : Attribute
+    {
+        public readonly string heading;
+        public readonly string description;
+
+        public SettingsHeaderAttribute(string heading, string description = "")
+        {
+            this.heading = heading;
+            this.description = description;
+        }
     }
 
 }

@@ -108,20 +108,25 @@ namespace OpenGET {
             /// Play an audio clip on a free audio source.
             /// Returns the audio source used.
             /// To crossfade music, set volume to zero.
+            /// Optionally bring-your-own audio source instead of using the pool.
             /// </summary>
-            public AudioSource Play(AudioClip clip, float volume = 1, bool loop = false)
+            public AudioSource Play(AudioClip clip, float volume = 1, bool loop = false, AudioSource source = null)
             {
-                AudioSource source = pool[head];
+                bool byo = source != null;
+                source = byo ? source : pool[head];
                 source.clip = clip;
                 source.loop = loop;
                 source.volume = volume;
                 source.Play();
 
-                // Update pool head
-                head++;
-                if (head >= pool.Length)
+                if (!byo)
                 {
-                    head = 0;
+                    // Update pool head if we're using the pool
+                    head++;
+                    if (head >= pool.Length)
+                    {
+                        head = 0;
+                    }
                 }
 
                 return source;
@@ -130,13 +135,12 @@ namespace OpenGET {
             /// <summary>
             /// Play an audio clip given a resource path.
             /// </summary>
-            public AudioSource Play(string resource, float volume = 1, bool loop = false)
+            public AudioSource Play(string resource, float volume = 1, bool loop = false, AudioSource source = null)
             {
                 AudioClip clip = Resources.Load<AudioClip>(resource);
-                AudioSource source = null;
                 if (clip != null)
                 {
-                    source = Play(clip, volume, loop);
+                    source = Play(clip, volume, loop, source);
                 }
                 else
                 {
@@ -145,6 +149,10 @@ namespace OpenGET {
                 return source;
             }
 
+            /// <summary>
+            /// Stops all audio sources in the pool.
+            /// Note: Does not stop custom audio sources.
+            /// </summary>
             public void StopAll()
             {
                 for (int i = 0, counti = pool.Length; i < counti; i++)

@@ -15,26 +15,28 @@ namespace OpenGET.UI
 {
 
     /// <summary>
-    /// Element used to rebind an input action.
-    /// Parts of this code originate from the Unity InputSystem RebindActionUI sample script.
+    /// Element used to modify a single binding of an InputAction.
+    /// Partly based on the Unity InputSystem RebindActionUI sample script.
     /// </summary>
-    public class InputBindElement : Element, IPointerEnterHandler, IPointerExitHandler
+    public class InputBinding : ScrollPassback
     {
-        public UnityEvent<bool> onHoverChange = new UnityEvent<bool>();
+        // This is a necessary evil due to input actions being tied to specific runtime instances of InputActionAsset,
+        // rather than referencing a single instance of an asset
+        private UIController UI => _UI = (_UI != null ? _UI : GetComponentInParent<UIController>());
+        private UIController _UI = null;
 
-        protected void OnEnable()
-        {
-            Init();
-        }
+        private InputActionElement actionElement;
 
         /// <summary>
         /// Generate and show the options list.
         /// </summary>
-        public void Init()
+        public void Init(InputActionElement actionElement, int index)
         {
+            this.actionElement = actionElement;
+            bindingId = actionElement.action.bindings[index].id.ToString();
             if (s_RebindActionUIs == null)
             {
-                s_RebindActionUIs = new List<InputBindElement>();
+                s_RebindActionUIs = new List<InputBinding>();
             }
             s_RebindActionUIs.Add(this);
             
@@ -44,47 +46,19 @@ namespace OpenGET.UI
             }
         }
 
-        public override void SetValue(object value)
-        {
-            if (_action != (InputAction)value)
-            {
-                _action = (InputAction)value;
-            }
-        }
-
-        public override object GetValue()
-        {
-            return _action;
-        }
-
-        public void OnPointerEnter(PointerEventData eventData)
-        {
-            onHoverChange?.Invoke(true);
-        }
-
-        public void OnPointerExit(PointerEventData eventData)
-        {
-            onHoverChange?.Invoke(false);
-        }
-
 #if ENABLE_INPUT_SYSTEM
 
         /// <summary>
         /// Reference to the action that is to be rebound.
         /// </summary>
         public InputAction action {
-            get => _action;
-            set {
-                _action = value;
-                UpdateActionLabel();
-                UpdateBindingDisplay();
-            }
+            get => actionElement != null ? actionElement.action : null;
         }
 
         /// <summary>
         /// ID (in string form) of the binding that is to be rebound on the action.
         /// </summary>
-        /// <seealso cref="InputBinding.id"/>
+        /// <seealso cref="UnityEngine.InputSystem.InputBinding.id"/>
         public string bindingId {
             get => _bindingId;
             set {
@@ -93,22 +67,11 @@ namespace OpenGET.UI
             }
         }
 
-        public InputBinding.DisplayStringOptions displayStringOptions {
+        public UnityEngine.InputSystem.InputBinding.DisplayStringOptions displayStringOptions {
             get => m_DisplayStringOptions;
             set {
                 m_DisplayStringOptions = value;
                 UpdateBindingDisplay();
-            }
-        }
-
-        /// <summary>
-        /// Text component that receives the name of the action. Optional.
-        /// </summary>
-        public TMPro.TextMeshProUGUI actionLabel {
-            get => _actionLabel;
-            set {
-                _actionLabel = value;
-                UpdateActionLabel();
             }
         }
 
@@ -197,13 +160,18 @@ namespace OpenGET.UI
         public InputActionRebindingExtensions.RebindingOperation ongoingRebind => m_RebindOperation;
 
         /// <summary>
+        /// Keep track of whether the action map being rebound should be enabled.
+        /// </summary>
+        private bool wasEnabled = false;
+
+        /// <summary>
         /// Return the action and binding index for the binding that is targeted by the component.
         /// </summary>
         public bool ResolveActionAndBinding(out InputAction action, out int bindingIndex)
         {
             bindingIndex = -1;
 
-            action = _action;
+            action = this.action;
             if (action == null)
             {
                 return false;
@@ -236,7 +204,7 @@ namespace OpenGET.UI
             string controlPath = default;
 
             // Get display string from action.
-            InputAction action = _action;
+            InputAction action = this.action;
             if (action != null)
             {
                 int bindingIndex = action.bindings.IndexOf(x => x.id.ToString() == _bindingId);
@@ -309,12 +277,24 @@ namespace OpenGET.UI
 
         private void PerformInteractiveRebind(InputAction action, int bindingIndex, bool allCompositeParts = false)
         {
+            Log.Debug("Performing rebind of action {0}", action.name);
+
             m_RebindOperation?.Cancel(); // Will null out m_RebindOperation.
+
+            wasEnabled = action.actionMap.enabled;
+            if (wasEnabled)
+            {
+                action.actionMap.Disable();
+            }
 
             void CleanUp()
             {
                 m_RebindOperation?.Dispose();
                 m_RebindOperation = null;
+                if (wasEnabled)
+                {
+                    action.actionMap.Enable();
+                }
             }
 
             // Configure the rebind.
@@ -335,6 +315,26 @@ namespace OpenGET.UI
                         {
                             rebindInProgressPopup?.SetActive(false);
                         }
+
+                        // Apply to ALL action map instances
+                        for (int j = 0, countj = UI.inputActionAssets.Length; j < countj; j++)
+                        {
+                            InputActionAsset asset = UI.inputActionAssets[j];
+                            InputAction found = asset.FindAction(action.id);
+                            if (found != null) {
+                                bool mapEnabled = found.actionMap.enabled;
+                                if (mapEnabled)
+                                {
+                                    found.actionMap.Disable();
+                                }
+                                found.ApplyBindingOverride(bindingIndex, action.bindings[bindingIndex]);
+                                if (mapEnabled)
+                                {
+                                    found.actionMap.Enable();
+                                }
+                            }
+                        }
+
                         m_RebindStopEvent?.Invoke(this, operation);
                         UpdateBindingDisplay();
                         CleanUp();
@@ -388,11 +388,14 @@ namespace OpenGET.UI
             m_RebindOperation?.Dispose();
             m_RebindOperation = null;
 
-            s_RebindActionUIs.Remove(this);
-            if (s_RebindActionUIs.Count == 0)
+            if (s_RebindActionUIs != null)
             {
-                s_RebindActionUIs = null;
-                InputSystem.onActionChange -= OnActionChange;
+                s_RebindActionUIs.Remove(this);
+                if (s_RebindActionUIs.Count == 0)
+                {
+                    s_RebindActionUIs = null;
+                    InputSystem.onActionChange -= OnActionChange;
+                }
             }
         }
 
@@ -413,7 +416,7 @@ namespace OpenGET.UI
 
             for (int i = 0; i < s_RebindActionUIs.Count; ++i)
             {
-                InputBindElement component = s_RebindActionUIs[i];
+                InputBinding component = s_RebindActionUIs[i];
                 InputAction referencedAction = component.action;
                 if (referencedAction == null)
                 {
@@ -428,23 +431,12 @@ namespace OpenGET.UI
         }
 
         /// <summary>
-        /// Action to modify.
-        /// </summary>
-        private InputAction _action;
-
-        /// <summary>
         /// Id of the specific binding to be modified in the action.
         /// </summary>
         private string _bindingId;
 
         [SerializeField]
-        private InputBinding.DisplayStringOptions m_DisplayStringOptions;
-
-        [Tooltip("Text label that will receive the name of the action. Optional. Set to None to have the "
-            + "rebind UI not show a label for the action.")]
-        [SerializeField]
-        [Auto.NullCheck]
-        private TMPro.TextMeshProUGUI _actionLabel;
+        private UnityEngine.InputSystem.InputBinding.DisplayStringOptions m_DisplayStringOptions;
 
         [Tooltip("Text label that will receive the current, formatted binding string.")]
         [SerializeField]
@@ -476,7 +468,7 @@ namespace OpenGET.UI
 
         private InputActionRebindingExtensions.RebindingOperation m_RebindOperation;
 
-        private static List<InputBindElement> s_RebindActionUIs;
+        private static List<InputBinding> s_RebindActionUIs;
 
         // We want the label for the action name to update in edit mode, too, so
         // we kick that off from here.
@@ -485,27 +477,18 @@ namespace OpenGET.UI
         {
             base.OnValidate();
 
-            UpdateActionLabel();
             UpdateBindingDisplay();
         }
 
 #endif
 
-        private void UpdateActionLabel()
-        {
-            if (_actionLabel != null)
-            {
-                _actionLabel.text = _action != null ? _action.name : string.Empty;
-            }
-        }
-
         [Serializable]
-        public class UpdateBindingUIEvent : UnityEvent<InputBindElement, string, string, string>
+        public class UpdateBindingUIEvent : UnityEvent<InputBinding, string, string, string>
         {
         }
 
         [Serializable]
-        public class InteractiveRebindEvent : UnityEvent<InputBindElement, InputActionRebindingExtensions.RebindingOperation>
+        public class InteractiveRebindEvent : UnityEvent<InputBinding, InputActionRebindingExtensions.RebindingOperation>
         {
         }
 #endif

@@ -17,15 +17,12 @@ namespace OpenGET.UI
     }
 
     /// <summary>
-    /// Most elements implement pointer handlers. However, these block scroll inputs.
-    /// This class automatically passes the scroll event back up to the parent scroll rect (if any).
+    /// Intermediate class to ensure scrolling still works when hovering over a UI element.
     /// </summary>
-    public abstract class Element : AutoBehaviour, IElement, IScrollHandler, IDragHandler, IBeginDragHandler, IEndDragHandler {
-        public abstract void SetValue(object value);
-        public abstract object GetValue();
-
+    public abstract class ScrollPassback : AutoBehaviour, IScrollHandler, IDragHandler, IBeginDragHandler, IEndDragHandler
+    {
         private ScrollRect _containerScrollRect;
-        protected ScrollRect parentScrollRect => 
+        protected ScrollRect parentScrollRect =>
             _containerScrollRect != null ? _containerScrollRect : _containerScrollRect = GetComponentInParent<ScrollRect>();
 
         public virtual void OnScroll(PointerEventData eventData)
@@ -59,6 +56,15 @@ namespace OpenGET.UI
                 parentScrollRect.OnEndDrag(eventData);
             }
         }
+    }
+
+    /// <summary>
+    /// Most elements implement pointer handlers. However, these block scroll inputs.
+    /// This class automatically passes the scroll event back up to the parent scroll rect (if any).
+    /// </summary>
+    public abstract class Element : ScrollPassback, IElement {
+        public abstract void SetValue(object value);
+        public abstract object GetValue();
     }
 
     /// <summary>

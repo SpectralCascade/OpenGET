@@ -31,7 +31,7 @@ namespace OpenGET
 		}
 
 		/// <summary>
-		/// Map a value in a range to a different range.
+		/// Map a value in a range to a different target range.
 		/// </summary>
 		public static float MapRange(float value, float min, float max, float target_min, float target_max)
         {

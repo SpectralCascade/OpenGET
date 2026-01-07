@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using OpenGET.Input;
 using UnityEngine.UI;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 namespace OpenGET.UI
 {
@@ -33,6 +36,18 @@ namespace OpenGET.UI
         [SerializeField]
         [Tooltip("Optional - define custom settings to use for all UI.")]
         private UIConfig _settings;
+
+#if ENABLE_INPUT_SYSTEM
+        /// <summary>
+        /// You must set this manually; otherwise code will default to whatever the instance on InputActionReferences points to.
+        /// This is necessary because InputAction instances can differ even though they might be from the same original asset;
+        /// unfortunately Unity treats instances of InputActionAsset as being completely different when it comes to input handling.
+        /// </summary>
+        public InputActionAsset[] inputActionAssets { get; set; }
+        private InputActionAsset[] _inputActionAssets = new InputActionAsset[0];
+
+        protected InputActionAsset PrimeInputActionAsset => _inputActionAssets != null && _inputActionAssets.Length > 0 ? _inputActionAssets[0] : null;
+#endif
 
         [Tooltip("Recommended - This is the parent transform used for modal popups.")]
         public Transform modalsRoot;
@@ -101,12 +116,22 @@ namespace OpenGET.UI
         public InputHelper.Player input => _input = (_input == null ? InputHelper.Get(currentPlayer) : _input);
         private InputHelper.Player _input;
 
+#if ENABLE_INPUT_SYSTEM
         [Auto.NullCheck]
-        public UnityEngine.InputSystem.InputActionReference actionSubmit;
+        [SerializeField]
+        private InputActionReference actionSubmit;
         [Auto.NullCheck]
-        public UnityEngine.InputSystem.InputActionReference actionCancel;
+        [SerializeField]
+        private InputActionReference actionCancel;
         [Auto.NullCheck]
-        public UnityEngine.InputSystem.InputActionReference actionMoveSelection;
+        [SerializeField]
+        private InputActionReference actionMoveSelection;
+
+        public InputAction ActionSubmit => PrimeInputActionAsset != null ? PrimeInputActionAsset.FindAction(actionSubmit.action.id) : actionSubmit.action;
+        public InputAction ActionCancel => PrimeInputActionAsset != null ? PrimeInputActionAsset.FindAction(actionCancel.action.id) : actionCancel.action;
+        public InputAction ActionMoveSelection => PrimeInputActionAsset != null ? PrimeInputActionAsset.FindAction(actionMoveSelection.action.id) : actionMoveSelection.action;
+
+#endif
 
     }
 

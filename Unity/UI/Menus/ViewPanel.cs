@@ -329,8 +329,8 @@ namespace OpenGET.UI {
         protected virtual void Update() {
             // Trigger the back button if available, when the cancel action occurs.
             if (handleBackInputs && backButton != null
-                && UI.input.HasControl(transform.parent != null ? transform.parent.gameObject : UI.gameObject)
-                && UI.actionCancel.action.WasPressedThisFrame() 
+                //&& UI.input.HasControl(transform.parent != null ? transform.parent.gameObject : UI.gameObject)
+                && UI.ActionCancel.WasPressedThisFrame() 
             ) {
                 backButton.onClick.Invoke();
             }
