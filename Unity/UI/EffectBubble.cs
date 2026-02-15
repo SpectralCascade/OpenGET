@@ -10,8 +10,8 @@ namespace OpenGET.UI
     /// </summary>
     public class EffectBubble : AutoBehaviour, IReferrable
     {
-        [Tooltip("Optional effect bubble text component(s).")]
-        public TMPro.TextMeshProUGUI[] text = new TMPro.TextMeshProUGUI[0];
+        //[Tooltip("Optional effect bubble text component(s).")]
+        private TMPro.TextMeshProUGUI[] text = new TMPro.TextMeshProUGUI[0];
 
         /// <summary>
         /// Target to follow every update, if any.

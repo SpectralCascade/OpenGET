@@ -76,12 +76,10 @@ namespace OpenGET.UI
 
             if (prefab == null)
             {
-                tooltip = UI.tooltipShared;
+                prefab = UI.tooltipShared;
             }
-            else {
-                tooltip = Instantiate(prefab, UI.tooltipsRoot);
-                tooltip.Init(UI, (RectTransform)UI.tooltipsRoot);
-            }
+            tooltip = Instantiate(prefab, UI.tooltipsRoot);
+            tooltip.Init(UI, (RectTransform)UI.tooltipsRoot);
 
             EventTrigger.Entry pointerEnter = new EventTrigger.Entry();
             EventTrigger.Entry pointerExit = new EventTrigger.Entry();
