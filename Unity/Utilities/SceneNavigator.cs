@@ -123,7 +123,7 @@ namespace OpenGET
         /// </summary>
         public static string GetPath(Component component)
         {
-            return GetPath(component.gameObject);
+            return GetPath(component != null ? component.gameObject : null);
         }
 
 #if UNITY_EDITOR
