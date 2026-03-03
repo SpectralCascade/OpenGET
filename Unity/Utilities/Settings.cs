@@ -253,7 +253,7 @@ namespace OpenGET
         /// </summary>
         public void CopyIn(Derived source)
         {
-            Log.Debug("Copying in settings from {0} to {1}...", source.GetHashCode(), GetHashCode());
+            Debug.Assert(source.GetHashCode() != GetHashCode(), "False settings copy detected");
 
             List<object> sourceGroups = source.GetGroups();
             List<object> instanceGroups = GetGroups();

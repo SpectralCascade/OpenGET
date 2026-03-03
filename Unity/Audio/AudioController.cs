@@ -8,7 +8,7 @@ namespace OpenGET {
     /// <summary>
     /// Inherit from this class to implement your own buses & effects.
     /// </summary>
-    public class AudioController : AutoBehaviour
+    public class AudioController : Singleton<AudioController>
     {
 
         /// <summary>
@@ -42,7 +42,14 @@ namespace OpenGET {
                     group.audioMixer.GetFloat(name + _volumeParam, out float value);
                     return value;
                 }
-                set { group.audioMixer.SetFloat(name + _volumeParam, value); }
+                set
+                {
+                    bool result = group.audioMixer.SetFloat(name + _volumeParam, value);
+                    if (!result)
+                    {
+                        Log.Warning("Attempt to set volume on {0}: failed", name);
+                    }
+                }
             }
             protected const string _volumeParam = "/Volume";
 
@@ -211,27 +218,18 @@ namespace OpenGET {
         /// <summary>
         /// Retrieve the singleton instance of this AudioController.
         /// </summary>
-        public static AudioController Instance {
-            get {
-                if (_instance == null) {
-                    GameObject gob = new GameObject(typeof(AudioController).Name);
-                    _instance = gob.AddComponent<AudioController>();
-                }
-                return _instance;
-            }
-        }
-        private static AudioController _instance;
+        public static AudioController Instance => sharedInstance;
 
         /// <summary>
         /// Initialise all buses.
         /// </summary>
-        protected override void Awake() {
+        protected override void Awake()
+        {
             base.Awake();
 
-            DontDestroyOnLoad(gameObject);
-
             mixer = Resources.Load<AudioMixer>(MixerPath);
-            if (mixer == null) {
+            if (mixer == null)
+            {
                 mixer = Resources.Load<AudioMixer>(FallbackMixer);
             }
 
@@ -240,7 +238,8 @@ namespace OpenGET {
             for (int i = 0, counti = allMixerGroups.Length; i < counti; i++)
             {
                 // Ignore the special master and music buses
-                if (allMixerGroups[i].name != master.name && allMixerGroups[i].name != music.name) {
+                if (allMixerGroups[i].name != master.name && allMixerGroups[i].name != music.name)
+                {
                     Bus bus = new Bus(allMixerGroups[i].name);
                     bus.Init(mixer, gameObject);
                     buses.Add(bus);

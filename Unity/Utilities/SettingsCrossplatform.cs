@@ -81,6 +81,10 @@ namespace OpenGET.Bootstrap
                 {
                     bus.volume = v;
                 }
+                else
+                {
+                    Log.Warning("Bus with channel name \"{0}\" does not exist!", channel);
+                }
             }
 
             /// <summary>

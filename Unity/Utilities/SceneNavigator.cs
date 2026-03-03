@@ -1,14 +1,43 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.InputSystem.EnhancedTouch;
 using UnityEngine.SceneManagement;
 
 namespace OpenGET
 {
 
-    public static class SceneNavigator
+    public class SceneNavigator : Singleton<SceneNavigator>
     {
         public delegate void SceneProcess(Scene scene);
+
+        /// <summary>
+        /// Implement this interface for things you want to persist between scene loads and unloads.
+        /// </summary>
+        public interface IPersist
+        {
+        }
+
+        /// <summary>
+        /// Persistent object. You may only have one of these; if you need to persist lots of stuff,
+        /// build a custom struct or class.
+        /// </summary>
+        public static IPersist persist { get => sharedInstance._persist; set => sharedInstance._persist = value; }
+        private IPersist _persist;
+
+        /// <summary>
+        /// All currently loading scenes. Operations are automatically removed when complete.
+        /// </summary>
+        private Dictionary<string, AsyncOperation> loadingScenes = new Dictionary<string, AsyncOperation>();
+
+        /// <summary>
+        /// Get the loading operation for the first scene. Returns null if there are no scenes loading.
+        /// </summary>
+        public static AsyncOperation TryGetLoadOperation(string name)
+        {
+            return sharedInstance.loadingScenes.TryGetValue(name, out AsyncOperation op) ? op : null;
+        }
 
         /// <summary>
         /// Get the first GameObject instance in a scene that has a component of matching type.
@@ -45,6 +74,35 @@ namespace OpenGET
         }
 
         /// <summary>
+        /// Attempt to find and unload a scene. Returns false if no such scene was found.
+        /// </summary>
+        public static bool TryUnloadScene(string name, SceneProcess onSceneRemoved = null)
+        {
+            void onSceneUnloaded(Scene scene)
+            {
+                if (name == scene.name)
+                {
+                    Log.Debug("Scene \"{0}\" unloaded successfully.", scene.name);
+                    SceneManager.sceneUnloaded -= onSceneUnloaded;
+                }
+            }
+
+            for (int i = 0, counti = SceneManager.sceneCount; i < counti; i++)
+            {
+                Scene scene = SceneManager.GetSceneAt(i);
+                if (scene.name == name)
+                {
+                    Log.Info("Unloading scene \"{0}\"", scene.name);
+                    SceneManager.sceneUnloaded += onSceneUnloaded;
+                    SceneManager.UnloadSceneAsync(scene);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Find a scene by name, or additively load it if not, and do some processing.
         /// Optionally force reloading of a scene if it is found.
         /// </summary>
@@ -55,6 +113,10 @@ namespace OpenGET
                 if (name == scene.name)
                 {
                     SceneManager.sceneLoaded -= onSceneLoaded;
+                    if (sharedInstance.loadingScenes.ContainsKey(name))
+                    {
+                        sharedInstance.loadingScenes.Remove(name);
+                    }
                     onSceneReady(scene);
                 }
             }
@@ -62,7 +124,7 @@ namespace OpenGET
             void doLoadScene()
             {
                 SceneManager.sceneLoaded += onSceneLoaded;
-                SceneManager.LoadSceneAsync(name, LoadSceneMode.Additive);
+                sharedInstance.loadingScenes.Add(name, SceneManager.LoadSceneAsync(name, LoadSceneMode.Additive));
             }
 
             void onSceneUnloaded(Scene scene)
@@ -130,7 +192,7 @@ namespace OpenGET
         /// <summary>
         /// Load each scene individually in sequence running a processor function for each, then restore the original scenes.
         /// </summary>
-        public static void RunSceneProcess(string[] paths, SceneProcess processor)
+        public static void EditorSceneProcess(string[] paths, SceneProcess processor)
         {
             if (Application.isPlaying)
             {

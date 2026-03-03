@@ -643,7 +643,7 @@ namespace OpenGET
             for (int i = 0, counti = paths.Length; i < counti; i++) {
                 paths[i] = EditorBuildSettings.scenes[i].path;
             }
-            SceneNavigator.RunSceneProcess(
+            SceneNavigator.EditorSceneProcess(
                 paths,
                 (Scene scene) => {
                     Log.Debug("Extracting localisation strings from scene {0}", scene.name);
