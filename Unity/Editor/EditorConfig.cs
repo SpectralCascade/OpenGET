@@ -133,9 +133,19 @@ namespace OpenGET
         public static EditorConfig Instance {
             get {
                 string[] found = AssetDatabase.FindAssets("t:" + typeof(EditorConfig).Name);
-                EditorConfig config = found.Length > 0 ?
+                bool exists = found.Length > 0;
+                EditorConfig config = exists ?
                     AssetDatabase.LoadAssetAtPath<EditorConfig>(AssetDatabase.GUIDToAssetPath(found[0])) :
                     CreateInstance<EditorConfig>();
+                if (!exists && !Application.isPlaying)
+                {
+#if UNITY_EDITOR
+                    // Create a default asset
+                    const string AssetPath = "Assets/ConfigOpenGET";
+                    AssetDatabase.CreateAsset(config, AssetPath);
+                    config = AssetDatabase.LoadAssetAtPath<EditorConfig>(AssetPath);
+#endif
+                }
                 EditorPrefs.SetInt("OpenGET/LogLevel", (int)config.logging.level);
                 return config;
             }
