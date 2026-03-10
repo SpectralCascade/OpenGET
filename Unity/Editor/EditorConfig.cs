@@ -141,7 +141,7 @@ namespace OpenGET
                 {
 #if UNITY_EDITOR
                     // Create a default asset
-                    const string AssetPath = "Assets/ConfigOpenGET";
+                    const string AssetPath = "Assets/ConfigOpenGET.asset";
                     AssetDatabase.CreateAsset(config, AssetPath);
                     config = AssetDatabase.LoadAssetAtPath<EditorConfig>(AssetPath);
 #endif
