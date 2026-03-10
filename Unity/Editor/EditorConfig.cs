@@ -246,27 +246,27 @@ namespace OpenGET
         /// <summary>
         /// Log settings.
         /// </summary>
-        public Logging logging;
+        public Logging logging = new();
 
         /// <summary>
         /// Build uploader for platforms like Steam.
         /// </summary>
-        public BuildUploader buildUploader;
+        public BuildUploader buildUploader = new();
 
         /// <summary>
         /// Editor localisation settings.
         /// </summary>
-        public Localisation localisation;
+        public Localisation localisation = new();
 
         /// <summary>
         /// Tooling data for rendering a prefab to a 2D sprite.
         /// </summary>
-        public PrefabToSprite prefabToSprite;
+        public PrefabToSprite prefabToSprite = new();
 
         /// <summary>
         /// Asset reference generator settings.
         /// </summary>
-        public AssetReferenceGenerator assetReferenceGenerator;
+        public AssetReferenceGenerator assetReferenceGenerator = new();
 
     }
 
