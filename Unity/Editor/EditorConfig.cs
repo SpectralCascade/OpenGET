@@ -47,6 +47,31 @@ namespace OpenGET
         }
 
         [System.Serializable]
+        public class BuildUploader
+        {
+            [System.Flags]
+            public enum Platform
+            {
+                NONE = 0,
+                STEAMWORKS = 1
+            }
+
+            /// <summary>
+            /// Which platform(s) should be uploaded to.
+            /// </summary>
+            public Platform platform = Platform.NONE;
+
+            [Tooltip("Path to the build content you want to upload.")]
+            public string buildPath = "";
+
+            [Header("Steamworks")]
+
+            [Tooltip("Path to the Steamworks SDK tools/ContentBuilder directory.")]
+            public string pathToSteamworks = "";
+
+        }
+
+        [System.Serializable]
         public class PrefabToSprite
         {
             /// <summary>
@@ -222,6 +247,11 @@ namespace OpenGET
         /// Log settings.
         /// </summary>
         public Logging logging;
+
+        /// <summary>
+        /// Build uploader for platforms like Steam.
+        /// </summary>
+        public BuildUploader buildUploader;
 
         /// <summary>
         /// Editor localisation settings.

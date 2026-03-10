@@ -2,7 +2,8 @@
     "name": "OpenGET.Editor",
     "rootNamespace": "",
     "references": [
-        "OpenGET"
+        "OpenGET",
+        "VDFParser"
     ],
     "includePlatforms": [
         "Editor"
