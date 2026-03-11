@@ -57,18 +57,30 @@ namespace OpenGET
             }
 
             /// <summary>
-            /// Which platform(s) should be uploaded to.
+            /// Build configuration that includes one or more depots.
             /// </summary>
-            public Platform platform = Platform.NONE;
+            [System.Serializable]
+            public struct Config
+            {
+                [Tooltip("Name of this configuration.")]
+                public string name;
 
-            [Tooltip("Path to the build content you want to upload.")]
-            public string buildPath = "";
+                [Tooltip("Unique id for this configuration.")]
+                public string id;
+
+                [Tooltip("Steam app id.")]
+                public string appId;
+
+                [Tooltip("Depot ids to include in the build.")]
+                public string[] depots;
+
+                [Tooltip("Depot label for internal reference/documentation; it is not used in build/upload in any way.")]
+                public string comment;
+            }
 
             [Header("Steamworks")]
-
-            [Tooltip("Path to the Steamworks SDK tools/ContentBuilder directory.")]
-            public string pathToSteamworks = "";
-
+            [Tooltip("Steampipe app configurations.")]
+            public Config[] configs;
         }
 
         [System.Serializable]

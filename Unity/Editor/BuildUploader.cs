@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace OpenGET
+namespace OpenGET.Editor
 {
 
     /// <summary>
@@ -26,6 +26,89 @@ namespace OpenGET
         /// This object's serialisation binding.
         /// </summary>
         private SerializedObject serialiser;
+
+        /// <summary>
+        /// Prefix added to all Steamworks related editor prefs. DO NOT CHANGE.
+        /// </summary>
+        private const string KeyPrefixAppSteamworks = "OpenGET.Build.Steamworks.App.";
+
+        /// <summary>
+        /// Steamworks app config string field.
+        /// </summary>
+        private TextField SteamAppField(string key, string desc, string valDefault)
+        {
+            return EditorKeyField(KeyPrefixAppSteamworks, key, desc, valDefault) as TextField;
+        }
+
+        /// <summary>
+        /// Steamworks app config int field.
+        /// </summary>
+        private IntegerField SteamAppField(string key, string desc, int valDefault)
+        {
+            return EditorKeyField(KeyPrefixAppSteamworks, key, desc, valDefault) as IntegerField;
+        }
+
+        /// <summary>
+        /// Steamworks app config float field.
+        /// </summary>
+        private FloatField SteamAppField(string key, string desc, float valDefault)
+        {
+            return EditorKeyField(KeyPrefixAppSteamworks, key, desc, valDefault) as FloatField;
+        }
+
+        /// <summary>
+        /// Editor prefs field.
+        /// </summary>
+        private BaseField<T> EditorKeyField<T>(string prefix, string key, string desc, T valDefault)
+        {
+            BaseField<T> field = null;
+            string fullKey = prefix + key;
+            if (valDefault is string)
+            {
+                string v = EditorPrefs.HasKey(fullKey) ? EditorPrefs.GetString(fullKey) : valDefault as string;
+                field = new TextField()
+                {
+                    label = key,
+                    tooltip = desc,
+                    value = v
+                } as BaseField<T>;
+                field.RegisterCallback<ChangeEvent<string>>(
+                    (change) => EditorPrefs.SetString(fullKey, change.newValue)
+                );
+            }
+            else if (valDefault is int)
+            {
+                int v = EditorPrefs.HasKey(fullKey) ? EditorPrefs.GetInt(fullKey) : (int)(object)valDefault;
+                field = new IntegerField()
+                {
+                    label = key,
+                    tooltip = desc,
+                    value = v
+                } as BaseField<T>;
+                field.RegisterCallback<ChangeEvent<int>>(
+                    (change) => EditorPrefs.SetInt(fullKey, change.newValue)
+                );
+            }
+            else if (valDefault is float)
+            {
+                float v = EditorPrefs.HasKey(fullKey) ? EditorPrefs.GetFloat(fullKey) : (float)(object)valDefault;
+                field = new FloatField()
+                {
+                    label = key,
+                    tooltip = desc,
+                    value = v
+                } as BaseField<T>;
+                field.RegisterCallback<ChangeEvent<float>>(
+                    (change) => EditorPrefs.SetFloat(fullKey, change.newValue)
+                );
+            }
+
+            if (field == null)
+            {
+                Log.Error("Failed to create field {0}!", key);
+            }
+            return field;
+        }
 
         /// <summary>
         /// Setup the editor window.
@@ -50,23 +133,15 @@ namespace OpenGET
         /// </summary>
         private void RunSteampipeUpload()
         {
-#if !VDF_PARSER
-            Log.Error("You appear to be missing the VDF Parser package. Please install it from {0}", "https://github.com/SpectralCascade/UnityVDFParser.git");
-            return;
-#else
-            string found = EditorUtility.OpenFilePanel("Select Steampipe Build Script", Application.dataPath, ".vdf");
-            string buildScript = "";
-            if (string.IsNullOrEmpty(found))
+            string contentRoot = EditorUtility.OpenFolderPanel("Select Build Content Directory", Application.dataPath, "");
+            if (string.IsNullOrEmpty(contentRoot))
             {
                 // Cancelled
-                if (!System.IO.File.Exists(found))
-                {
-                    Log.Error("Invalid Steampipe build script.");
-                }
                 return;
             }
-            buildScript = System.IO.File.ReadAllText(found);
-#endif
+
+            // TODO: Generate .vdf files for chosen configuration
+            string appBuild = "";
         }
 
         /// <summary>
@@ -100,34 +175,23 @@ namespace OpenGET
             // Steamworks uploads
             root.Add(new Label("\n<b>Platform: Steamworks</b>"));
 
+            TextField desc = SteamAppField("Desc", "Internal build/upload description", "");
+            desc.multiline = true;
+            root.Add(desc);
+
+            root.Add(SteamAppField("Preview", "0 = Standard upload, 1 = Preview build only, nothing is uploaded", 0));
+            root.Add(SteamAppField("SetLive", "Branch to set this build live on", ""));
+            // ContentRoot is set by user on build/upload
+            root.Add(SteamAppField("BuildOutput", "Where the Steamworks build/upload cache and log files will go.", ""));
+            root.Add(SteamAppField("verbose", "How much logging detail you want in the Steamworks build/upload process.", 0));
+            root.Add(SteamAppField("Config id", "Which configuration to use, matching on id.", ""));
+
             Button button = new Button(() => RunSteampipeUpload())
             {
                 name = "Upload to Steam",
                 text = "Upload build to Steam"
             };
             root.Add(button);
-
-            // button = new Button(() =>
-            // {
-            //     importTable.Clear();
-            //     UpdateInfoLabel();
-            // });
-            // button.name = "ClearImportData";
-            // button.text = "Clear import data";
-            // root.Add(button);
-
-            // button = new Button(() =>
-            // {
-            //     exportTable.Clear();
-            //     UpdateInfoLabel();
-            // });
-            // button.name = "ClearExportData";
-            // button.text = "Clear export data";
-            // root.Add(button);
-
-            // infoLabel = new Label("");
-            // UpdateInfoLabel();
-            // root.Add(infoLabel);
         }
     }
 
