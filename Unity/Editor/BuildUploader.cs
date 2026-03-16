@@ -297,9 +297,11 @@ namespace OpenGET.Editor
 
                 string depot = VDF_KeyObject(0, "DepotBuild", indent =>
                     VDF_KeyValue(indent, "DepotID", depotId) +
-                    VDF_KeyValue(indent, "LocalPath", "*") +
-                    VDF_KeyValue(indent, "DepotPath", ".") +
-                    VDF_KeyValue(indent, "Recursive", "1")
+                    VDF_KeyObject(indent, "FileMapping", indent =>
+                        VDF_KeyValue(indent, "LocalPath", "./*") +
+                        VDF_KeyValue(indent, "DepotPath", ".") +
+                        VDF_KeyValue(indent, "Recursive", "1")
+                    )
                 );
 
                 string depotFilePath = System.IO.Path.Join(appBuildPath, DepotFilePrefix + depotId + ".vdf");
