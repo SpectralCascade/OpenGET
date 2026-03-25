@@ -36,9 +36,9 @@ namespace OpenGET.UI
         public override void SetHintAt(Vector3 worldPos, Hint.Parameters parameters = null)
         {
             SetHintData(parameters);
-            if (parameters != null && parameters.camera != null)
+            if (parameters != null && parameters.UI != null)
             {
-                SetHintAt((Vector2)parameters.camera.WorldToScreenPoint(worldPos), parameters);
+                SetHintAt((Vector2)parameters.UI.WorldToCanvasPoint(worldPos), parameters);
             }
             else
             {

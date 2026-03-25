@@ -17,23 +17,17 @@ namespace OpenGET.UI {
         public Transform target;
 
         /// <summary>
-        /// Camera to use for worldspace conversion.
+        /// UI to use for worldspace conversion.
         /// </summary>
-        public Camera cam;
-
-        /// <summary>
-        /// Only required if you use one on the canvas.
-        /// </summary>
-        public CanvasScaler scaler;
+        public UIController UI;
 
         /// <summary>
         /// Follow a given target in worldspace.
         /// </summary>
-        public void Follow(Transform target, Camera cam, CanvasScaler scaler = null)
+        public void Follow(Transform target, UIController UI)
         {
             this.target = target;
-            this.cam = cam;
-            this.scaler = scaler;
+            this.UI = UI;
         }
 
         /// <summary>
@@ -42,17 +36,16 @@ namespace OpenGET.UI {
         public void Follow(RectTransform target)
         {
             this.target = target;
-            cam = null;
-            scaler = null;
+            UI = null;
         }
 
         protected virtual void Update()
         {
             if (target != null)
             {
-                if (cam != null)
+                if (UI != null)
                 {
-                    transform.position = cam.WorldToScreenPoint(target.position) * (scaler != null ? scaler.scaleFactor : 1);
+                    transform.position = UI.WorldToCanvasPoint(target.position);
                 }
                 else
                 {

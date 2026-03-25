@@ -306,7 +306,7 @@ namespace OpenGET.UI
                     (hintObj.transform as RectTransform).pivot = new Vector2(0, 0.5f);
                     Hint hint = hintObj.AddComponent<PointerHint>();
                     PointerHint.Parameters args = new PointerHint.Parameters();
-                    args.camera = Camera.main;
+                    args.UI = modal.UI;
                     hint.SetHintTarget(pointAtTargets[index], args);
                     return hint;
                 };
@@ -495,8 +495,8 @@ namespace OpenGET.UI
                     //Log.Debug("Moving bounds from {0} to {1} (delta = {2})", bounds, bounds.center + (Vector3)delta, delta);
                 }
                 main.position = new Vector2(
-                    Mathf.Clamp(bounds.center.x + delta.x, bounds.extents.x, Screen.width - bounds.extents.x),
-                    Mathf.Clamp(bounds.center.y + delta.y, bounds.extents.y, Screen.height - bounds.extents.y)
+                    Mathf.Clamp(bounds.center.x + delta.x, bounds.extents.x, UI.width - bounds.extents.x),
+                    Mathf.Clamp(bounds.center.y + delta.y, bounds.extents.y, UI.height - bounds.extents.y)
                 );
             }
         }

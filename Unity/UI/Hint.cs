@@ -18,9 +18,9 @@ namespace OpenGET.UI
         public class Parameters
         {
             /// <summary>
-            /// Camera used for world-to-screen space positioning.
+            /// UI used for world-to-canvas-space positioning.
             /// </summary>
-            public Camera camera = null;
+            public UIController UI = null;
 
             /// <summary>
             /// Target world position, if given.
@@ -105,18 +105,14 @@ namespace OpenGET.UI
         /// <summary>
         /// Convenience method to create a hint for a world target.
         /// </summary>
-        public static T Create<T, ParamsType>(T prefab, Transform worldTarget = null, Camera cam = null, Transform root = null, Transform origin = null)
+        public static T Create<T, ParamsType>(T prefab, Transform worldTarget = null, UIController UI = null, Transform root = null, Transform origin = null)
             where T : Hint where ParamsType : Parameters, new()
         {
             T created = root != null ? Instantiate(prefab, root) : Instantiate(prefab);
             if (worldTarget != null)
             {
                 ParamsType args = new ParamsType();
-                if (cam == null)
-                {
-                    cam = Camera.main;
-                }
-                args.camera = cam;
+                args.UI = UI;
                 created.SetHintTarget(worldTarget, args, origin);
             }
             return created;
@@ -125,9 +121,9 @@ namespace OpenGET.UI
         /// <summary>
         /// Convenience method to create a hint for a world target.
         /// </summary>
-        public static T Create<T>(T prefab, Transform worldTarget = null, Camera cam = null, Transform root = null, Transform origin = null) where T : Hint
+        public static T Create<T>(T prefab, Transform worldTarget = null, UIController UI = null, Transform root = null, Transform origin = null) where T : Hint
         {
-            return Create<T, Parameters>(prefab, worldTarget, cam, root, origin);
+            return Create<T, Parameters>(prefab, worldTarget, UI, root, origin);
         }
 
         /// <summary>

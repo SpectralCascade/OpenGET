@@ -19,14 +19,14 @@ namespace OpenGET.UI
         private Transform target;
 
         /// <summary>
-        /// Associated world camera, required for worldspace conversion.
+        /// Associated UI controller.
         /// </summary>
-        private Camera worldCamera;
+        private UIController UI;
 
         /// <summary>
         /// Initialise the text bubble with a target to follow. If a RectTransform is provided, no world space conversion is performed.
         /// </summary>
-        public EffectBubble Init(Transform followTarget, Camera worldCamera, string text = "")
+        public EffectBubble Init(Transform followTarget, UIController UI, string text = "")
         {
             if (this.text != null)
             {
@@ -36,7 +36,7 @@ namespace OpenGET.UI
                 }
             }
             target = followTarget;
-            this.worldCamera = worldCamera;
+            this.UI = UI;
             return this;
         }
 
@@ -61,8 +61,8 @@ namespace OpenGET.UI
                 }
             }
             transform.position = position;
+            UI = null;
             target = null;
-            worldCamera = null;
             return this;
         }
 
@@ -70,20 +70,20 @@ namespace OpenGET.UI
         {
             if (target != null)
             {
-                if (worldCamera == null || target is RectTransform)
+                if (UI == null || target is RectTransform)
                 {
                     transform.position = target.position;
                 }
                 else
                 {
-                    transform.position = worldCamera.WorldToScreenPoint(target.position);
+                    transform.position = UI.WorldToCanvasPoint(target.position);
                 }
             }
         }
 
-        public static EffectBubble Spawn(EffectBubble prefab, Camera worldCamera, Transform root, Transform target, string text = "")
+        public static EffectBubble Spawn(EffectBubble prefab, UIController UI, Transform root, Transform target, string text = "")
         {
-            return Spawn(prefab, root).Init(target, worldCamera, text);
+            return Spawn(prefab, root).Init(target, UI, text);
         }
 
         public static EffectBubble Spawn(EffectBubble prefab, Transform root, RectTransform target, string text = "")

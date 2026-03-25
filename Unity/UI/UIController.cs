@@ -48,6 +48,45 @@ namespace OpenGET.UI
 
         protected InputActionAsset PrimeInputActionAsset => _inputActionAssets != null && _inputActionAssets.Length > 0 ? _inputActionAssets[0] : null;
 #endif
+        /// <summary>
+        /// The canvas for this UI.
+        /// </summary>
+        [Auto.NullCheck]
+        [Auto.Hookup(Auto.Mode.Self)]
+        public Canvas canvas;
+
+        [Tooltip("Associated UI camera (not required for canvas \"Screenspace - Overlay\").")]
+        public Camera cam;
+
+        /// <summary>
+        /// World camera. Used for converting world space to canvas space.
+        /// If there is no world camera available, falls back to the UI camera if any, finally falling back to the main camera.
+        /// </summary>
+        public Camera worldCam
+        {
+            get
+            {
+                return _worldCam != null ? _worldCam : (cam != null ? cam : Camera.main);
+            }
+            protected set
+            {
+                _worldCam = value;
+            }
+        }
+
+        [SerializeField]
+        [Tooltip("Optional world camera. You may set this dynamically in code.")]
+        protected Camera _worldCam;
+
+        /// <summary>
+        /// The true pixel width of the UI.
+        /// </summary>
+        public float width => cam != null ? cam.rect.width * Screen.width : Screen.width;
+
+        /// <summary>
+        /// The true pixel height of the UI.
+        /// </summary>
+        public float height => cam != null ? cam.rect.height * Screen.height : Screen.height;
 
         [Tooltip("Recommended - This is the parent transform used for modal popups.")]
         public Transform modalsRoot;
@@ -108,6 +147,33 @@ namespace OpenGET.UI
         /// </summary>
         public virtual void UpdateScrollSensitivity()
         {
+        }
+
+        public virtual void UpdateScaling()
+        {
+        }
+
+        /// <summary>
+        /// Convert a worldspace position to canvas space.
+        /// Note: When camera render mode is worldspace or ScreenSpaceCamera, this is calculated as a world position based on the viewport & canvas.
+        /// Corresponds to transform.position, NOT transform.localPosition.
+        /// </summary>
+        public Vector3 WorldToCanvasPoint(Vector3 point, bool withZ = false)
+        {
+            if (canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+            {
+                return worldCam.WorldToScreenPoint(point);
+            }
+            else
+            {
+                Vector2 viewportPos = worldCam.WorldToViewportPoint(point);
+
+                RectTransform canvasRect = canvas.transform as RectTransform;
+
+                Vector3 pivotPos = (Vector3)viewportPos - new Vector3(canvasRect.pivot.x, canvasRect.pivot.y, 0);
+                Vector2 canvasPixelDimensions = canvasRect.sizeDelta;
+                return Vector3.Scale(pivotPos, canvasPixelDimensions * canvasRect.localScale.x);
+            }
         }
 
         /// <summary>

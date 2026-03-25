@@ -52,13 +52,22 @@ namespace OpenGET.UI
         /// <summary>
         /// Generate and show the options list.
         /// </summary>
-        public void Init()
+        public void Init(int value = -1)
         {
+            if (value < 0)
+            {
+                value = dropdown.value;
+            }
             dropdown.ClearOptions();
 
             dropdown.options = new List<TMPro.TMP_Dropdown.OptionData>(
                 options.Select(x => new TMPro.TMP_Dropdown.OptionData(Localise.Text(x)))
             );
+
+            if (value > -1)
+            {
+                dropdown.value = value;
+            }
 
             dropdown.onValueChanged.RemoveAllListeners();
             dropdown.onValueChanged.AddListener((x) => {

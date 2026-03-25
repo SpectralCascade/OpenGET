@@ -278,7 +278,7 @@ namespace OpenGET.Editor
                     string output = "";
                     for (int i = 0, counti = chosen.depots.Length; i < counti; i++)
                     {
-                        string depotId = chosen.depots[i];
+                        string depotId = chosen.depots[i].id;
                         output += VDF_KeyValue(indent, depotId, DepotFilePrefix + depotId + ".vdf");
                     }
                     return output;
@@ -292,11 +292,17 @@ namespace OpenGET.Editor
             // TODO: Path exclusions etc.
             for (int i = 0, counti = chosen.depots.Length; i < counti; i++)
             {
-                string depotId = chosen.depots[i];
+                string depotId = chosen.depots[i].id;
                 string depotPath = DepotFilePrefix + depotId + ".vdf";
+                string depotContent = chosen.depots[i].contentRoot;
+                if (!string.IsNullOrEmpty(depotContent))
+                {
+                    depotContent = Path.GetFullPath(depotContent);
+                }
 
                 string depot = VDF_KeyObject(0, "DepotBuild", indent =>
                     VDF_KeyValue(indent, "DepotID", depotId) +
+                    (string.IsNullOrEmpty(depotContent) ? "" : VDF_KeyValue(indent, "ContentRoot", depotContent)) +
                     VDF_KeyObject(indent, "FileMapping", indent =>
                         VDF_KeyValue(indent, "LocalPath", "./*") +
                         VDF_KeyValue(indent, "DepotPath", ".") +

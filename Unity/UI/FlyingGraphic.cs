@@ -70,11 +70,11 @@ namespace OpenGET.UI
         /// <summary>
         /// Initialise to follow a target. Provide a camera if it's a worldspace target.
         /// </summary>
-        public void Init(string text = "", Color? colour = null, Transform target = null, Camera cam = null, float speed = -1, float fadeTime = -1)
+        public void Init(string text = "", Color? colour = null, Transform target = null, UIController UI = null, float speed = -1, float fadeTime = -1)
         {
             //Log.Debug("Setting target = {0}, cam = \"{1}\"", target != null ? target.gameObject.name : null, cam != null ? cam.gameObject.name : null);
             this.target = target;
-            this.cam = cam;
+            this.UI = UI;
 
             if (textGraphic != null && !string.IsNullOrEmpty(text))
             {
@@ -116,13 +116,13 @@ namespace OpenGET.UI
             {
                 transform.position += new Vector3(change.x, change.y, 0);
             }
-            else if (cam == null)
+            else if (UI == null)
             {
                 transform.position = target.position + movement;
             }
             else
             {
-                transform.position = movement + cam.WorldToScreenPoint(target.position);
+                transform.position = movement + UI.WorldToCanvasPoint(target.position);
             }
 
             if (timer >= fadeTime + fadeDelay)

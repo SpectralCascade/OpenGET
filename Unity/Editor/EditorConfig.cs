@@ -57,6 +57,24 @@ namespace OpenGET
             }
 
             /// <summary>
+            /// Depot configuration.
+            /// </summary>
+            [System.Serializable]
+            public struct Depot
+            {
+                public string id;
+
+                [FolderPath(
+#if UNITY_STANDALONE_LINUX
+                "~",
+#elif UNITY_STANDALONE_WINDOWS
+                "%USERPROFILE%"
+#endif
+                "Select Depot ContentRoot")]
+                public string contentRoot;
+            }
+
+            /// <summary>
             /// Build configuration that includes one or more depots.
             /// </summary>
             [System.Serializable]
@@ -71,8 +89,8 @@ namespace OpenGET
                 [Tooltip("Steam app id.")]
                 public string appId;
 
-                [Tooltip("Depot ids to include in the build.")]
-                public string[] depots;
+                [Tooltip("Depots to include in the build.")]
+                public Depot[] depots;
 
                 [Tooltip("Depot label for internal reference/documentation; it is not used in build/upload in any way.")]
                 public string comment;

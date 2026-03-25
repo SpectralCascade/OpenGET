@@ -231,7 +231,7 @@ namespace OpenGET
 		/// Assumes that the transform has been updated. Don't call on Awake or Start.
 		/// </summary>
 		public static Bounds GetTrueBounds(this RectTransform rt, bool autoScale = true)
-        {
+		{
 			Vector3[] corners = new Vector3[4];
 			rt.GetWorldCorners(corners);
 			Vector2 scale = rt.lossyScale;
@@ -246,7 +246,7 @@ namespace OpenGET
 				((Vector2)corners[0] + (size * 0.5f)),
 				globalSize
 			);
-        }
+		}
 
 	}
 
