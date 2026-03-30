@@ -59,10 +59,10 @@ namespace OpenGET.UI
 
             // Get canvas dimensions in worldspace
             Rect canvasDim = new Rect(
-                -canvasRect.sizeDelta.x * canvasPivot.x * scale,
-                -canvasRect.sizeDelta.y * canvasPivot.y * scale,
-                canvasRect.sizeDelta.x * scale,
-                canvasRect.sizeDelta.y * scale
+                -canvasRect.rect.width * canvasPivot.x * scale,
+                -canvasRect.rect.height * canvasPivot.y * scale,
+                canvasRect.rect.width * scale,
+                canvasRect.rect.height * scale
             );
 
             // Get size of the content in worldspace
@@ -77,25 +77,25 @@ namespace OpenGET.UI
 
             // Get bounds in worldspace
             Rect bounds = new Rect(
-                (rect.rect.x * scale) - (boundingSize.x * boundingPivot.x) - canvasOffset.x,
-                (rect.rect.y * scale) - (boundingSize.y * boundingPivot.y) - canvasOffset.y,
-                boundingSize.x,
-                boundingSize.y
+                (rect.rect.x * scale) + (contentSize.x * contentPivot.x) - canvasOffset.x,
+                (rect.rect.y * scale) + (contentSize.y * contentPivot.y) - canvasOffset.y,
+                boundingSize.x - contentSize.x,
+                boundingSize.y - contentSize.y
             );
 
             // Compute new position in the worldspace canvas
-            // screenPos = new Vector2(
-            //     Mathf.Clamp(
-            //         screenPos.x,
-            //         bounds.x,// + (contentSize.x * contentPivot.x),
-            //         bounds.x + bounds.width// - (contentSize.x * (1f - contentPivot.x))
-            //     ),
-            //     Mathf.Clamp(
-            //         screenPos.y,
-            //         bounds.y,// + (contentSize.y * contentPivot.y),
-            //         bounds.y + bounds.height// - (contentSize.y * (1f - contentPivot.y))
-            //     )
-            // );
+            screenPos = new Vector2(
+                Mathf.Clamp(
+                    screenPos.x,
+                    bounds.x,
+                    bounds.x + bounds.width
+                ),
+                Mathf.Clamp(
+                    screenPos.y,
+                    bounds.y,
+                    bounds.y + bounds.height
+                )
+            );
 
             transform.position = screenPos;
         }
