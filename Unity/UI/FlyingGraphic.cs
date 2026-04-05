@@ -114,15 +114,15 @@ namespace OpenGET.UI
 
             if (target == null)
             {
-                transform.position += new Vector3(change.x, change.y, 0);
+                transform.localPosition += new Vector3(change.x, change.y, 0);
             }
             else if (UI == null)
             {
-                transform.position = target.position + movement;
+                transform.localPosition = target.position + movement;
             }
             else
             {
-                transform.position = movement + UI.WorldToCanvasPoint(target.position);
+                transform.localPosition = movement + UI.WorldToCanvasPoint(target.position);
             }
 
             if (timer >= fadeTime + fadeDelay)
