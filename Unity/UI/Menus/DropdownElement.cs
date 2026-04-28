@@ -10,6 +10,7 @@ namespace OpenGET.UI
 
     /// <summary>
     /// Similar to a dropdown but rather than overlaying on the current screen, acts as it's own view.
+    /// Note: May be set to use carousel mode where no actual dropdown is shown (instead options are in a carousel layout).
     /// </summary>
     public class DropdownElement : Element, IPointerEnterHandler, IPointerExitHandler
     {
@@ -24,12 +25,27 @@ namespace OpenGET.UI
         public TMPro.TextMeshProUGUI text;
 
         /// <summary>
-        /// Associated dropdown.
+        /// Label showing the chosen option. Optional (not required if a dropdown is used).
+        /// </summary>
+        public TMPro.TextMeshProUGUI label;
+
+        /// <summary>
+        /// Associated dropdown, if any. Not used in carousel mode.
         /// </summary>
         [SerializeField]
-        [Auto.NullCheck]
-        [Auto.Hookup]
         private TMPro.TMP_Dropdown dropdown;
+
+        /// <summary>
+        /// Optional index increment button.
+        /// </summary>
+        [SerializeField]
+        private Button indexIncButton;
+
+        /// <summary>
+        /// Optional index decrement button.
+        /// </summary>
+        [SerializeField]
+        private Button indexDecButton;
 
         /// <summary>
         /// Get/set dropdown options.
@@ -50,55 +66,131 @@ namespace OpenGET.UI
         }
 
         /// <summary>
-        /// Generate and show the options list.
+        /// Generate and show the options list (or setup carousel mode).
         /// </summary>
         public void Init(int value = -1)
         {
-            if (value < 0)
+            if (dropdown != null)
             {
-                value = dropdown.value;
+                if (value < 0)
+                {
+                    value = dropdown.value;
+                }
+                dropdown.ClearOptions();
+
+                dropdown.options = new List<TMPro.TMP_Dropdown.OptionData>(
+                    options.Select(x => new TMPro.TMP_Dropdown.OptionData(Localise.Text(x)))
+                );
+
+                if (value > -1)
+                {
+                    dropdown.value = value;
+                }
+
+                dropdown.onValueChanged.RemoveAllListeners();
+                dropdown.onValueChanged.AddListener((x) =>
+                {
+                    value = x;
+                    dropdown.Hide();
+                    onOptionChanged?.Invoke(x);
+                });
             }
-            dropdown.ClearOptions();
+            _value = value >= 0 && _value < options.Length ? value : _value;
 
-            dropdown.options = new List<TMPro.TMP_Dropdown.OptionData>(
-                options.Select(x => new TMPro.TMP_Dropdown.OptionData(Localise.Text(x)))
-            );
-
-            if (value > -1)
+            if (indexIncButton == null && indexDecButton != null)
             {
-                dropdown.value = value;
+                // Hide if only one of the buttons available.
+                indexDecButton.gameObject.SetActive(false);
             }
+            else if (indexDecButton == null && indexIncButton != null)
+            {
+                // Hide if only one of the buttons available.
+                indexIncButton.gameObject.SetActive(false);
+            }
+            else if (indexDecButton != null && indexIncButton != null)
+            {
+                // Both buttons available, setup input actions
+                indexDecButton.onClick.RemoveAllListeners();
+                indexDecButton.onClick.AddListener(OnDec);
 
-            dropdown.onValueChanged.RemoveAllListeners();
-            dropdown.onValueChanged.AddListener((x) => {
-                value = x;
-                dropdown.Hide();
-                onOptionChanged?.Invoke(x);
-            });
+                indexIncButton.onClick.RemoveAllListeners();
+                indexIncButton.onClick.AddListener(OnInc);
+
+                // Update the initial state
+                UpdateState();
+            }
+        }
+
+        /// <summary>
+        /// Handle index decrement.
+        /// </summary>
+        private void OnDec()
+        {
+            if (value > 0)
+            {
+                value--;
+            }
+        }
+
+        /// <summary>
+        /// Handle index increment.
+        /// </summary>
+        private void OnInc()
+        {
+            if (value < options.Length - 1)
+            {
+                value++;
+            }
         }
 
         /// <summary>
         /// The option index.
         /// </summary>
-        public int value {
+        public int value
+        {
             get { return (int)GetValue(); }
             private set { SetValue(value); }
         }
 
+        /// <summary>
+        /// Local option index if we have no dropdown.
+        /// </summary>
+        private int _value;
+
         public override void SetValue(object value)
         {
-            if (dropdown.value != (int)value)
+            if ((int)value != _value)
             {
-                dropdown.value = (int)value;
-                onOptionChanged?.Invoke(dropdown.value);
+                if (dropdown != null)
+                {
+                    dropdown.value = (int)value;
+                }
+                _value = (int)value;
+                onOptionChanged?.Invoke(_value);
+                UpdateState();
             }
         }
 
         public override object GetValue()
         {
-            return dropdown.value;
+            return _value;
         }
 
+
+        private void UpdateState()
+        {
+            if (label != null && _value >= 0 && _value < options.Length)
+            {
+                label.text = Localise.Text(options[_value]);
+            }
+
+            // Update buttons
+            if (indexDecButton != null && indexIncButton != null)
+            {
+                indexDecButton.interactable = _value > 0;
+                indexIncButton.interactable = _value < options.Length - 1;
+            }
+        }
         public void OnPointerEnter(PointerEventData eventData)
         {
             onHoverChange?.Invoke(true);

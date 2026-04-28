@@ -32,7 +32,10 @@ namespace OpenGET.UI
         private int TryGetLink(PointerEventData data, out TMP_LinkInfo link)
         {
             Vector3 mousePos = new Vector3(data.position.x, data.position.y, 0);
-
+            if (text.canvas != null && text.canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            {
+                mousePos = text.canvas.worldCamera.ScreenToWorldPoint(mousePos);
+            }
             int index = TMP_TextUtilities.FindIntersectingLink(text, mousePos, null);
             link = index >= 0 ? text.textInfo.linkInfo[index] : new TMP_LinkInfo();
             return index;

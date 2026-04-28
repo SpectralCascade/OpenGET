@@ -16,8 +16,17 @@ namespace OpenGET.UI
         /// <summary>
         /// The toggle checkbox mark, indicating whether the setting is on or off.
         /// </summary>
-        [Auto.NullCheck]
         public GameObject checkmark;
+
+        /// <summary>
+        /// Store state in a boolean, NOT the checkmark!
+        /// </summary>
+        private bool _value;
+
+        /// <summary>
+        /// Optional dropdown/carousel to use instead of the checkmark.
+        /// </summary>
+        public DropdownElement dropdown;
 
         /// <summary>
         /// Reference to container if available.
@@ -43,17 +52,42 @@ namespace OpenGET.UI
         protected override void Awake()
         {
             base.Awake();
-            Debug.Assert(checkmark != null);
 
-            button.onClick.AddListener(OnToggled);
+            if (dropdown != null)
+            {
+                dropdown.options = new string[] {
+                    Localise.Runtime("Disabled"),
+                    Localise.Runtime("Enabled")
+                };
+                dropdown.onOptionChanged += OnToggledDropdown;
+                if (checkmark != null)
+                {
+                    checkmark.SetActive(false);
+                }
+            }
+            else
+            {
+                button.onClick.AddListener(OnToggled);
+            }
         }
 
         private void OnDestroy()
         {
-            if (button != null)
+            if (dropdown != null)
+            {
+                dropdown.onOptionChanged -= OnToggledDropdown;
+            }
+            else
             {
                 button.onClick.RemoveListener(OnToggled);
             }
+        }
+
+        private void OnToggledDropdown(int index)
+        {
+            SetValue(index != 0);
+            // Always toggle on dropdown regardless of current state, as it is guaranteed only on change
+            onToggle?.Invoke(_value);
         }
 
         /// <summary>
@@ -61,7 +95,7 @@ namespace OpenGET.UI
         /// </summary>
         private void OnToggled()
         {
-            SetValue(!value);
+            SetValue(!_value);
         }
 
         /// <summary>
@@ -69,10 +103,23 @@ namespace OpenGET.UI
         /// </summary>
         public void SetValue(object value)
         {
-            if (checkmark.activeSelf != (bool)value)
+            if (checkmark != null)
             {
+                if (dropdown != null)
+                {
+                    checkmark.SetActive(false);
+                }
                 checkmark.SetActive((bool)value);
-                onToggle?.Invoke(checkmark.activeSelf);
+            }
+
+            if ((bool)value != this.value)
+            {
+                _value = (bool)value;
+                if (dropdown != null)
+                {
+                    dropdown.SetValue((bool)value ? 1 : 0);
+                }
+                onToggle?.Invoke(_value);
             }
         }
 
@@ -81,7 +128,7 @@ namespace OpenGET.UI
         /// </summary>
         public object GetValue()
         {
-            return checkmark.activeSelf;
+            return _value;
         }
 
         public ElementContainer TryGetContainer()

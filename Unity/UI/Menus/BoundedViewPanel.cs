@@ -51,7 +51,7 @@ namespace OpenGET.UI
         /// Sets the position of the panel by screen position, while staying within bounds.
         /// Note: Screen position should be in worldspace when using ScreenSpaceCamera mode for UI.
         /// </summary>
-        public void SetPosition(Vector2 screenPos)
+        public void SetPosition(Vector2 screenPos, bool useCanvasOffset = true)
         {
             RectTransform canvasRect = UI.canvas.transform as RectTransform;
             Vector2 canvasPivot = canvasRect.pivot;
@@ -73,7 +73,8 @@ namespace OpenGET.UI
             Vector2 boundingPivot = rect.pivot;
 
             // Canvas offset
-            Vector2 canvasOffset = canvasPivot * new Vector2(canvasDim.width, canvasDim.height);
+            // Not sure why but in some setups accounting for the canvas offset is not necessary (e.g. toolips)
+            Vector2 canvasOffset = useCanvasOffset ? canvasPivot * new Vector2(canvasDim.width, canvasDim.height) : Vector2.zero;
 
             // Get bounds in worldspace
             Rect bounds = new Rect(

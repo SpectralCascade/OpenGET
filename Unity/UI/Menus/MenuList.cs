@@ -34,6 +34,11 @@ namespace OpenGET.UI
 
         [SerializeField]
         [Auto.NullCheck]
+        [Tooltip("Optional prefab for a toggle carousel (gamepad checkbox alternative) element.")]
+        private ButtonToggle elementToggleGamepadPrefab;
+
+        [SerializeField]
+        [Auto.NullCheck]
         [Tooltip("The prefab for a slider element.")]
         private SliderElement elementSliderPrefab;
 
@@ -41,6 +46,11 @@ namespace OpenGET.UI
         [Auto.NullCheck]
         [Tooltip("The prefab for a dropdown list element.")]
         private DropdownElement elementDropdownPrefab;
+
+        [SerializeField]
+        [Auto.NullCheck]
+        [Tooltip("Optional prefab for a carousel (gamepad dropdown alternative) element.")]
+        private DropdownElement elementDropdownGamepadPrefab;
 
         [SerializeField]
         [Tooltip("The prefab for an input action element.")]
@@ -219,12 +229,15 @@ namespace OpenGET.UI
                         }
                         //slider.group = groupType.Name;
                         slider.gameObject.name = field.Name;
+                        slider.SetValue((float)fieldValue);
                     }, elementContainerPrefab);
                 }
                 else if (type == typeof(bool))
                 {
                     // Toggle
-                    container = builder.Add(elementTogglePrefab, fieldValue, (ButtonToggle button) => {
+                    ButtonToggle prefab = elementToggleGamepadPrefab != null && Input.InputHelper.Get(0).usingGamepad ? elementToggleGamepadPrefab : elementTogglePrefab;
+                    container = builder.Add(prefab, fieldValue, (ButtonToggle button) =>
+                    {
                         button.text.text = (applyField as IApplySetting).GetName() ?? field.Name;
                         button.onToggle += (bool toggled) => {
                             // Update the value in the referenced object.
@@ -253,13 +266,18 @@ namespace OpenGET.UI
                         }
                         //button.group = groupType.Name;
                         button.gameObject.name = field.Name;
+                        // Set initial state
+                        button.SetValue((bool)fieldValue);
                     }, elementContainerPrefab);
 
                 }
                 else if (type.IsEnum || type == typeof(int))
                 {
-                    // Dropdown selection
-                    container = builder.Add(elementDropdownPrefab, (int)fieldValue, (DropdownElement dropdown) => {
+                    // Dropdown/carousel selection
+                    DropdownElement element =
+                        elementDropdownGamepadPrefab != null && Input.InputHelper.Get(0).usingGamepad ? elementDropdownGamepadPrefab : elementDropdownPrefab;
+                    container = builder.Add(element, (int)fieldValue, (DropdownElement dropdown) =>
+                    {
                         // TODO: Localise option names instead of just grabbing enum member names...
                         bool isEnum = type.IsEnum;
                         if (isEnum)

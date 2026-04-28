@@ -41,6 +41,16 @@ namespace OpenGET.UI
         private TooltipPanel tooltip;
 
         /// <summary>
+        /// Custom action called every update.
+        /// </summary>
+        private UnityAction<Component> onUpdate = null;
+
+        /// <summary>
+        /// Inner UI, if any.
+        /// </summary>
+        private Component inner = null;
+
+        /// <summary>
         /// Used to access pointer events.
         /// </summary>
         [SerializeField]
@@ -113,7 +123,11 @@ namespace OpenGET.UI
             Vector2 customOffset = custom?.getTooltipOffset ?? offset;
             Vector2 customPosition = custom?.getTooltipPosition ?? Pointer.current.position.ReadValue();
 
-            tooltip.SetPosition(customPosition + customOffset);
+            bool rawCustom = custom?.getTooltipPosition != null;
+
+            Vector2 pos = customPosition + (rawCustom ? Vector2.zero : customOffset);
+            pos = !rawCustom && UI.canvas.renderMode != RenderMode.ScreenSpaceOverlay ? UI.cam.ScreenToWorldPoint(pos) : pos;
+            tooltip.SetPosition(pos, false);
 
             if (custom != null)
             {
@@ -128,6 +142,8 @@ namespace OpenGET.UI
                     HideTooltip();
                 }
             }
+
+            onUpdate?.Invoke(inner);
         }
 
         public void OnPointerExit(PointerEventData eventData)
@@ -138,14 +154,41 @@ namespace OpenGET.UI
             }
         }
 
+        /// <summary>
+        /// Shows the tooltip.
+        /// </summary>
         public void ShowTooltip()
         {
+            ShowTooltip<Component>(null);
+        }
+
+        /// <summary>
+        /// Shows the tooltip with an inner-UI prefab for the tooltip and an optional update callback.
+        /// Returns the instantiated inner-UI object if a prefab is provided, otherwise returns null.
+        /// Update callback provides the inner instance, if any.
+        /// </summary>
+        public T ShowTooltip<T>(T innerPrefab, UnityAction<Component> onUpdate = null) where T : Component
+        {
+            this.onUpdate = onUpdate;
+            if (inner != null)
+            {
+                Destroy(inner.gameObject);
+                inner = null;
+            }
+            if (innerPrefab != null)
+            {
+                // Add a child object to the tooltip. Useful for custom UI. Must be already instantiated and ready to go.
+                inner = Instantiate(innerPrefab, tooltip.body.transform.parent);
+                inner.gameObject.transform.SetAsFirstSibling();
+            }
             if (!string.IsNullOrEmpty(text))
             {
                 tooltip.SetText(Localise.Text(text));
             }
             UpdateTooltip();
             tooltip.Show(0);
+
+            return inner as T;
         }
 
         public void HideTooltip()
