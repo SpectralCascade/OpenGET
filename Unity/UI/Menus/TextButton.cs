@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
@@ -9,7 +10,7 @@ namespace OpenGET.UI
     /// <summary>
     /// A button with text.
     /// </summary>
-    public class TextButton : AutoBehaviour, IPointerEnterHandler, IPointerExitHandler, IScrollHandler
+    public class TextButton : AutoBehaviour, IPointerEnterHandler, IPointerExitHandler, IScrollHandler, NavigationBlock.IElement
     {
 
         /// <summary>
@@ -30,6 +31,16 @@ namespace OpenGET.UI
         /// Convenience accessor.
         /// </summary>
         public Button.ButtonClickedEvent onClick { get { return button.onClick; } set { button.onClick = value; } }
+
+        public Navigation navigation
+        {
+            get => button.navigation;
+            set
+            {
+                button.navigation = value;
+            }
+        }
+        public Selectable selectable => button;
 
         /// <summary>
         /// Event for handling a hover enter or exit event.

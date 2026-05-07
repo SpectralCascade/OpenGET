@@ -55,6 +55,12 @@ namespace OpenGET.UI
         [Auto.Hookup(Auto.Mode.Self)]
         public Canvas canvas;
 
+        /// <summary>
+        /// Input event system, necessary for selection handling.
+        /// </summary>
+        [Auto.NullCheck]
+        public UnityEngine.EventSystems.EventSystem events;
+
         [Tooltip("Associated UI camera (not required for canvas \"Screenspace - Overlay\").")]
         public Camera cam;
 
