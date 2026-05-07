@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using OpenGET;
-using PlasticPipe.PlasticProtocol.Client.Proxies;
 using UnityEngine;
 using UnityEngine.UI;
 
