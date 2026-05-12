@@ -80,14 +80,11 @@ namespace OpenGET
         public void FadeIn(float time = 1.0f) {
             if (time <= 0 && implementation != null)
             {
-                if (implementation.GetValue() < 1f)
-                {
-                    fadeDirection = 1;
-                    implementation.SetValue(1);
-                    fadeDirection = 0;
-                    OnFadeComplete?.Invoke(this, 1);
-                    fadeCoroutine = null;
-                }
+                fadeDirection = 1;
+                implementation.SetValue(1);
+                fadeDirection = 0;
+                OnFadeComplete?.Invoke(this, 1);
+                fadeCoroutine = null;
                 fadeDirection = 0;
             }
             else if (implementation != null) {
@@ -102,14 +99,11 @@ namespace OpenGET
         public void FadeOut(float time = 1.0f) {
             if (time <= 0 && implementation != null)
             {
-                if (implementation.GetValue() > 0)
-                {
-                    fadeDirection = -1;
-                    implementation.SetValue(0);
-                    fadeDirection = 0;
-                    OnFadeComplete?.Invoke(this, -1);
-                    fadeCoroutine = null;
-                }
+                fadeDirection = -1;
+                implementation.SetValue(0);
+                fadeDirection = 0;
+                OnFadeComplete?.Invoke(this, -1);
+                fadeCoroutine = null;
             }
             else if (implementation != null) {
                 fadeDirection = -1;

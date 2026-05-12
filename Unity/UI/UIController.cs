@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using OpenGET.Input;
 using UnityEngine.UI;
+using System.Linq;
+using UnityEngine.UIElements;
+
+
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -110,6 +114,11 @@ namespace OpenGET.UI
         protected ScrollRect[] scrollRects = new ScrollRect[0];
 
         /// <summary>
+        /// Actively shown ViewPanels.
+        /// </summary>
+        private HashSet<ViewPanel> activePanels = new HashSet<ViewPanel>();
+
+        /// <summary>
         /// Current player input index.
         /// </summary>
         public int currentPlayer {
@@ -136,6 +145,92 @@ namespace OpenGET.UI
                 RectTransform root = (RectTransform)(tooltipsRoot != null ? tooltipsRoot : transform);
                 tooltipShared = Instantiate(tooltipShared, root);
                 tooltipShared.Init(this, root);
+            }
+        }
+
+        /// <summary>
+        /// Track shown ViewPanels.
+        /// </summary>
+        public void OnViewPanelSetShown(ViewPanel panel, bool shown)
+        {
+            if (shown)
+            {
+                activePanels.Add(panel);
+            }
+            else
+            {
+                activePanels.Remove(panel);
+            }
+        }
+
+        /// <summary>
+        /// Returns the topmost ViewPanel in the UI.
+        /// </summary>
+        public ViewPanel GetTopViewPanel()
+        {
+            ViewPanel[] shown = activePanels.Where(x => x.gameObject.activeInHierarchy).ToArray();
+            ViewPanel top = shown.Length > 0 ? shown[0] : null;
+            List<int> bestIndexer = new List<int>();
+            for (int i = 0, counti = shown.Length; i < counti; i++)
+            {
+                ViewPanel candidate = shown[i];
+                if (candidate != null)
+                {
+                    // Determine sibling ancestry, ascend to the top of the transform hierarchy
+                    Transform ancestor = candidate.transform;
+                    List<int> candidateIndexer = new List<int>();
+                    int count = 0;
+                    while (ancestor != null)
+                    {
+                        candidateIndexer.Add(ancestor.GetSiblingIndex());
+                        ancestor = ancestor.parent;
+                    }
+                    candidateIndexer.Reverse();
+
+                    if (bestIndexer.Count == 0)
+                    {
+                        bestIndexer = candidateIndexer;
+                        top = candidate;
+                    }
+                    else
+                    {
+                        // Figure out if it's better than the current best
+                        for (int j = 0, countj = candidateIndexer.Count; j < countj; j++)
+                        {
+                            if (j >= bestIndexer.Count)
+                            {
+                                // This only occurs when candidate is the best
+                                bestIndexer.Add(candidateIndexer[j]);
+                                continue;
+                            }
+                            if (candidateIndexer[j] > bestIndexer[j])
+                            {
+                                bestIndexer = candidateIndexer;
+                                top = candidate;
+                                continue;
+                            }
+                            else if (candidateIndexer[j] < bestIndexer[j])
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            return top;
+        }
+
+        public virtual void LateUpdate()
+        {
+            if (ActionMoveSelection.IsPressed() && events.currentSelectedGameObject == null)
+            {
+                // Attempt to reselect the top view panel if nothing is selected currently
+                ViewPanel found = GetTopViewPanel();
+                if (found != null)
+                {
+                    found.TryReselect();
+                    Log.Debug("Attempted reselect at {0}", SceneNavigator.GetPath(found));
+                }
             }
         }
 

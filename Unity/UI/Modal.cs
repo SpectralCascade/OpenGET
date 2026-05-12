@@ -135,6 +135,16 @@ namespace OpenGET.UI
         public Button buttonClose;
 
         /// <summary>
+        /// Primary button. Not guaranteed to exist.
+        /// </summary>
+        public Button buttonPrimary;
+
+        /// <summary>
+        /// Secondary button. Not guaranteed to exist.
+        /// </summary>
+        public Button buttonSecondary;
+
+        /// <summary>
         /// Primary input prompt or button image. Not guaranteed to exist.
         /// Image reference used as it could just be an input prompt or a navigable button.
         /// </summary>
@@ -450,6 +460,23 @@ namespace OpenGET.UI
             InputHelper.Player input = _UI.input;
             if (input.HasControl(gameObject))
             {
+                if (UI.ActionMoveSelection.IsPressed() && UI.events.currentSelectedGameObject == null)
+                {
+                    // Reselect an active button, if available
+                    if (buttonSecondary != null && buttonSecondary.isActiveAndEnabled)
+                    {
+                        UI.events.SetSelectedGameObject(buttonSecondary.gameObject);
+                    }
+                    else if (buttonPrimary != null && buttonPrimary.isActiveAndEnabled)
+                    {
+                        UI.events.SetSelectedGameObject(buttonPrimary.gameObject);
+                    }
+                    else if (buttonClose != null && buttonClose.isActiveAndEnabled)
+                    {
+                        UI.events.SetSelectedGameObject(buttonClose.gameObject);
+                    }
+                }
+
                 if (!string.IsNullOrEmpty(data.textPrimary) && input.HasControl(gameObject) && promptActionPrimary != null && promptActionPrimary.action.WasPressedThisFrame())
                 {
                     OnPrimary();
@@ -509,10 +536,16 @@ namespace OpenGET.UI
             this.data = data;
             this._UI = ui;
 
+            // Deselect
+            ui.events.SetSelectedGameObject(null);
+
             // Setup buttons
             if (buttonClose != null)
             {
                 buttonClose.gameObject.SetActive(data.showCloseInput);
+
+                // Set to close button by default
+                ui.events.SetSelectedGameObject(buttonClose.gameObject);
             }
 
             // Primary button
@@ -520,6 +553,11 @@ namespace OpenGET.UI
             if (inputPrimary != null)
             {
                 inputPrimary.gameObject.SetActive(show);
+            }
+            if (buttonPrimary != null && show)
+            {
+                // Primary button takes next precedence
+                ui.events.SetSelectedGameObject(buttonPrimary.gameObject);
             }
             if (textPrimaryGraphic != null)
             {
@@ -537,6 +575,11 @@ namespace OpenGET.UI
             if (inputSecondary != null)
             {
                 inputSecondary.gameObject.SetActive(show);
+            }
+            if (buttonSecondary != null && show)
+            {
+                // Secondary button takes most precedence (so player can't accidentally trigger the primary action so easily)
+                ui.events.SetSelectedGameObject(buttonSecondary.gameObject);
             }
             if (textSecondaryGraphic != null)
             {

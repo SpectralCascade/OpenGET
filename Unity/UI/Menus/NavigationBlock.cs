@@ -10,6 +10,7 @@ namespace OpenGET.UI
     /// <summary>
     /// Specialised UI navigation block. Use this to control navigation between UI elements and other blocks within a particular area.
     /// Adheres to (and builds upon) Unity's built-in UI navigation system.
+    /// Note: This does NOT do any selection state management itself, that is left to Unity or other OpenGET modules. 
     /// </summary>
     public class NavigationBlock : AutoBehaviour
     {
@@ -80,8 +81,6 @@ namespace OpenGET.UI
             Horizontal
         }
 
-        public UIController UI { get; private set; }
-
         /// <summary>
         /// Layout direction of the children; must be either vertical or horizontal, cannot be both.
         /// </summary>
@@ -114,6 +113,70 @@ namespace OpenGET.UI
         /// Do the children need their navigation updated?
         /// </summary>
         private Refresh refresh = Refresh.Init | Refresh.Navigation;
+
+        /// <summary>
+        /// Check if a GameObject is one of the selectable children of this NavigationBlock.
+        /// </summary>
+        public bool HasChild(GameObject obj)
+        {
+            for (int i = 0, counti = children.Count; i < counti; i++)
+            {
+                if (children[i].selectable != null && children[i].selectable.gameObject == obj)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Check if a GameObject is a selectable child in the neighbourhood of this NavigationBlock.
+        /// </summary>
+        public bool HasChildInNeighbourhood(GameObject obj, HashSet<NavigationBlock> explored = null)
+        {
+            if (explored.Contains(this))
+            {
+                // Early out, already explored
+                return false;
+            }
+
+            // Add to explored list
+            if (explored == null)
+            {
+                explored = new() { this };
+            }
+            else
+            {
+                explored.Add(this);
+            }
+
+            // Check self
+            bool found = HasChild(obj);
+            if (found)
+            {
+                return found;
+            }
+
+            // Search neighbours
+            if (neighbours.up != null)
+            {
+                found = neighbours.up.HasChildInNeighbourhood(obj, explored);
+            }
+            if (neighbours.down != null && !found)
+            {
+                found = neighbours.down.HasChildInNeighbourhood(obj, explored);
+            }
+            if (neighbours.left != null && !found)
+            {
+                found = neighbours.left.HasChildInNeighbourhood(obj, explored);
+            }
+            if (neighbours.right != null && !found)
+            {
+                found = neighbours.right.HasChildInNeighbourhood(obj, explored);
+            }
+
+            return found;
+        }
 
         /// <summary>
         /// Attempts to return the closest active child element. Returns null if invalid or there are no active children.
@@ -198,6 +261,10 @@ namespace OpenGET.UI
         /// </summary>
         protected void OnEnable()
         {
+            Init();
+            UpdateNavigation();
+
+            // Refresh on updates for good measure
             refresh = Refresh.Navigation | Refresh.Init;
         }
 
@@ -231,6 +298,7 @@ namespace OpenGET.UI
 
             // Order top-to-bottom or left-to-right depending on layout direction
             bool vert = layoutDirection == LayoutDirection.Vertical;
+            children.RemoveAll(x => x == null);
             children = children.OrderBy(
                 element => vert ? -element.selectable.transform.position.y : element.selectable.transform.position.x
             ).ToList();

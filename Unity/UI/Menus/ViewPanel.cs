@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 using OpenGET.Input;
+using UnityEngine.UI;
+using System;
 
 namespace OpenGET.UI {
 
@@ -92,9 +94,19 @@ namespace OpenGET.UI {
         private int animHashHide => Animator.StringToHash(animHideState);
 
         /// <summary>
+        /// Optional button to auto-select when shown (or all menus above are popped).
+        /// </summary>
+        public Selectable selectOnShow;
+
+        /// <summary>
+        /// Most recently selected element in this panel; tracks child objects only.
+        /// </summary>
+        private GameObject lastSelectedChild;
+
+        /// <summary>
         /// The button used to go back to the previous screen, if relevant. May be null.
         /// </summary>
-        public UnityEngine.UI.Button backButton = null;
+        public Button backButton = null;
 
         /// <summary>
         /// Should the onClick of backButton be used to handle built in back button inputs (e.g. Escape key)?
@@ -138,12 +150,50 @@ namespace OpenGET.UI {
         private Fader _fader;
 
         /// <summary>
+        /// Check if this ViewPanel has the given gameobject as a direct child.
+        /// Gameobjects living under nested ViewPanels are ignored.
+        /// </summary>
+        public bool HasChild(GameObject obj)
+        {
+            Transform chain = obj.transform.parent;
+            while (chain != null)
+            {
+                if (chain == null)
+                {
+                    break;
+                }
+                else if (chain == transform)
+                {
+                    return true;
+                }
+
+                ViewPanel found = chain.GetComponent<ViewPanel>();
+                if (found == null)
+                {
+                    chain = chain.parent;
+                    continue;
+                }
+                return found == this;
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Handle fade completion.
         /// </summary>
         private void OnFaded(Fader f, int fadeDir)
         {
             if (fadeDir > 0)
             {
+                if (selectOnShow != null)
+                {
+                    // Auto-select button
+                    UI.events.SetSelectedGameObject(selectOnShow.gameObject);
+                }
+                else if (lastSelectedChild != null)
+                {
+                    UI.events.SetSelectedGameObject(lastSelectedChild);
+                }
                 OnDidShow();
                 onSetShown?.Invoke(true);
             }
@@ -227,6 +277,7 @@ namespace OpenGET.UI {
                         animFader.SetAnim(animHashShow);
                     }
                     fader.FadeIn(fadeTime);
+                    UI.OnViewPanelSetShown(this, true);
                 }
             }
             else
@@ -239,6 +290,7 @@ namespace OpenGET.UI {
                         animFader.SetAnim(animHashShow);
                     }
                     fader.FadeOut(fadeTime);
+                    UI.OnViewPanelSetShown(this, false);
                 }
             }
         }
@@ -326,13 +378,34 @@ namespace OpenGET.UI {
             }
         }
 
-        protected virtual void Update() {
+        protected virtual void Update()
+        {
+            GameObject selected = UI.events.currentSelectedGameObject;
+            if (selected != null && selected != lastSelectedChild && HasChild(selected))
+            {
+                lastSelectedChild = selected;
+            }
+
             // Trigger the back button if available, when the cancel action occurs.
             if (handleBackInputs && backButton != null
                 //&& UI.input.HasControl(transform.parent != null ? transform.parent.gameObject : UI.gameObject)
-                && UI.ActionCancel.WasPressedThisFrame() 
-            ) {
+                && UI.ActionCancel.WasPressedThisFrame()
+            )
+            {
                 backButton.onClick.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// Reselects the last selected child, if no object is currently selected.
+        /// </summary>
+        public void TryReselect()
+        {
+            GameObject selected = UI.events.currentSelectedGameObject;
+            if (selected == null && lastSelectedChild != null && lastSelectedChild.gameObject.activeInHierarchy)
+            {
+                // Re-select the last selected object if we start navigating again after deselection has occurred.
+                UI.events.SetSelectedGameObject(lastSelectedChild);
             }
         }
 
