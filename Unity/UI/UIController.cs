@@ -229,7 +229,6 @@ namespace OpenGET.UI
                 if (found != null)
                 {
                     found.TryReselect();
-                    Log.Debug("Attempted reselect at {0}", SceneNavigator.GetPath(found));
                 }
             }
         }
