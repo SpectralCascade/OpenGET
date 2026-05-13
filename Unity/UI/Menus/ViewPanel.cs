@@ -101,7 +101,7 @@ namespace OpenGET.UI {
         /// <summary>
         /// Most recently selected element in this panel; tracks child objects only.
         /// </summary>
-        private GameObject lastSelectedChild;
+        protected GameObject lastSelectedChild;
 
         /// <summary>
         /// The button used to go back to the previous screen, if relevant. May be null.

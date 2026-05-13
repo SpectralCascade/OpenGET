@@ -135,7 +135,8 @@ namespace OpenGET.UI
             switch (button.transition)
             {
                 case Selectable.Transition.ColorTint:
-                    button.colors = new ColorBlock {
+                    button.colors = new ColorBlock
+                    {
                         normalColor = activated ? activatedState.colour : deactivatedState.colour,
                         selectedColor = activated ? activatedState.colour : deactivatedState.colour,
                         colorMultiplier = button.colors.colorMultiplier,
@@ -147,7 +148,8 @@ namespace OpenGET.UI
                     break;
                 case Selectable.Transition.SpriteSwap:
                     button.image.sprite = activated ? activatedState.sprite : deactivatedState.sprite;
-                    button.spriteState = new SpriteState {
+                    button.spriteState = new SpriteState
+                    {
                         selectedSprite = activated ? activatedState.sprite : deactivatedState.sprite,
                         disabledSprite = button.spriteState.disabledSprite,
                         highlightedSprite = button.spriteState.highlightedSprite,

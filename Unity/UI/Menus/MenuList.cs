@@ -193,6 +193,11 @@ namespace OpenGET.UI
             // Start the generation process
             builder.Begin(root);
 
+            // Invalidate last selected before setting it to first element
+            lastSelectedChild = null;
+            // Trigger a navigation refresh among neighbours
+            navigator.SetDirty(NavigationBlock.Refresh.Init | NavigationBlock.Refresh.Navigation, true);
+
             // Get all fields in settings and automagically create appropriate elements for them.
             System.Type groupType = group.GetType();
             FieldInfo[] fields = groupType.GetFields(BindingFlags.Instance | BindingFlags.Public);
@@ -244,6 +249,10 @@ namespace OpenGET.UI
                         slider.gameObject.name = field.Name;
                         slider.SetValue((float)fieldValue);
                         slider.Init(UI);
+                        if (lastSelectedChild == null)
+                        {
+                            lastSelectedChild = slider.selectable.gameObject;
+                        }
                     }, elementContainerPrefab);
                 }
                 else if (type == typeof(bool))
@@ -283,6 +292,10 @@ namespace OpenGET.UI
                         // Set initial state
                         button.SetValue((bool)fieldValue);
                         button.Init(UI);
+                        if (lastSelectedChild == null)
+                        {
+                            lastSelectedChild = button.selectable.gameObject;
+                        }
                     }, elementContainerPrefab);
 
                 }
@@ -333,6 +346,10 @@ namespace OpenGET.UI
                         dropdown.gameObject.name = field.Name;
                         dropdown.Init((int)fieldValue);
                         dropdown.InitUI(UI);
+                        if (lastSelectedChild == null)
+                        {
+                            lastSelectedChild = dropdown.selectable.gameObject;
+                        }
                     }, elementContainerPrefab);
                 }
 #if ENABLE_INPUT_SYSTEM

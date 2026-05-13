@@ -121,11 +121,24 @@ namespace OpenGET.UI
         private Refresh refresh = Refresh.Init | Refresh.Navigation;
 
         /// <summary>
-        /// Set refresh flags to trigger an update.
+        /// Set refresh flags to trigger an update. Optionally proliferate flags to neighbours.
         /// </summary>
-        public void SetDirty(Refresh flags)
+        public void SetDirty(Refresh flags, bool proliferate = false)
         {
             refresh |= flags;
+
+            if (proliferate)
+            {
+                NavigationBlock[] nextdoor = new NavigationBlock[] { neighbours.up, neighbours.down, neighbours.left, neighbours.right };
+                for (int i = 0, counti = nextdoor.Length; i < counti; i++)
+                {
+                    NavigationBlock neighbour = nextdoor[i];
+                    if (neighbour != null)
+                    {
+                        neighbour.SetDirty(flags, false);
+                    }
+                }
+            }
         }
 
         /// <summary>

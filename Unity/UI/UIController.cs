@@ -233,6 +233,7 @@ namespace OpenGET.UI
             {
                 // Attempt to reselect the top view panel if nothing is selected currently
                 ViewPanel found = GetTopViewPanel();
+                Log.Debug("Attempting reselect with panel {0}", SceneNavigator.GetPath(found));
                 if (found != null)
                 {
                     found.TryReselect();
