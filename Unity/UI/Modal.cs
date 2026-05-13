@@ -460,7 +460,7 @@ namespace OpenGET.UI
             InputHelper.Player input = _UI.input;
             if (input.HasControl(gameObject))
             {
-                if (UI.ActionMoveSelection.IsPressed() && UI.events.currentSelectedGameObject == null)
+                if (UI.ActionMoveSelection != null && UI.ActionMoveSelection.IsPressed() && UI.events.currentSelectedGameObject == null)
                 {
                     // Reselect an active button, if available
                     if (buttonSecondary != null && buttonSecondary.isActiveAndEnabled)

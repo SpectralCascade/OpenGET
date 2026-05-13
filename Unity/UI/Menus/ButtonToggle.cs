@@ -71,6 +71,14 @@ namespace OpenGET.UI
             }
         }
 
+        public void Init(UIController UI = null)
+        {
+            if (dropdown != null)
+            {
+                dropdown.InitUI(UI);
+            }
+        }
+
         private void OnDestroy()
         {
             if (dropdown != null)

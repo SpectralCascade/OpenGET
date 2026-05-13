@@ -1,3 +1,4 @@
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Linq;
 using OpenGET;
@@ -35,6 +36,11 @@ namespace OpenGET.UI
             [Tooltip("UI element that can be navigated to/from.")]
             private Selectable navigable;
 
+            /// <summary>
+            /// Check if this is "automatically" set.
+            /// </summary>
+            public bool isAutomatic => navigable == null || main != null;
+
             public Navigation navigation
             {
                 get { return main != null ? main.navigation : navigable.navigation; }
@@ -54,7 +60,7 @@ namespace OpenGET.UI
 
             public Element(Selectable element)
             {
-                this.navigable = element;
+                navigable = element;
             }
 
             public Element(IElement element)
@@ -102,7 +108,7 @@ namespace OpenGET.UI
         /// Multiple "isDirty" flags due to different aspects needing updates at different times.
         /// </summary>
         [System.Flags]
-        private enum Refresh
+        public enum Refresh
         {
             None = 0,
             Init = 1,
@@ -113,6 +119,14 @@ namespace OpenGET.UI
         /// Do the children need their navigation updated?
         /// </summary>
         private Refresh refresh = Refresh.Init | Refresh.Navigation;
+
+        /// <summary>
+        /// Set refresh flags to trigger an update.
+        /// </summary>
+        public void SetDirty(Refresh flags)
+        {
+            refresh |= flags;
+        }
 
         /// <summary>
         /// Check if a GameObject is one of the selectable children of this NavigationBlock.
@@ -238,7 +252,7 @@ namespace OpenGET.UI
             {
                 // Check if this is a suitable place to insert the element. Ignores inactive elements.
                 Element child = children[i];
-                doInsert = child.selectable != null && child.selectable.isActiveAndEnabled && (vert ?
+                doInsert = child != null && child.selectable != null && child.selectable.isActiveAndEnabled && (vert ?
                     (-element.selectable.transform.position.y < -child.selectable.transform.position.y) :
                     (element.selectable.transform.position.x < child.selectable.transform.position.x));
 
@@ -275,13 +289,22 @@ namespace OpenGET.UI
         {
             if (automatic)
             {
+                // First, remove all automatic elements
+                for (int i = children.Count - 1; i >= 0; i--)
+                {
+                    if (children[i] == null || children[i].selectable == null || children[i].isAutomatic)
+                    {
+                        children.SwapRemoveAt(i);
+                    }
+                }
+
                 // Try and get selectables & IElement objects
                 for (int i = 0, counti = transform.childCount; i < counti; i++)
                 {
                     Transform child = transform.GetChild(i);
 
                     IElement element = child.GetComponent<IElement>();
-                    if (element != null && children.FirstOrDefault(x => x.main == element || (x.selectable != null && child.GetComponent<Selectable>() == x.selectable)) == null)
+                    if (element != null && element.selectable != null && children.FirstOrDefault(x => x != null && (x.main == element || (x.selectable != null && child.GetComponent<Selectable>() == x.selectable))) == null)
                     {
                         AddElement(element);
                     }
@@ -298,7 +321,6 @@ namespace OpenGET.UI
 
             // Order top-to-bottom or left-to-right depending on layout direction
             bool vert = layoutDirection == LayoutDirection.Vertical;
-            children.RemoveAll(x => x == null);
             children = children.OrderBy(
                 element => vert ? -element.selectable.transform.position.y : element.selectable.transform.position.x
             ).ToList();
@@ -322,7 +344,11 @@ namespace OpenGET.UI
                 if (i < counti - 1 && nextIndex <= i)
                 {
                     nextIndex = children.FindIndex(nextIndex + 1, x => x.selectable != null && x.selectable.isActiveAndEnabled);
-                    next = nextIndex >= 0 ? children[nextIndex].selectable : null;
+                    next = nextIndex >= 0 && i != nextIndex ? children[nextIndex].selectable : null;
+                }
+                else
+                {
+                    next = null;
                 }
 
                 Element child = children[i];
@@ -360,7 +386,8 @@ namespace OpenGET.UI
 
         private void LateUpdate()
         {
-            if ((refresh & Refresh.Navigation) != 0)
+            // Only refresh nav AFTER init has completed
+            if ((refresh & Refresh.Navigation) != 0 && (refresh & Refresh.Init) == 0)
             {
                 UpdateNavigation();
             }

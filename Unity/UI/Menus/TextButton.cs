@@ -32,14 +32,7 @@ namespace OpenGET.UI
         /// </summary>
         public Button.ButtonClickedEvent onClick { get { return button.onClick; } set { button.onClick = value; } }
 
-        public Navigation navigation
-        {
-            get => button.navigation;
-            set
-            {
-                button.navigation = value;
-            }
-        }
+        public Navigation navigation { get => button.navigation; set { button.navigation = value; } }
         public Selectable selectable => button;
 
         /// <summary>

@@ -64,6 +64,10 @@ namespace OpenGET.UI
         [Tooltip("Optional container prefab for elements.")]
         private ElementContainer elementContainerPrefab;
 
+        [SerializeField]
+        [Tooltip("Optional navigation block associated with the elements.")]
+        private NavigationBlock navigator;
+
         /// <summary>
         /// The local menu builder instance.
         /// </summary>
@@ -171,6 +175,15 @@ namespace OpenGET.UI
 
         }
 
+        protected override void OnDidShow()
+        {
+            base.OnDidShow();
+            if (navigator != null)
+            {
+                navigator.SetDirty(NavigationBlock.Refresh.Init | NavigationBlock.Refresh.Navigation);
+            }
+        }
+
         /// <summary>
         /// Build the menu list, using reflection. Returns the group type name.
         /// Optionally specify tooltip text that should be set when elements are hovered.
@@ -230,6 +243,7 @@ namespace OpenGET.UI
                         //slider.group = groupType.Name;
                         slider.gameObject.name = field.Name;
                         slider.SetValue((float)fieldValue);
+                        slider.Init(UI);
                     }, elementContainerPrefab);
                 }
                 else if (type == typeof(bool))
@@ -268,6 +282,7 @@ namespace OpenGET.UI
                         button.gameObject.name = field.Name;
                         // Set initial state
                         button.SetValue((bool)fieldValue);
+                        button.Init(UI);
                     }, elementContainerPrefab);
 
                 }
@@ -317,6 +332,7 @@ namespace OpenGET.UI
                         }
                         dropdown.gameObject.name = field.Name;
                         dropdown.Init((int)fieldValue);
+                        dropdown.InitUI(UI);
                     }, elementContainerPrefab);
                 }
 #if ENABLE_INPUT_SYSTEM

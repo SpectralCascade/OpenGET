@@ -222,7 +222,7 @@ namespace OpenGET.UI
 
         public virtual void LateUpdate()
         {
-            if (ActionMoveSelection.IsPressed() && events.currentSelectedGameObject == null)
+            if (ActionMoveSelection != null && ActionMoveSelection.IsPressed() && events.currentSelectedGameObject == null)
             {
                 // Attempt to reselect the top view panel if nothing is selected currently
                 ViewPanel found = GetTopViewPanel();

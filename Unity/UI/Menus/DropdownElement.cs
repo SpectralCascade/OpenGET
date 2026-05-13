@@ -12,7 +12,7 @@ namespace OpenGET.UI
     /// Similar to a dropdown but rather than overlaying on the current screen, acts as it's own view.
     /// Note: May be set to use carousel mode where no actual dropdown is shown (instead options are in a carousel layout).
     /// </summary>
-    public class DropdownElement : Element, IPointerEnterHandler, IPointerExitHandler
+    public class DropdownElement : Element, IPointerEnterHandler, IPointerExitHandler, NavigationBlock.IElement
     {
 
         public UnityEngine.Events.UnityEvent<bool> onHoverChange = new UnityEngine.Events.UnityEvent<bool>();
@@ -36,6 +36,12 @@ namespace OpenGET.UI
         private TMPro.TMP_Dropdown dropdown;
 
         /// <summary>
+        /// Alternative to the dropdown, used for selection states.
+        /// </summary>
+        [SerializeField]
+        private Selectable selectionObject;
+
+        /// <summary>
         /// Optional index increment button.
         /// </summary>
         [SerializeField]
@@ -53,7 +59,16 @@ namespace OpenGET.UI
         [System.NonSerialized]
         public string[] options = new string[0];
 
+        /// <summary>
+        /// Associated UI, if any.
+        /// </summary>
+        private UIController UI;
+
         public delegate void OnOptionChanged(int value);
+
+        public Navigation navigation { get => selectable.navigation; set => selectable.navigation = value; }
+
+        public Selectable selectable => dropdown != null ? dropdown : selectionObject;
 
         /// <summary>
         /// Event to handle the current option being changed.
@@ -63,6 +78,14 @@ namespace OpenGET.UI
         protected void OnEnable()
         {
             Init();
+        }
+
+        public void InitUI(UIController UI)
+        {
+            if (UI != null)
+            {
+                this.UI = UI;
+            }
         }
 
         /// <summary>
@@ -140,6 +163,23 @@ namespace OpenGET.UI
             if (value < options.Length - 1)
             {
                 value++;
+            }
+        }
+
+        protected void Update()
+        {
+            // Handle carousel navigation
+            if (UI != null && UI.ActionMoveSelection != null && UI.events.currentSelectedGameObject != null && selectionObject != null && selectionObject.gameObject == UI.events.currentSelectedGameObject && UI.ActionMoveSelection.WasPressedThisFrame())
+            {
+                Vector2 nav = UI.ActionMoveSelection.ReadValue<Vector2>();
+                if (nav.x > float.Epsilon)
+                {
+                    OnInc();
+                }
+                else if (nav.x < -float.Epsilon)
+                {
+                    OnDec();
+                }
             }
         }
 

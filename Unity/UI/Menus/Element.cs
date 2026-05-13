@@ -62,9 +62,11 @@ namespace OpenGET.UI
     /// Most elements implement pointer handlers. However, these block scroll inputs.
     /// This class automatically passes the scroll event back up to the parent scroll rect (if any).
     /// </summary>
-    public abstract class Element : ScrollPassback, IElement {
+    public abstract class Element : ScrollPassback, IElement
+    {
         public abstract void SetValue(object value);
         public abstract object GetValue();
+
     }
 
     /// <summary>
