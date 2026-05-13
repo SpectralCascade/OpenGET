@@ -113,6 +113,12 @@ namespace OpenGET.UI
         [Auto.Hookup]
         protected ScrollRect[] scrollRects = new ScrollRect[0];
 
+        [Tooltip("Recommended - Required for tabbing between NavigationBlocks.")]
+        [SerializeField]
+        [Auto.NullCheck]
+        [Auto.Hookup]
+        protected NavigationBlock[] navigationBlocks = new NavigationBlock[0];
+
         /// <summary>
         /// Actively shown ViewPanels.
         /// </summary>
@@ -222,13 +228,62 @@ namespace OpenGET.UI
 
         public virtual void LateUpdate()
         {
-            if (ActionMoveSelection != null && ActionMoveSelection.IsPressed() && events.currentSelectedGameObject == null)
+            GameObject selected = events.currentSelectedGameObject;
+            if (ActionMoveSelection != null && ActionMoveSelection.IsPressed() && selected == null)
             {
                 // Attempt to reselect the top view panel if nothing is selected currently
                 ViewPanel found = GetTopViewPanel();
                 if (found != null)
                 {
                     found.TryReselect();
+                }
+            }
+            else if (ActionTabForward != null && ActionTabForward.WasPressedThisFrame() && selected != null)
+            {
+                // Step through active nav blocks to find the current one, if any
+                NavigationBlock found = null;
+                NavigationBlock.Element child = null;
+                for (int i = 0, counti = navigationBlocks.Length; i < counti; i++)
+                {
+                    child = navigationBlocks[i].FindChild(selected);
+                    if (child != null)
+                    {
+                        found = navigationBlocks[i];
+                        break;
+                    }
+                }
+
+                // Create an ordered list of the neighbourhood based on positions for consistency
+                if (found != null)
+                {
+                    List<NavigationBlock> all = found.GetNeighbourhood();
+                    PriorityQueue<NavigationBlock> neighbourhood = new();
+                    for (int i = 0, counti = all.Count; i < counti; i++)
+                    {
+                        neighbourhood.Enqueue(all[i], all[i].transform.position.sqrMagnitude);
+                    }
+                    neighbourhood.SortByPriority();
+                    for (int i = 0, counti = neighbourhood.Count; i < counti; i++)
+                    {
+                        if (neighbourhood[i].data == found)
+                        {
+                            NavigationBlock next = null;
+                            if (i + 1 < counti)
+                            {
+                                next = neighbourhood[i + 1].data;
+                            }
+                            else
+                            {
+                                next = neighbourhood[0].data;
+                            }
+                            NavigationBlock.Element select = next != null ? next.GetClosestElement(child) : null;
+                            if (select != null && select.selectable != null)
+                            {
+                                events.SetSelectedGameObject(select.selectable.gameObject);
+                            }
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -292,10 +347,15 @@ namespace OpenGET.UI
         [Auto.NullCheck]
         [SerializeField]
         private InputActionReference actionMoveSelection;
+        [Auto.NullCheck]
+        [SerializeField]
+        private InputActionReference actionTabForward;
+
 
         public InputAction ActionSubmit => PrimeInputActionAsset != null ? PrimeInputActionAsset.FindAction(actionSubmit.action.id) : actionSubmit.action;
         public InputAction ActionCancel => PrimeInputActionAsset != null ? PrimeInputActionAsset.FindAction(actionCancel.action.id) : actionCancel.action;
         public InputAction ActionMoveSelection => PrimeInputActionAsset != null ? PrimeInputActionAsset.FindAction(actionMoveSelection.action.id) : actionMoveSelection.action;
+        public InputAction ActionTabForward => PrimeInputActionAsset != null ? PrimeInputActionAsset.FindAction(actionTabForward.action.id) : actionTabForward.action;
 
 #endif
 

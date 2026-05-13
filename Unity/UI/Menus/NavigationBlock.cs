@@ -129,18 +129,60 @@ namespace OpenGET.UI
         }
 
         /// <summary>
-        /// Check if a GameObject is one of the selectable children of this NavigationBlock.
+        /// Get a list of the whole "neighbourhood" in relation to this block.
         /// </summary>
-        public bool HasChild(GameObject obj)
+        public List<NavigationBlock> GetNeighbourhood(HashSet<NavigationBlock> neighbourhood = null)
+        {
+            List<NavigationBlock> neighbourList = new() { this };
+            if (neighbourhood == null)
+            {
+                neighbourhood = new HashSet<NavigationBlock>() { this };
+            }
+            neighbourhood.Add(this);
+
+            // Step through neighbours, prioritising those in the same layout direction towards the right and down
+            PriorityQueue<NavigationBlock> candidates = new();
+            if (neighbours.up != null && !neighbourhood.Contains(neighbours.up))
+            {
+                neighbourList.AddRange(neighbours.up.GetNeighbourhood(neighbourhood));
+            }
+            if (neighbours.down != null && !neighbourhood.Contains(neighbours.down))
+            {
+                neighbourList.AddRange(neighbours.down.GetNeighbourhood(neighbourhood));
+            }
+            if (neighbours.left != null && !neighbourhood.Contains(neighbours.left))
+            {
+                neighbourList.AddRange(neighbours.left.GetNeighbourhood(neighbourhood));
+            }
+            if (neighbours.right != null && !neighbourhood.Contains(neighbours.right))
+            {
+                neighbourList.AddRange(neighbours.right.GetNeighbourhood(neighbourhood));
+            }
+
+            return neighbourList;
+        }
+
+        /// <summary>
+        /// Find an element among selectable children of this NavigationBlock.
+        /// </summary>
+        public Element FindChild(GameObject obj)
         {
             for (int i = 0, counti = children.Count; i < counti; i++)
             {
                 if (children[i].selectable != null && children[i].selectable.gameObject == obj)
                 {
-                    return true;
+                    return children[i];
                 }
             }
-            return false;
+            return null;
+        }
+
+        /// <summary>
+        /// Check if a GameObject is one of the selectable children of this NavigationBlock.
+        /// </summary>
+        public bool HasChild(GameObject obj)
+        {
+            return FindChild(obj) != null;
         }
 
         /// <summary>
