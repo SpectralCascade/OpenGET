@@ -18,6 +18,9 @@ namespace OpenGET.UI
         [Auto.Hookup(Auto.Mode.Children)]
         protected Tab[] tabs = new Tab[0];
 
+        [Tooltip("Optional NavigationBlock.")]
+        public NavigationBlock navigationBlock;
+
         /// <summary>
         /// Current active tab index.
         /// </summary>

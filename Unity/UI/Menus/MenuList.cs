@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using System.Linq;
+using UnityEngine.UI;
+
 
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -31,6 +33,8 @@ namespace OpenGET.UI
         [Auto.NullCheck]
         [Tooltip("The prefab for a toggle button element.")]
         private ButtonToggle elementTogglePrefab;
+
+        //private ButtonElement elementButtonPrefab;
 
         [SerializeField]
         [Auto.NullCheck]
@@ -122,26 +126,26 @@ namespace OpenGET.UI
                 return this;
             }
 
-            public delegate void OnAdded<T>(T added) where T : MonoBehaviour;
+            public delegate void OnAdded<T>(T added, T previous = null) where T : MonoBehaviour;
 
             /// <summary>
             /// Add a custom prefab that implements IElement.
             /// </summary>
-            public ElementContainer Add<T, V>(T prefab, V value, OnAdded<T> onAdded = null, ElementContainer containerPrefab = null) where T : MonoBehaviour, IElement
+            public ElementContainer Add<T, V>(T prefab, V value, out T created, OnAdded<T> onAdded = null, ElementContainer containerPrefab = null, T previous = null) where T : MonoBehaviour, IElement
             {
                 ElementContainer container = containerPrefab != null ? Instantiate(containerPrefab, root.transform) : null;
-                T loaded = GameObject.Instantiate(prefab, (container != null ? container.content.transform : null) ?? root.transform);
+                created = GameObject.Instantiate(prefab, (container != null ? container.content.transform : null) ?? root.transform);
                 if (container != null)
                 {
-                    container.element = loaded;
+                    container.element = created;
                 }
-                added.Add(container as MonoBehaviour ?? loaded);
-                elements.Add(container as IElement ?? loaded);
+                added.Add(container as MonoBehaviour ?? created);
+                elements.Add(container as IElement ?? created);
 
-                loaded.SetValue(value);
+                created.SetValue(value);
                 if (onAdded != null)
                 {
-                    onAdded(loaded);
+                    onAdded(created, previous);
                 }
                 return container;
             }
@@ -188,7 +192,7 @@ namespace OpenGET.UI
         /// Build the menu list, using reflection. Returns the group type name.
         /// Optionally specify tooltip text that should be set when elements are hovered.
         /// </summary>
-        public string Build(object group, TMPro.TextMeshProUGUI tooltipText = null, string groupDescription = null)
+        public string Build(object group, NavigationBlock.Neighbours neighbours, TMPro.TextMeshProUGUI tooltipText = null, string groupDescription = null)
         {
             // Start the generation process
             builder.Begin(root);
@@ -218,7 +222,8 @@ namespace OpenGET.UI
                 if (type == typeof(float))
                 {
                     // Slider
-                    container = builder.Add(elementSliderPrefab, fieldValue, (SliderElement slider) => {
+                    container = builder.Add(elementSliderPrefab, fieldValue, out SliderElement loaded, (slider, prev) =>
+                    {
                         slider.text.text = (applyField as IApplySetting).GetName() ?? field.Name;
                         slider.button.onClick.AddListener(() => {
                             // TODO map slider value according to any field attributes if available.
@@ -259,7 +264,7 @@ namespace OpenGET.UI
                 {
                     // Toggle
                     ButtonToggle prefab = elementToggleGamepadPrefab != null && Input.InputHelper.Get(0).usingGamepad ? elementToggleGamepadPrefab : elementTogglePrefab;
-                    container = builder.Add(prefab, fieldValue, (ButtonToggle button) =>
+                    container = builder.Add(prefab, fieldValue, out ButtonToggle loaded, (button, prev) =>
                     {
                         button.text.text = (applyField as IApplySetting).GetName() ?? field.Name;
                         button.onToggle += (bool toggled) => {
@@ -304,7 +309,7 @@ namespace OpenGET.UI
                     // Dropdown/carousel selection
                     DropdownElement element =
                         elementDropdownGamepadPrefab != null && Input.InputHelper.Get(0).usingGamepad ? elementDropdownGamepadPrefab : elementDropdownPrefab;
-                    container = builder.Add(element, (int)fieldValue, (DropdownElement dropdown) =>
+                    container = builder.Add(element, (int)fieldValue, out DropdownElement loaded, (dropdown, prev) =>
                     {
                         // TODO: Localise option names instead of just grabbing enum member names...
                         bool isEnum = type.IsEnum;
@@ -356,15 +361,18 @@ namespace OpenGET.UI
                 else if (fieldValue is IActionMapBindings)
                 {
                     IActionMapBindings map = fieldValue as IActionMapBindings;
-                    foreach (InputAction action in map.actions) {
+                    InputActionElement loaded = null;
+                    foreach (InputAction action in map.actions)
+                    {
                         if (map.enabledMaps != null && !map.enabledMaps.Contains(action.actionMap.name))
                         {
                             // Skip uneditable maps
                             continue;
                         }
                         string[] enabledBinds = map.GetEnabledBindGroups();
-                        if (enabledBinds != null && enabledBinds.Where(
-                            x => {
+                        if (enabledBinds != null && enabledBinds.Count(
+                            x =>
+                            {
                                 if (string.IsNullOrEmpty(x))
                                 {
                                     return false;
@@ -380,7 +388,7 @@ namespace OpenGET.UI
                                 }
                                 return false;
                             }
-                        ).Count() <= 0)
+                        ) <= 0)
                         {
                             // Skip actions that have no enabled bindings.
                             continue;
@@ -393,12 +401,28 @@ namespace OpenGET.UI
                         ElementContainer created = builder.Add(
                             elementInputActionPrefab,
                             action,
-                            (element) => {
+                            out loaded,
+                            (element, previous) =>
+                            {
+                                // Setup inner navigation block neighbours
+                                if (previous != null)
+                                {
+                                    element.navigationBlock.neighbours.up = previous.navigationBlock;
+                                    previous.navigationBlock.neighbours.down = element.navigationBlock;
+                                }
+                                else
+                                {
+                                    element.navigationBlock.neighbours.up = neighbours.up;
+                                }
+                                element.navigationBlock.neighbours.down = neighbours.down;
+
+                                // Now setup bindings
                                 element.enabledControls = enabledBinds;
                                 element.UpdateBindings();
                                 object innerCapApplyField = applyField;
                                 object innerCapField = field;
-                                element.onBindChanged.AddListener((a) => {
+                                element.onBindChanged.AddListener((a) =>
+                                {
                                     // Note: As map is a struct, we don't need to do a capture.
                                     // However, the changes applied to it MUST be copied to the matching settings field.
                                     map.UpdateAction(a);
@@ -412,8 +436,13 @@ namespace OpenGET.UI
                                         field.SetValue(group, map);
                                     }
                                 });
+                                if (lastSelectedChild == null)
+                                {
+                                    lastSelectedChild = element.selectable.gameObject;
+                                }
                             },
-                            elementContainerPrefab
+                            elementContainerPrefab,
+                            loaded
                         );
                     }
                 }

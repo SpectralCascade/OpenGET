@@ -10,7 +10,7 @@ namespace OpenGET.UI
     /// <summary>
     /// A button with text.
     /// </summary>
-    public class TextButton : AutoBehaviour, IPointerEnterHandler, IPointerExitHandler, IScrollHandler, NavigationBlock.IElement
+    public class TextButton : AutoBehaviour, IPointerEnterHandler, IPointerExitHandler, IScrollHandler, NavigationBlock.IElement, ISelectHandler
     {
 
         /// <summary>
@@ -36,6 +36,11 @@ namespace OpenGET.UI
         public Selectable selectable => button;
 
         /// <summary>
+        /// Refresh parent navigation block on selection (if available).
+        /// </summary>
+        public bool refreshNavOnSelect = false;
+
+        /// <summary>
         /// Event for handling a hover enter or exit event.
         /// </summary>
         public UnityEngine.Events.UnityEvent<bool> onHoverChange = new UnityEngine.Events.UnityEvent<bool>();
@@ -58,6 +63,19 @@ namespace OpenGET.UI
             if (_containerScrollRect != null)
             {
                 _containerScrollRect.OnScroll(eventData);
+            }
+        }
+
+        public void OnSelect(BaseEventData eventData)
+        {
+            if (refreshNavOnSelect)
+            {
+                NavigationBlock parentNav = transform.parent.GetComponent<NavigationBlock>();
+                if (parentNav.HasChild(gameObject))
+                {
+                    // Refresh navigation on selection if enabled
+                    parentNav.SetDirty(NavigationBlock.Refresh.Navigation);
+                }
             }
         }
     }

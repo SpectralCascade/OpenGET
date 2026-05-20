@@ -105,7 +105,8 @@ namespace OpenGET.UI
                 // Add all possible options to the list
                 for (int i = 0, counti = options.Length; i < counti; i++)
                 {
-                    builder.Add(optionButtonPrefab, (TextButton button) => {
+                    builder.Add(optionButtonPrefab, (button, prev) =>
+                    {
                         // Capture index by value for inner lambda
                         int index = i;
                         // TODO: Localise

@@ -76,15 +76,29 @@ namespace OpenGET.UI
         public struct Neighbours
         {
             public NavigationBlock up;
+            public NeighbourMode upMode;
             public NavigationBlock down;
+            public NeighbourMode downMode;
             public NavigationBlock left;
+            public NeighbourMode leftMode;
             public NavigationBlock right;
+            public NeighbourMode rightMode;
         }
 
         public enum LayoutDirection
         {
             Vertical = 0,
             Horizontal
+        }
+
+        /// <summary>
+        /// Which child to select when switching to a neighbouring navigation block.
+        /// </summary>
+        public enum NeighbourMode
+        {
+            Closest = 0,
+            First,
+            Last
         }
 
         /// <summary>
@@ -275,6 +289,23 @@ namespace OpenGET.UI
             return best;
         }
 
+        public Element GetFirst()
+        {
+            return children.FirstOrDefault();
+        }
+
+        public Element GetLast()
+        {
+            return children.LastOrDefault();
+        }
+
+        public Element GetElement(Element origin, NeighbourMode mode) => mode switch
+        {
+            NeighbourMode.First => GetFirst(),
+            NeighbourMode.Last => GetLast(),
+            _ => GetClosestElement(origin)
+        };
+
         protected void OnTransformChildrenChanged()
         {
             refresh |= Refresh.Init;
@@ -322,6 +353,7 @@ namespace OpenGET.UI
             {
                 children.Add(element);
             }
+            Log.Debug("\"{0}\" is adding child \"{1}\"", SceneNavigator.GetPath(this), SceneNavigator.GetPath(element.selectable));
             return element;
         }
         
@@ -349,6 +381,7 @@ namespace OpenGET.UI
                 {
                     if (children[i] == null || children[i].selectable == null || children[i].isAutomatic)
                     {
+                        Log.Debug("Removing child {0} from {1}", children[i] != null && children[i].selectable != null ? SceneNavigator.GetPath(children[i].selectable) : i, SceneNavigator.GetPath(this));
                         children.SwapRemoveAt(i);
                     }
                 }
@@ -414,10 +447,10 @@ namespace OpenGET.UI
                     {
                         mode = Navigation.Mode.Explicit,
                         wrapAround = false,
-                        selectOnUp = vert && prev != null ? prev : neighbours.up?.GetClosestElement(child)?.selectable,
-                        selectOnDown = vert && next != null ? next : neighbours.down?.GetClosestElement(child)?.selectable,
-                        selectOnLeft = !vert && prev != null ? prev : neighbours.left?.GetClosestElement(child)?.selectable,
-                        selectOnRight = !vert && next != null ? next : neighbours.right?.GetClosestElement(child)?.selectable,
+                        selectOnUp = vert && prev != null ? prev : neighbours.up?.GetElement(child, neighbours.upMode)?.selectable,
+                        selectOnDown = vert && next != null ? next : neighbours.down?.GetElement(child, neighbours.downMode)?.selectable,
+                        selectOnLeft = !vert && prev != null ? prev : neighbours.left?.GetElement(child, neighbours.leftMode)?.selectable,
+                        selectOnRight = !vert && next != null ? next : neighbours.right?.GetElement(child, neighbours.rightMode)?.selectable,
                     };
                     prev = child.selectable;
                 }

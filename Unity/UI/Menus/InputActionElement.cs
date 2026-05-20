@@ -13,7 +13,7 @@ namespace OpenGET.UI
     /// <summary>
     /// Lists one or more editable input bindings associated with an InputAction.
     /// </summary>
-    public class InputActionElement : Element
+    public class InputActionElement : Element, NavigationBlock.IElement
     {
         /// <summary>
         /// Prefab for editing a single binding associated with this action.
@@ -28,9 +28,16 @@ namespace OpenGET.UI
         public Transform bindsRoot;
 
         /// <summary>
-        /// All rebinding elements. Warning: Some entries may be null e.g. parts of composite bindings, or hidden bindings.
+        /// WARNING: Some entries may be null e.g. parts of composite bindings, or hidden bindings.
         /// </summary>
         private List<InputBinding> binds = new List<InputBinding>();
+
+        /// <summary>
+        /// A navigation block is expected.
+        /// </summary>
+        [Auto.NullCheck]
+        [Auto.Hookup]
+        public NavigationBlock navigationBlock;
 
         [Tooltip("Optional text label that will receive the name of the action.")]
         [SerializeField]
@@ -51,18 +58,60 @@ namespace OpenGET.UI
         /// <summary>
         /// Reference to the action that is to be rebound.
         /// </summary>
-        public InputAction action {
+        public InputAction action
+        {
             get => _action;
-            set {
+            set
+            {
                 _action = value;
                 UpdateBindings();
             }
         }
 
+        private InputBinding selectedBinding => binds.FirstOrDefault(x => x != null);
+
+        public Navigation navigation { get => selectedBinding != null ? selectedBinding.navigation : new Navigation(); set => SetupNavigation(value); }
+
+        public Selectable selectable => selectedBinding != null ? selectedBinding.selectable : null;
+
         /// <summary>
         /// Action instance. Note - this is NOT necessarily the only instance to be modified.
         /// </summary>
         private InputAction _action;
+
+        /// <summary>
+        /// Assumes horizontal layout for bindings.
+        /// </summary>
+        private void SetupNavigation(Navigation nav)
+        {
+            int prev = -1;
+            for (int i = 0, counti = binds.Count; i < counti; i++)
+            {
+                if (binds[i] != null)
+                {
+                    binds[i].navigation = new Navigation()
+                    {
+                        selectOnDown = nav.selectOnDown,
+                        selectOnUp = nav.selectOnUp,
+                        selectOnLeft = prev >= 0 && binds[prev] != null ? binds[prev].selectable : null,
+                        selectOnRight = null, // This is set by the next bind
+                        mode = Navigation.Mode.Explicit,
+                        wrapAround = false
+                    };
+
+                    // Set previous nav right select
+                    if (prev >= 0)
+                    {
+                        Navigation prevNav = binds[prev].navigation;
+                        prevNav.selectOnRight = binds[i].selectable;
+                        binds[prev].navigation = prevNav;
+                    }
+
+                    prev = i;
+                }
+            }
+        }
+
 #endif
 
         public void UpdateActionLabel()
@@ -78,23 +127,26 @@ namespace OpenGET.UI
         public void UpdateBindings()
         {
 #if ENABLE_INPUT_SYSTEM
-            if (action != null) {
+            if (action != null)
+            {
                 // Setup bindings
-                int counti = action.bindings.Count;
-                for (int i = 0; i < counti; i++) {
+                for (int i = 0, counti = action.bindings.Count; i < counti; i++)
+                {
                     InputBinding bind = null;
                     if (i >= binds.Count)
                     {
                         // Only show bindings for enabled control schemes (AKA bind groups)
                         UnityEngine.InputSystem.InputBinding binding = action.bindings[i];
                         bool bindingEnabled = enabledControls == null || enabledControls.FirstOrDefault(
-                            x => {
+                            x =>
+                            {
                                 string groups = binding.groups;
                                 if (!string.IsNullOrEmpty(groups) && groups.Contains(x))
                                 {
                                     return true;
                                 }
-                                if (binding.isComposite) {
+                                if (binding.isComposite)
+                                {
                                     // Step through subsequent composite parts and check for a valid one
                                     for (int index = i + 1; index < counti; index++)
                                     {
@@ -120,7 +172,8 @@ namespace OpenGET.UI
                         // Handle rebind event
                         if (bind != null)
                         {
-                            bind.stopRebindEvent.AddListener((bindData, op) => {
+                            bind.stopRebindEvent.AddListener((bindData, op) =>
+                            {
                                 if (!op.canceled && op.completed)
                                 {
                                     onBindChanged?.Invoke(action);
@@ -136,7 +189,7 @@ namespace OpenGET.UI
                 }
 
                 // Cleanup old bindings if any
-                for (int i = counti; i < binds.Count;)
+                for (int i = action.bindings.Count; i < binds.Count;)
                 {
                     if (binds[i] != null)
                     {
@@ -145,6 +198,7 @@ namespace OpenGET.UI
                     binds.SwapRemoveAt(i);
                 }
             }
+            navigationBlock.SetDirty(NavigationBlock.Refresh.Navigation);
             UpdateActionLabel();
 #endif
         }

@@ -18,7 +18,7 @@ namespace OpenGET.UI
     /// Element used to modify a single binding of an InputAction.
     /// Partly based on the Unity InputSystem RebindActionUI sample script.
     /// </summary>
-    public class InputBinding : ScrollPassback
+    public class InputBinding : ScrollPassback, NavigationBlock.IElement
     {
         // This is a necessary evil due to input actions being tied to specific runtime instances of InputActionAsset,
         // rather than referencing a single instance of an asset
@@ -26,6 +26,14 @@ namespace OpenGET.UI
         private UIController _UI = null;
 
         private InputActionElement actionElement;
+
+        /// <summary>
+        /// Selectable bind button.
+        /// </summary>
+        [SerializeField]
+        [Auto.NullCheck]
+        [Auto.Hookup]
+        private Button button;
 
         /// <summary>
         /// Generate and show the options list.
@@ -39,7 +47,7 @@ namespace OpenGET.UI
                 s_RebindActionUIs = new List<InputBinding>();
             }
             s_RebindActionUIs.Add(this);
-            
+
             if (s_RebindActionUIs.Count == 1)
             {
                 InputSystem.onActionChange += OnActionChange;
@@ -158,6 +166,10 @@ namespace OpenGET.UI
         /// Otherwise, it is <c>null</c>.
         /// </summary>
         public InputActionRebindingExtensions.RebindingOperation ongoingRebind => m_RebindOperation;
+
+        public Navigation navigation { get => button.navigation; set => button.navigation = value; }
+
+        public Selectable selectable => button;
 
         /// <summary>
         /// Keep track of whether the action map being rebound should be enabled.
