@@ -69,16 +69,28 @@ namespace OpenGET.UI
         public UnityEngine.Events.UnityEvent onTabDeactivate;
 
         /// <summary>
-        /// Activated button state.
+        /// Activated button state (deselected).
         /// </summary>
         [SerializeField]
         protected ButtonState activatedState;
 
         /// <summary>
-        /// Deactivated button state.
+        /// Activated button state (selected).
+        /// </summary>
+        [SerializeField]
+        protected ButtonState activatedSelectedState;
+
+        /// <summary>
+        /// Deactivated button state (deselected).
         /// </summary>
         [SerializeField]
         protected ButtonState deactivatedState;
+
+        /// <summary>
+        /// Deactivated button state (selected).
+        /// </summary>
+        [SerializeField]
+        protected ButtonState deactivatedSelectedState;
 
         /// <summary>
         /// Is this the active tab?
@@ -138,7 +150,7 @@ namespace OpenGET.UI
                     button.colors = new ColorBlock
                     {
                         normalColor = activated ? activatedState.colour : deactivatedState.colour,
-                        selectedColor = activated ? activatedState.colour : deactivatedState.colour,
+                        selectedColor = activated ? activatedSelectedState.colour : deactivatedSelectedState.colour,
                         colorMultiplier = button.colors.colorMultiplier,
                         disabledColor = button.colors.disabledColor,
                         pressedColor = button.colors.pressedColor,
@@ -150,7 +162,7 @@ namespace OpenGET.UI
                     button.image.sprite = activated ? activatedState.sprite : deactivatedState.sprite;
                     button.spriteState = new SpriteState
                     {
-                        selectedSprite = activated ? activatedState.sprite : deactivatedState.sprite,
+                        selectedSprite = activated ? activatedSelectedState.sprite : deactivatedSelectedState.sprite,
                         disabledSprite = button.spriteState.disabledSprite,
                         highlightedSprite = button.spriteState.highlightedSprite,
                         pressedSprite = button.spriteState.pressedSprite
