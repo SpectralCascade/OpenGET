@@ -42,6 +42,11 @@ namespace OpenGET.UI
                 this.takeInputControl = takeInputControl;
             }
 
+            public Parameters(bool takeInputControl)
+            {
+                this.takeInputControl = takeInputControl;
+            }
+
             /// <summary>
             /// Title text.
             /// </summary>
@@ -246,6 +251,30 @@ namespace OpenGET.UI
         /// Callback to get the bounds this modal should avoid overlap with.
         /// </summary>
         private GetAvoidanceArea avoid;
+
+        /// <summary>
+        /// Show an embedded, non-dynamic popup. Auto selects last non-null button.
+        /// </summary>
+        public void ShowEmbedded(UIController UI)
+        {
+            this._UI = UI;
+            data = new Parameters(true);
+            UI.events.SetSelectedGameObject(null);
+            gameObject.SetActive(true);
+            UI.input.RequestInputControl(gameObject);
+            UI.events.SetSelectedGameObject(
+                buttonSecondary != null ? buttonSecondary.gameObject : (buttonPrimary != null ? buttonPrimary.gameObject : buttonClose.gameObject)
+            );
+        }
+
+        /// <summary>
+        /// Hide an embedded, non-dynamic popup.
+        /// </summary>
+        public void HideEmbedded()
+        {
+            gameObject.SetActive(false);
+            _UI.input.FreeInputControl(gameObject);
+        }
 
         /// <summary>
         /// Show a modal popup.

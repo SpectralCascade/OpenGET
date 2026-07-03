@@ -48,15 +48,15 @@ namespace OpenGET
         {
             showText = showText && !string.IsNullOrEmpty(_text);
             bool gotStyle = showText && !string.IsNullOrEmpty(style);
-            showGlyph = showGlyph && !string.IsNullOrEmpty(id);
+            showGlyph = showGlyph && !string.IsNullOrEmpty(glyphId);
             showLink = showLink && !string.IsNullOrEmpty(description);
             return (showLink ? $"<link=\"{name}\">" : "") 
                 + (gotStyle ? $"<style={style}>" : "")
                 + text
                 + (gotStyle ? "</style>" : "")
                 + (showLink ? "</link>" : "")
-                + (showGlyph ? (showText ? " " : "") 
-                + "<sprite" + (spriteSheet != null ? $"=\"{spriteSheet.name}\"" : "") + $" name=\"{id}\"" + (tintGlyph ? " tint=1" : "") + ">" : "");
+                + (showGlyph ? (showText ? " " : "")
+                + "<sprite" + (spriteSheet != null ? $"=\"{spriteSheet.name}\"" : "") + $" name=\"{glyphId}\"" + (tintGlyph ? " tint=1" : "") + ">" : "");
         }
 
         public override string ToString()

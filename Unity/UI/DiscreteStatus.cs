@@ -41,6 +41,11 @@ namespace OpenGET.UI
 
             [Tooltip("Optional collection of gameobjects to enable.")]
             public GameObject[] enable;
+
+            public override string ToString()
+            {
+                return $"<color=#{ColorUtility.ToHtmlStringRGBA(color)}>" + Localise.Text(rawText) + "</color>";
+            }
         }
 
         [Tooltip("Your custom statuses.")]
@@ -91,6 +96,14 @@ namespace OpenGET.UI
             previous = current;
             current = index;
             UpdateStatus();
+        }
+
+        /// <summary>
+        /// Get a specific status.
+        /// </summary>
+        public State GetStatus(int index)
+        {
+            return states[index];
         }
 
         /// <summary>
@@ -155,7 +168,7 @@ namespace OpenGET.UI
         public string GetTooltip()
         {
             return string.IsNullOrEmpty(status.rawText) ? "" :
-                (setTextColour ? $"<color={status.color}>" : "") + Localise.Text(status.rawText) + (setTextColour ? $"</color>" : "");
+                (setTextColour ? $"<color=#{ColorUtility.ToHtmlStringRGBA(status.color)}>" : "") + Localise.Text(status.rawText) + (setTextColour ? $"</color>" : "");
         }
     }
 

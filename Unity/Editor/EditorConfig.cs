@@ -47,6 +47,32 @@ namespace OpenGET
         }
 
         [System.Serializable]
+        public class TextConversion
+        {
+            [System.Serializable]
+            public struct FindReplacePair
+            {
+                public string find;
+                public string replace;
+            }
+
+            /// <summary>
+            /// All text to find-and-replace.
+            /// </summary>
+            public FindReplacePair[] findAndReplace = new FindReplacePair[0];
+
+            /// <summary>
+            /// Paths that should be considered during strings extraction, relative to project assets directory.
+            /// </summary>
+            public string[] scriptIncludePaths = new string[0];
+
+            public string fileReadEncoding = "UTF-8";
+
+            public string fileWriteEncoding = "UTF-8";
+
+        }
+
+        [System.Serializable]
         public class BuildUploader
         {
             [System.Flags]
@@ -297,6 +323,11 @@ namespace OpenGET
         /// Editor localisation settings.
         /// </summary>
         public Localisation localisation = new();
+
+        /// <summary>
+        /// Fix file encodings + find & replace.
+        /// </summary>
+        public TextConversion textConversion = new();
 
         /// <summary>
         /// Tooling data for rendering a prefab to a 2D sprite.

@@ -28,11 +28,13 @@ namespace OpenGET
         [SerializeField]
         protected TMPro.TMP_SpriteAsset spriteSheet;
 
+        public virtual string id => name;
+
         /// <summary>
         /// Identifier of the glyph to use in the sprite sheet.
         /// Override this in a derivative class for custom behaviour.
         /// </summary>
-        public virtual string id => glyphName;
+        public virtual string glyphId => glyphName;
 
         [Tooltip("Identifier for the glyph to use in the sprite sheet. If empty, no glyph will be shown.")]
         [SerializeField]
@@ -40,7 +42,7 @@ namespace OpenGET
 
         public override string ToString()
         {
-            return $"{(string.IsNullOrEmpty(_text) ? "" : "<b>" + text + "</b> ")}" + (!string.IsNullOrEmpty(id) ? "<sprite=\"{spriteSheet.name}\" name=\"{id}\">" : "");
+            return $"{(string.IsNullOrEmpty(_text) ? "" : "<b>" + text + "</b> ")}" + (!string.IsNullOrEmpty(glyphId) ? $"<sprite=\"{spriteSheet.name}\" name=\"{glyphId}\">" : "");
         }
 
     }
