@@ -11,6 +11,20 @@ namespace OpenGET
     /// </summary>
     public static class Rand
     {
+        /// <summary>
+        /// Attempt to seed the RNG. Beware that if the default value of 0 is used, the current time is used as the seed.
+        /// Returns the seed.
+        /// </summary>
+        public static int Seed(int seed = 0)
+        {
+            if (seed == 0)
+            {
+                // Use current time as the seed. Note this may be prone to fakery.
+                seed = (int)System.DateTime.UtcNow.Ticks;
+            }
+            Random.InitState(seed);
+            return seed;
+        }
 
         /// <summary>
         /// Pick a random element from an array.
