@@ -374,6 +374,7 @@ namespace OpenGET.UI
         /// </summary>
         private void Init()
         {
+            Element[] old = children.ToArray();
             if (automatic)
             {
                 // First, remove all automatic elements
@@ -392,7 +393,8 @@ namespace OpenGET.UI
                     Transform child = transform.GetChild(i);
 
                     IElement element = child.GetComponent<IElement>();
-                    if (element != null && element.selectable != null && children.FirstOrDefault(x => x != null && (x.main == element || (x.selectable != null && child.GetComponent<Selectable>() == x.selectable))) == null)
+                    if (element != null && element.selectable != null &&
+                        children.FirstOrDefault(x => x != null && (x.main == element || (x.selectable != null && child.GetComponent<Selectable>() == x.selectable))) == null)
                     {
                         AddElement(element);
                     }
@@ -412,6 +414,17 @@ namespace OpenGET.UI
             children = children.OrderBy(
                 element => vert ? -element.selectable.transform.position.y : element.selectable.transform.position.x
             ).ToList();
+
+            // If there are changes, auto refresh navigation
+            for (int i = 0, counti = Mathf.Min(old.Length, children.Count); i < counti; i++)
+            {
+                if (children[i] != old[i])
+                {
+                    // Layout of children has changed, trigger a nav refresh
+                    refresh |= Refresh.Navigation;
+                    break;
+                }
+            }
 
             refresh &= ~Refresh.Init;
         }

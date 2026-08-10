@@ -107,6 +107,11 @@ namespace OpenGET.UI
         [Tooltip("Recommended - Shared tooltip used when no custom tooltip is specified.")]
         public TooltipPanel tooltipShared;
 
+        /// <summary>
+        /// Trigger a reselection of the topmost panel.
+        /// </summary>
+        private bool reselect;
+
         [Tooltip("Recommended - Required for setting scroll rect sensitivity via settings.")]
         [SerializeField]
         [Auto.NullCheck]
@@ -142,6 +147,15 @@ namespace OpenGET.UI
         }
         private int _currentPlayer = 0;
 
+        /// <summary>
+        /// Triggers reselection on LateUpdate.
+        /// </summary>
+        public void Reselect()
+        {
+            reselect = true;
+            events.SetSelectedGameObject(null);
+        }
+
         protected override void Awake()
         {
             base.Awake();
@@ -170,11 +184,11 @@ namespace OpenGET.UI
         }
 
         /// <summary>
-        /// Returns the topmost ViewPanel in the UI.
+        /// Returns the topmost ViewPanel in the UI that isn't fading out.
         /// </summary>
         public ViewPanel GetTopViewPanel()
         {
-            ViewPanel[] shown = activePanels.Where(x => x.gameObject.activeInHierarchy).ToArray();
+            ViewPanel[] shown = activePanels.Where(x => x.gameObject.activeInHierarchy && !x.fader.isFadingOut).ToArray();
             ViewPanel top = shown.Length > 0 ? shown[0] : null;
             List<int> bestIndexer = new List<int>();
             for (int i = 0, counti = shown.Length; i < counti; i++)
@@ -229,11 +243,10 @@ namespace OpenGET.UI
         public virtual void LateUpdate()
         {
             GameObject selected = events.currentSelectedGameObject;
-            if (ActionMoveSelection != null && ActionMoveSelection.IsPressed() && selected == null)
+            if (selected == null && (reselect || (ActionMoveSelection != null && ActionMoveSelection.IsPressed())))
             {
                 // Attempt to reselect the top view panel if nothing is selected currently
                 ViewPanel found = GetTopViewPanel();
-                Log.Debug("Attempting reselect with panel {0}", SceneNavigator.GetPath(found));
                 if (found != null)
                 {
                     found.TryReselect();

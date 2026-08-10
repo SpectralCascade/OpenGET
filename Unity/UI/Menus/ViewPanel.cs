@@ -397,7 +397,7 @@ namespace OpenGET.UI {
         }
 
         /// <summary>
-        /// Reselects the last selected child, if no object is currently selected.
+        /// Reselects the last selected child, if no object is currently selected. Otherwise selects the "selectOnShow" child (if there is one).
         /// </summary>
         public void TryReselect()
         {
@@ -406,6 +406,10 @@ namespace OpenGET.UI {
             {
                 // Re-select the last selected object if we start navigating again after deselection has occurred.
                 UI.events.SetSelectedGameObject(lastSelectedChild);
+            }
+            else if (selected == null && selectOnShow != null && selectOnShow.gameObject.activeInHierarchy)
+            {
+                UI.events.SetSelectedGameObject(selectOnShow.gameObject);
             }
         }
 

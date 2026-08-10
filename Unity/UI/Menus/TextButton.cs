@@ -70,8 +70,8 @@ namespace OpenGET.UI
         {
             if (refreshNavOnSelect)
             {
-                NavigationBlock parentNav = transform.parent.GetComponent<NavigationBlock>();
-                if (parentNav.HasChild(gameObject))
+                NavigationBlock parentNav = GetComponentInParent<NavigationBlock>();
+                if (parentNav != null && parentNav.HasChild(gameObject))
                 {
                     // Refresh navigation on selection if enabled
                     parentNav.SetDirty(NavigationBlock.Refresh.Navigation);
