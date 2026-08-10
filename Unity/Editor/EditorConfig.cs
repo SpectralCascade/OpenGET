@@ -174,7 +174,8 @@ namespace OpenGET
             public string[] includeAssetTypes = new string[] {
                 "UnityEngine.Sprite",
                 "UnityEngine.AudioClip",
-                "UnityEngine.AnimationClip"
+                "UnityEngine.AnimationClip",
+                "UnityEngine.TextAsset"
             };
 
             [Tooltip("Include specific prefab types in addition to IReferrable implementations. IMPORTANT: Use fully-qualified type names.")]
