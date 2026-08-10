@@ -650,7 +650,6 @@ namespace OpenGET.UI
         /// <summary>
         /// Called when the modal is closed.
         /// </summary>
-        [SerializeField]
         public void OnClose()
         {
             if (data.takeInputControl)
