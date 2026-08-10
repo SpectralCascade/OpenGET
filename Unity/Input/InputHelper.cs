@@ -307,12 +307,14 @@ namespace OpenGET.Input
                     if (binding.groups != null && controlScheme != null && binding.groups.Contains(controlScheme) && !binding.isComposite)
                     {
                         // Get a text display string using Unity's built-in method
+                        // NOTE: Unity being Unity, this seems to be inconsistent on different platforms such as Linux...
                         string bindString = action.GetBindingDisplayString(
                             i,
                             out deviceLayoutName,
                             out controlPath,
                             displayOptions
                         );
+                        //Log.Debug("BIND STRING for {0} = \"{1}\"", action.name, bindString);
                         string spriteName = binding.path;
                         string textDisplayFormat = "{0}";
                         bool showTextAlways = false;
