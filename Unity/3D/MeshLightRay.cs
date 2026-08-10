@@ -39,6 +39,10 @@ namespace OpenGET
         [Tooltip("What colour to use for the effect.")]
         public Color color = Color.white;
 
+        [Tooltip("Opacity multiplier. This can only be set in editor. Allows you to limit how intense/contrasting the light ray appears to be.")]
+        [SerializeField]
+        private float intensityMod = 1f;
+
         [Tooltip("Worldspace direction vector to use for the angle (normalised).")]
         public Vector3 direction = new Vector3(0, 0, 1);
 
@@ -83,7 +87,7 @@ namespace OpenGET
                     angle >= maxAngle ? 0f : Mathf.Lerp(1, 0, (angle - min) / Mathf.Max(float.Epsilon, maxAngle - min))
                 );
 
-                mat.SetColor(PropColour, Colors.Alpha(color, color.a * angleFactor));
+                mat.SetColor(PropColour, Colors.Alpha(color, color.a * angleFactor * intensityMod));
                 mat.SetFloat(PropDistance, distance);
                 mat.SetFloat(PropSpread, spread);
                 // Set the direction to world space
