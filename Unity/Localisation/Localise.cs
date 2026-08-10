@@ -20,7 +20,7 @@ namespace OpenGET
         public readonly int index;
 
         /// <summary>
-        /// The name of the language within the language, e.g. "Español".
+        /// The name of the language (in it's own language), e.g. "Español".
         /// </summary>
         public readonly string localisedName;
 
@@ -30,9 +30,14 @@ namespace OpenGET
         public readonly string code;
 
         /// <summary>
-        /// Map of localisation keys to translated strings.
+        /// The dictionary to reference.
         /// </summary>
-        private Dictionary<string, string> map = new Dictionary<string, string>();
+        public bool isInitialised => map != null;
+
+        /// <summary>
+        /// Reference to the map of localisation strings.
+        /// </summary>
+        private Dictionary<string, string[]> map = null;
 
         public Language(int index, string localisedName, string code)
         {
@@ -42,9 +47,9 @@ namespace OpenGET
         }
 
         /// <summary>
-        /// Setup the data map of localisation keys to text strings.
+        /// Reset the map reference.
         /// </summary>
-        public void Init(Dictionary<string, string> map)
+        public void Init(Dictionary<string, string[]> map)
         {
             this.map = map;
         }
@@ -54,14 +59,23 @@ namespace OpenGET
         /// </summary>
         public Result<string> Get(string key)
         {
-            return map.ContainsKey(key) ? 
-                new Result<string>(value: map[key]) : 
-                new Result<string>(error: 
+            return key != null && map.ContainsKey(key) ?
+                new Result<string>(value: map[key][index]) :
+                new Result<string>(error:
                     string.Format("Failed to find string with localisation key \"{0}\" in language \"{1}\"", key, localisedName)
                 );
         }
 
-        /// TODO: add support for language-specific formatting (e.g. left and right quotation marks).
+        /// <summary>
+        /// Returns the raw localised name of the language along with the language code.
+        /// </summary>
+        public override string ToString()
+        {
+            return localisedName + " [" + code + "]";
+        }
+
+        /// TODO: add support for language-specific formatting (e.g. left and right quotation marks) where necessary.
+        /// These will only be used for dynamic localised text in code. Note: May be able to use C# "cultures" for these.
     }
 
     /// <summary>
@@ -82,28 +96,19 @@ namespace OpenGET
         /// <summary>
         /// Load an array of localisation strings from a CSV file.
         /// </summary>
-        public static Dictionary<string, string>[] LoadLanguages(TextAsset csv)
+        public static Dictionary<string, string[]> LoadLanguages(TextAsset csv)
         {
-            // TODO: Handle newline characters properly
-            string[] lines = csv.text.Split('\n');
-            string[] entries = lines[0].Trim().Split(',');
-            Dictionary<string, string>[] data = new Dictionary<string, string>[entries.Length];
-            for (int i = 0, counti = entries.Length - 1; i < counti; i++)
+            CSVFile.CSVReader loaded = CSVFile.CSVReader.FromString(csv.text);
+            string[][] raw = loaded.ToArray();
+
+            // TODO: Consider using hash codes instead of strings for (potentially) faster retrieval
+            Dictionary<string, string[]> data = new Dictionary<string, string[]>();
+            for (int i = 0, counti = raw.Length; i < counti; i++)
             {
-                entries[i] = entries[i].Trim('\"');
-                data[i] = new Dictionary<string, string>();
+                data[raw[i][0]] = raw[i];
             }
 
-            // Line-by-line loading from the CSV
-            for (int i = 1, counti = lines.Length; i < counti; i++)
-            {
-                // Regex split to handle various characters
-                entries = Regex.Split(lines[i].Trim(), ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
-                for (int entry = 1, numEntries = entries.Length; entry < numEntries; entry++) {
-                    data[entry - 1][entries[0].Trim('\"')] = entries[entry].Trim('\"');
-                }
-            }
-            Log.Debug("Loaded {0} languages with a total of {1} entries.", data.Length, lines.Length);
+            Log.Debug("Loaded {0} language(s) with a total of {1} entries.", raw.Length > 0 ? raw[0].Length : 0, raw.Length);
 
             return data;
         }
@@ -147,9 +152,9 @@ namespace OpenGET
             {
                 Result<string> res = language.Get(raw);
 #if UNITY_EDITOR
-                if (res.hasError)
+                if (res.hasError && language.index != 0)
                 {
-                    Log.Error(
+                    Log.Warning(
                         "Failed to get string localisation for language: {0}, raw string: \"{0}\"",
                         language.localisedName,
                         raw
