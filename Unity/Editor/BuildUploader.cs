@@ -232,13 +232,6 @@ namespace OpenGET.Editor
         /// </summary>
         private async Task RunSteampipeUpload()
         {
-            string contentRoot = EditorUtility.OpenFolderPanel("Select Build Content Directory", Application.dataPath, "");
-            if (string.IsNullOrEmpty(contentRoot))
-            {
-                // Cancelled
-                return;
-            }
-
             // Determine if chosen configuration is valid
             string configKey = KeyPrefixAppSteamworks + "config";
             string configId = TryGetPref(configKey);
@@ -249,6 +242,24 @@ namespace OpenGET.Editor
                 return;
             }
             EditorConfig.BuildUploader.Config chosen = config.buildUploader.configs.First(x => x.id == configId);
+
+            // Check if all depots have ContentRoots; if not, a fallback must be selected
+            string contentRoot = null;
+            for (int i = 0, counti = chosen.depots.Length; i < counti; i++)
+            {
+                if (string.IsNullOrEmpty(chosen.depots[i].contentRoot))
+                {
+                    Log.Warning("Depot {0} [{1}] has no ContentRoot specified, prompting for fallback directory...", i, chosen.depots[i].id);
+                    contentRoot = EditorUtility.OpenFolderPanel("Select Build Content Directory", Application.dataPath, "");
+                    if (string.IsNullOrEmpty(contentRoot))
+                    {
+                        // Cancelled, early out
+                        Log.Debug("Cancelled upload.");
+                        return;
+                    }
+                    break;
+                }
+            }
 
             // Get script file output paths
             string appBuildPath = TryGetPref(KeyPrefixAppSteamworks + "CWD");
@@ -270,7 +281,8 @@ namespace OpenGET.Editor
                 VDF_TryGetKV(indent, "Desc") +
                 VDF_TryGetKV(indent, "Preview") +
                 VDF_TryGetKV(indent, "SetLive") +
-                VDF_KeyValue(indent, "ContentRoot", contentRoot) +
+                // Note: ContentRoot is overridden by depots
+                (string.IsNullOrEmpty(contentRoot) ? "" : VDF_KeyValue(indent, "ContentRoot", contentRoot)) +
                 VDF_TryGetKV(indent, "BuildOutput") +
                 VDF_TryGetKV(indent, "verbose") +
                 VDF_KeyObject(indent, "Depots", indent =>
@@ -284,6 +296,11 @@ namespace OpenGET.Editor
                     return output;
                 })
             );
+
+            if (!EditorUtility.DisplayDialog("CONFIRM STEAM BUILD UPLOAD", $"Are you sure you want to upload to Steam? Config:\n{appBuild}", "Upload Build", "Cancel"))
+            {
+                return;
+            }
 
             // Write app build script file
             File.WriteAllText(appFilePath, appBuild);
