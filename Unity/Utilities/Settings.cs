@@ -24,6 +24,8 @@ namespace OpenGET
 
         public delegate string GetText();
 
+        public delegate object[] GetCustomData();
+
         /// <summary>
         /// Create a new setting.
         /// </summary>
@@ -48,7 +50,7 @@ namespace OpenGET
             GetText name = null,
             GetText desc = null,
             OnSettingUpdate onUpdate = null,
-            object[] customData = null
+            GetCustomData customData = null
         )
         {
             this.value = value;
@@ -58,7 +60,7 @@ namespace OpenGET
             this.autoRevertTime = autoRevertTime;
             this.getName = name;
             this.getDescription = desc;
-            this.customData = customData ?? new object[0];
+            this.getCustomData = customData;
         }
 
         public static implicit operator T(Setting<T> s)
@@ -111,7 +113,7 @@ namespace OpenGET
         /// Custom data that will be not be serialised.
         /// </summary>
         [NonSerialized]
-        public object[] customData;
+        public GetCustomData getCustomData;
 
         /// <summary>
         /// Apply the setting.

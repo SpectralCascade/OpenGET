@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using OpenGET.UI;
 using System;
+using System.Linq;
 
 namespace OpenGET.Bootstrap
 {
@@ -19,6 +20,66 @@ namespace OpenGET.Bootstrap
         [Serializable]
         public class Video
         {
+
+            [Dropdown]
+            public Setting<int> display = new Setting<int>(
+                apply: (index) =>
+                {
+                    if (index < Display.displays.Length)
+                    {
+#if UNITY_STANDALONE
+                        int oldIndex = index;
+                        Display display = Display.displays[index];
+                        List<DisplayInfo> layouts = new();
+                        Screen.GetDisplayLayout(layouts);
+                        if (index < layouts.Count)
+                        {
+                            bool wasFullscreen = Screen.fullScreen;
+                            Screen.fullScreenMode = FullScreenMode.Windowed;
+                            Screen.MoveMainWindowTo(layouts[index], Screen.mainWindowPosition);
+                            Screen.fullScreen = wasFullscreen;
+                        }
+#endif
+                    }
+                },
+                customData: () =>
+                {
+                    List<DisplayInfo> data = new List<DisplayInfo>();
+                    Screen.GetDisplayLayout(data);
+                    return data.Select((x, i) => $"[{i}] " + x.name).ToArray();
+                }
+            );
+
+            public enum WindowMode
+            {
+                BorderlessWindowed,
+#if UNITY_STANDALONE
+                Windowed
+#endif
+#if UNITY_STANDALONE_WINDOWS
+                Fullscreen,
+#endif
+            }
+
+            /// <summary>
+            /// Application window/fullscreen mode.
+            /// </summary>
+            public Setting<WindowMode> windowMode = new Setting<WindowMode>(
+                WindowMode.BorderlessWindowed,
+                (mode) =>
+                {
+                    Screen.fullScreenMode = mode switch
+                    {
+#if UNITY_STANDALONE_WINDOWS
+                        WindowMode.Fullscreen => FullScreenMode.ExclusiveFullScreen,
+#endif
+#if UNITY_STANDALONE
+                        WindowMode.Windowed => FullScreenMode.Windowed,
+#endif
+                        _ => FullScreenMode.FullScreenWindow
+                    };
+                }
+            );
 
             /// <summary>
             /// VSync mode - whether to turn off VSync or set to a particular interval.

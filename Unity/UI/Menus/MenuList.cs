@@ -319,7 +319,7 @@ namespace OpenGET.UI
                         }
                         else
                         {
-                            dropdown.options = ((Setting<int>)applyField).customData.Select(x => x.ToString()).ToArray();
+                            dropdown.options = ((Setting<int>)applyField).getCustomData?.Invoke()?.Select(x => x.ToString())?.ToArray() ?? new string[1] { "" };
                         }
                         dropdown.text.text = Localise.Text((applyField as IApplySetting).GetName() ?? field.Name);
                         dropdown.onOptionChanged += (int value) => {
